@@ -1,0 +1,333 @@
+{# qc/templates/qc/draft_report.html #}
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Draft QC Entries – QC Project{% endblock %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<div class="p-4 sm:p-6 lg:p-8 space-y-6">
+
+  {# Page Header #}
+  <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Draft QC Entries</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Entries where QC decision is not yet recorded (decision_status is blank)
+        and status is <span class="font-semibold">Pending QC</span>.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+        {% if perms.QC.view_qcentry %}
+        <a href="{% url 'qc:qc_list' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-white bg-slate-400 hover:bg-slate-700 border border-transparent shadow-sm">
+          <i class="fa-solid fa-eye"></i>
+          <span>QC List</span>
+        </a>
+      {% endif %}
+      {% if perms.QC.add_qcentry %}
+        <a href="{% url 'qc:qc_create' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent shadow-sm">
+          <i class="fa-solid fa-plus"></i>
+          <span>New QC Entry</span>
+        </a>
+      {% endif %}
+    </div>
+  </header>
+
+  {# Messages #}
+  {% if messages %}
+    <div class="space-y-2">
+      {% for message in messages %}
+        <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm border
+          {% if 'success' in message.tags %}
+            bg-emerald-50 text-emerald-800 border-emerald-200
+          {% elif 'error' in message.tags %}
+            bg-rose-50 text-rose-800 border-rose-200
+          {% elif 'warning' in message.tags %}
+            bg-amber-50 text-amber-800 border-amber-200
+          {% else %}
+            bg-sky-50 text-sky-800 border-sky-200
+          {% endif %}">
+          <span class="flex items-center gap-2">
+            {% if 'success' in message.tags %}
+              <i class="fa-solid fa-check-circle"></i>
+            {% elif 'error' in message.tags %}
+              <i class="fa-solid fa-times-circle"></i>
+            {% elif 'warning' in message.tags %}
+              <i class="fa-solid fa-exclamation-triangle"></i>
+            {% else %}
+              <i class="fa-solid fa-info-circle"></i>
+            {% endif %}
+            {{ message }}
+          </span>
+          <button type="button"
+                  class="text-slate-500 hover:text-slate-700"
+                  onclick="this.parentElement.remove()">
+            &times;
+          </button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {# Content Panel #}
+  <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+
+    {# Filter Toolbar #}
+    <form method="get"
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end p-4 border-b border-slate-200">
+
+      {# Search #}
+      <div class="sm:col-span-2 lg:col-span-2">
+        <label for="search-query" class="block text-xs font-medium text-slate-600 mb-1">
+          Search
+        </label>
+        <input type="text"
+               id="search-query"
+               name="q"
+               placeholder="Product, Batch, or Entry No..."
+               value="{{ q|default:'' }}"
+               class="w-full text-sm border border-slate-300 rounded-md shadow-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      {# Item Type #}
+      <div>
+        <label for="item-type-filter" class="block text-xs font-medium text-slate-600 mb-1">
+          Item Type
+        </label>
+        <select id="item-type-filter"
+                name="item_type"
+                class="w-full text-sm border border-slate-300 rounded-md shadow-sm px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+          <option value="">All</option>
+          {% for type in item_type_choices %}
+            <option value="{{ type }}" {% if item_type == type %}selected{% endif %}>
+              {{ type }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      {# Start Date #}
+      <div>
+        <label for="start-date" class="block text-xs font-medium text-slate-600 mb-1">
+          Start Date
+        </label>
+        <input type="date"
+               id="start-date"
+               name="start_date"
+               value="{{ start_date|default:'' }}"
+               class="w-full text-sm border border-slate-300 rounded-md shadow-sm px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      {# End Date #}
+      <div>
+        <label for="end-date" class="block text-xs font-medium text-slate-600 mb-1">
+          End Date
+        </label>
+        <input type="date"
+               id="end-date"
+               name="end_date"
+               value="{{ end_date|default:'' }}"
+               class="w-full text-sm border border-slate-300 rounded-md shadow-sm px-3 py-2 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+      </div>
+
+      {# Actions #}
+      <div class="flex items-center gap-2">
+        <button type="submit"
+                class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 border border-transparent rounded-md shadow-sm">
+          <i class="fa-solid fa-filter"></i>
+          <span>Apply</span>
+        </button>
+        <a href="{% url 'qc:qc_draft_list' %}"
+           class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50">
+          <i class="fa-solid fa-rotate-right"></i>
+          <span>Clear</span>
+        </a>
+      </div>
+    </form>
+
+    {# Data Table or Empty State #}
+    {% if entries %}
+      {# Meta header #}
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 px-4 py-3 border-b border-slate-200 text-sm text-slate-600">
+        <div>
+          Showing
+          <span class="font-semibold text-slate-800">{{ entries.start_index }}–{{ entries.end_index }}</span>
+          of
+          <span class="font-semibold text-slate-800">{{ entries.paginator.count }}</span>
+          draft entries
+        </div>
+        {% if entries.has_other_pages %}
+          <nav class="flex items-center justify-end">
+            <ul class="inline-flex items-center -space-x-px text-xs">
+              {% if entries.has_previous %}
+                <li>
+                  <a href="?page=1&{{ query_params }}"
+                     class="px-2.5 py-1.5 border border-slate-300 rounded-l-md bg-white hover:bg-slate-50 text-slate-600">
+                    «
+                  </a>
+                </li>
+                <li>
+                  <a href="?page={{ entries.previous_page_number }}&{{ query_params }}"
+                     class="px-2.5 py-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-600">
+                    ‹
+                  </a>
+                </li>
+              {% else %}
+                <li>
+                  <span class="px-2.5 py-1.5 border border-slate-200 rounded-l-md bg-slate-50 text-slate-400">«</span>
+                </li>
+                <li>
+                  <span class="px-2.5 py-1.5 border border-slate-200 bg-slate-50 text-slate-400">‹</span>
+                </li>
+              {% endif %}
+
+              {% for num in entries.paginator.get_elided_page_range %}
+                {% if num == entries.paginator.ELLIPSIS %}
+                  <li>
+                    <span class="px-2.5 py-1.5 border border-slate-200 bg-white text-slate-400">…</span>
+                  </li>
+                {% else %}
+                  <li>
+                    <a href="?page={{ num }}&{{ query_params }}"
+                       class="px-2.5 py-1.5 border border-slate-300 bg-white hover:bg-slate-50
+                              {% if entries.number == num %}bg-blue-50 text-blue-700 border-blue-300 font-semibold{% else %}text-slate-600{% endif %}">
+                      {{ num }}
+                    </a>
+                  </li>
+                {% endif %}
+              {% endfor %}
+
+              {% if entries.has_next %}
+                <li>
+                  <a href="?page={{ entries.next_page_number }}&{{ query_params }}"
+                     class="px-2.5 py-1.5 border border-slate-300 bg-white hover:bg-slate-50 text-slate-600">
+                    ›
+                  </a>
+                </li>
+                <li>
+                  <a href="?page={{ entries.paginator.num_pages }}&{{ query_params }}"
+                     class="px-2.5 py-1.5 border border-slate-300 rounded-r-md bg-white hover:bg-slate-50 text-slate-600">
+                    »
+                  </a>
+                </li>
+              {% else %}
+                <li>
+                  <span class="px-2.5 py-1.5 border border-slate-200 bg-slate-50 text-slate-400">›</span>
+                </li>
+                <li>
+                  <span class="px-2.5 py-1.5 border border-slate-200 rounded-r-md bg-slate-50 text-slate-400">»</span>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        {% endif %}
+      </div>
+
+      {# Table #}
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-xs uppercase text-slate-600">
+            <tr>
+              <th class="px-4 py-2 text-left border-b border-slate-200">Entry No.</th>
+              <th class="px-4 py-2 text-left border-b border-slate-200">Product</th>
+              <th class="px-4 py-2 text-left border-b border-slate-200">Batch No.</th>
+              <th class="px-4 py-2 text-left border-b border-slate-200">Group</th>
+              <th class="px-4 py-2 text-left border-b border-slate-200">Item Type</th>
+              <th class="px-4 py-2 text-left border-b border-slate-200 whitespace-nowrap">Entry Date</th>
+              <th class="px-4 py-2 text-left border-b border-slate-200">Status</th>
+              <th class="px-4 py-2 text-left border-b border-slate-200">QC Decision</th>
+              {% if perms.QC.view_qcentry or perms.QC.change_qcentry or perms.QC.delete_qcentry %}
+                <th class="px-4 py-2 text-center border-b border-slate-200">Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for entry in entries %}
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-2">
+                  <a href="{% url 'qc:qc_detail' entry.id %}"
+                     class="text-blue-600 hover:text-blue-700 font-medium">
+                    {{ entry.entry_no }}
+                  </a>
+                </td>
+                <td class="px-4 py-2 text-slate-800">
+                  {{ entry.product.name }}
+                </td>
+                <td class="px-4 py-2 text-slate-700">
+                  {{ entry.batch_no|default:"—" }}
+                </td>
+                <td class="px-4 py-2 text-slate-700">
+                  {{ entry.group|default:"—" }}
+                </td>
+                <td class="px-4 py-2 text-slate-700">
+                  {{ entry.product.item_type|default:"—" }}
+                </td>
+                <td class="px-4 py-2 text-slate-700 whitespace-nowrap">
+                  {{ entry.entry_date|date:"d-m-Y"|default:"—" }}
+                </td>
+                <td class="px-4 py-2">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                    bg-amber-100 text-amber-800">
+                    {{ entry.get_status_display }}
+                  </span>
+                </td>
+                <td class="px-4 py-2 text-slate-500">
+                  — {# decision_status is NULL by definition #}
+                </td>
+
+                {% if perms.QC.view_qcentry or perms.QC.change_qcentry or perms.QC.delete_qcentry %}
+                  <td class="px-4 py-2">
+                    <div class="flex items-center justify-center gap-2">
+                      {% if perms.QC.view_qcentry %}
+                        <a href="{% url 'qc:qc_detail' entry.id %}"
+                           class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-blue-600 hover:text-white"
+                           title="View Details">
+                          <i class="fa-solid fa-eye text-xs"></i>
+                        </a>
+                      {% endif %}
+                      {% if perms.QC.change_qcentry %}
+                        <a href="{% url 'qc:qc_update' entry.id %}"
+                           class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-amber-500 hover:text-white"
+                           title="Edit Entry">
+                          <i class="fa-solid fa-pencil text-xs"></i>
+                        </a>
+                      {% endif %}
+                      {% if perms.QC.delete_qcentry and entry.status != 'cancelled' %}
+                        <a href="{% url 'qc:qc_cancel' entry.id %}"
+                           onclick="return confirm('Cancel entry #{{ entry.id }}?');"
+                           class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-rose-600 hover:text-white"
+                           title="Cancel Entry">
+                          <i class="fa-solid fa-trash text-xs"></i>
+                        </a>
+                      {% endif %}
+                    </div>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="py-16 px-6 text-center">
+        <div class="text-slate-300 mb-3">
+          <i class="fa-solid fa-folder-open text-5xl"></i>
+        </div>
+        <h2 class="text-base font-semibold text-slate-800">
+          No draft QC entries found for the selected filters.
+        </h2>
+        <p class="mt-1 text-sm text-slate-500">
+          <a href="{% url 'qc:qc_draft_list' %}" class="text-blue-600 hover:text-blue-700">
+            Clear the filters
+          </a>
+          to see all draft entries.
+        </p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock maincontent %}

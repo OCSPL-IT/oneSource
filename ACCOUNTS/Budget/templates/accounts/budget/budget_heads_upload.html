@@ -1,0 +1,33 @@
+{% extends "main/index.html" %}
+{% block title %}Upload Budget Heads{% endblock %}
+{% block maincontent %}
+<div class="min-h-[calc(100vh-6rem)] bg-slate-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">Upload Budget Heads (Excel)</h1>
+          <p class="text-sm text-slate-600 mt-1">Sheet name must be <b>Budget-heads</b> with columns: Unit, Department, Budget Head, GL</p>
+        </div>
+        <a href="{% url 'accounts_budget:gl_account_list' %}"
+           class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-sm font-semibold hover:bg-slate-50">
+          Back
+        </a>
+      </div>
+
+      <form method="post" enctype="multipart/form-data" class="mt-6 space-y-4">
+        {% csrf_token %}
+        <input type="file" name="file" accept=".xlsx" required
+               class="block w-full text-sm file:mr-4 file:py-2 file:px-4
+                      file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white
+                      hover:file:bg-indigo-700"/>
+
+        <button type="submit"
+                class="px-5 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
+          Upload & Create Ledgers
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

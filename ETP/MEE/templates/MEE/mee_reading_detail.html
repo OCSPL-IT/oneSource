@@ -1,0 +1,159 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto bg-white shadow-xl rounded-3xl p-6 sm:p-8 mt-6">
+
+  <div class="flex items-center mb-4">
+    <div class="flex-none">
+      <a href="{% url 'mee:mee_reading_list' %}"
+         class="inline-flex items-center px-3 py-1.5 rounded-lg bg-slate-500 text-white text-xs font-semibold hover:bg-slate-600">
+        ← Back to List
+      </a>
+    </div>
+    <div class="flex-1 text-center">
+      <h1 class="text-xl sm:text-2xl font-semibold text-gray-800">
+        MEE Reading Detail – {{ date|date:"d-m-Y" }}
+      </h1>
+    </div>
+    <div class="flex-none">
+      {% if perms.MEE.change_meedailyreading %}
+      <a href="{% url 'mee:mee_reading_edit' date|date:'Y-m-d' %}"
+         class="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600">
+        Edit
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- All category values (single row, all categories) -->
+  <div class="overflow-x-auto mb-6">
+    <table class="min-w-full text-xs sm:text-sm border border-gray-400">
+      <thead>
+        <tr>
+          <th rowspan="2"
+              class="sticky left-0 bg-gray-50 z-20 border-b border-r border-gray-400 px-3 py-2 text-left font-semibold">
+            Date
+          </th>
+          {% for cat in categories %}
+            <th colspan="{{ cat.subcategories.all|length }}"
+                class="border-b border-gray-400 px-2 py-2 text-center font-semibold text-gray-700
+                       {% if not forloop.first %} border-l-2 border-gray-400 {% endif %}
+                       bg-emerald-50">
+              {{ cat.name }}
+              {% if cat.unit %}
+                <span class="text-[0.65rem] text-gray-600">({{ cat.unit }})</span>
+              {% endif %}
+            </th>
+          {% endfor %}
+        </tr>
+        <tr>
+          {% for cat in categories %}
+            {% for sub in cat.subcategories.all %}
+              <th class="border-b border-gray-400 border-l border-gray-300
+                         px-2 py-1 text-center font-medium text-gray-700 whitespace-nowrap">
+                {{ sub.name }}
+              </th>
+            {% endfor %}
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="sticky left-0 bg-white z-10 border-t border-r border-l-2 border-gray-300 px-3 py-2 font-medium whitespace-nowrap">
+            {{ date|date:"d-m-Y" }}
+          </td>
+          {% for val in values %}
+            <td class="border-t border-l border-gray-300 px-2 py-1 text-right">
+              {% if val != "" %}
+                {{ val }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- All downtime rows -->
+   <!-- All downtime rows -->
+  <div class="flex items-center justify-between mb-2 mt-4">
+    <h2 class="text-base sm:text-lg font-semibold text-gray-800">
+      Downtime Entries
+    </h2>
+
+    <!-- Total downtime box on the right -->
+    <div class="px-2 py-1 rounded-xl bg-rose-50 border border-rose-200 text-sm sm:text-base font-semibold text-rose-700">
+      Total Downtime:
+      {% if total_downtime %}
+        {{ total_downtime }} hrs
+      {% else %}
+        0.00 hrs
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="border border-gray-200 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs sm:text-sm">
+      <thead class="bg-gray-50 text-gray-700">
+        <tr>
+          <th class="px-3 py-2 text-left">#</th>
+          <th class="px-3 py-2 text-left whitespace-nowrap">Start</th>
+          <th class="px-3 py-2 text-left whitespace-nowrap">End</th>
+          <th class="px-3 py-2 text-right whitespace-nowrap">Hours</th>
+          <th class="px-3 py-2 text-left">Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if downtimes %}
+          {% for dt in downtimes %}
+          <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+            <td class="px-3 py-1 border-t border-gray-200 text-center">
+              {{ forloop.counter }}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200 whitespace-nowrap">
+              {% if dt.downtime_start %}
+                {{ dt.downtime_start|date:"d-m-Y H:i" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200 whitespace-nowrap">
+              {% if dt.downtime_end %}
+                {{ dt.downtime_end|date:"d-m-Y H:i" }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200 text-right whitespace-nowrap">
+              {% if dt.downtime_hours %}
+                {{ dt.downtime_hours }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200">
+              {% if dt.reason %}
+                {{ dt.reason }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" class="px-3 py-3 text-center text-gray-500">
+              No downtime entries for this date.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+
+<div class="max-w-5xl mx-auto bg-white shadow-md rounded-lg p-6 mt-6">
+
+  <!-- header row -->
+  <div class="flex items-center justify-between mb-6">
+    <!-- Left: Back -->
+    <a href="{% url 'pssr_record_list' %}"
+       class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-sm">
+       <i class="fa fa-arrow-left" aria-hidden="true"></i>
+    </a>
+  
+    <!-- Center: Title -->
+    <div class="flex-1 text-center">
+      <h2 class="text-2xl font-bold text-gray-800">
+        PSSR Record {{ job.id }}
+      </h2>
+    </div>
+  
+    <!-- Right: Edit -->
+    <a href="{% url 'edit_pssr_record' job.id %}"
+       class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded shadow-sm">
+      <i class="fas fa-edit"></i>
+    </a>
+  </div>
+  
+  <hr class="mb-6">
+
+  <!-- job summary -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <div>
+      <h4 class="font-semibold text-gray-600">Performar Date</h4>
+      <p class="border border-gray-300 rounded-lg p-2 bg-gray-50">{{ job.date|date:"d M Y" }}</p>
+    </div>
+    <div>
+      <h4 class="font-semibold text-gray-600">MOC No</h4>
+      <p class="border border-gray-300 rounded-lg p-2 bg-gray-50">{{ job.moc_no|default:"—" }}</p>
+    </div>
+    <div class="md:col-span-2">
+      <h4 class="font-semibold text-gray-600">Job Description</h4>
+      <p class="border border-gray-300 rounded-lg p-3 bg-gray-50 whitespace-pre-line">
+        {{ job.job_description|default:"—" }}
+      </p>
+    </div>
+  </div>
+
+  <!-- observations -->
+  <h3 class="text-xl font-semibold mb-4">Observations ({{ observations|length }})</h3>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full border border-gray-300 rounded-lg">
+      <thead class="bg-gray-100">
+        <tr class="text-center">
+          <th class="py-2 px-4 border-b">Sr No</th>
+          <th class="py-2 px-4 border-b">Observar</th>
+          <th class="py-2 px-4 border-b">Observation</th>
+          <th class="py-2 px-4 border-b">FPR</th>
+          <th class="py-2 px-4 border-b">Target Date</th>
+          <th class="py-2 px-4 border-b">Compliance Date</th>
+          <th class="py-2 px-4 border-b">RPN Cat.</th>
+          <th class="py-2 px-4 border-b">Compliance</th>
+          <th class="py-2 px-4 border-b">Remark</th>
+          {% if perms.EHS.delete_pssr_observation %}
+          <th class="py-2 px-4 border-b">Action</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for obs in observations %}
+        <tr class="text-center hover:bg-gray-50">
+          <td class="py-2 px-4 border-b">{{ forloop.counter }}</td>
+          <td class="py-2 px-4 border-b">{{ obs.observar|default:"—" }}</td>
+          <td class="py-2 px-4 border-b text-left max-w-xl whitespace-pre-line">{{ obs.observation|default:"—" }}</td>
+          <td class="py-2 px-4 border-b">{{ obs.fpr|default:"—" }}</td>
+          <td class="py-2 px-4 border-b">{{ obs.target_date|date:"d/m/Y"|default:"—" }}</td>
+          <td class="py-2 px-4 border-b">{{ obs.compliance_date|date:"d/m/Y"|default:"—" }}</td>
+          <td class="py-2 px-4 border-b">{{ obs.rpn_category|default:"—" }}</td>
+          <td class="py-2 px-4 border-b">{{ obs.compliance_status|default:"—" }}</td>
+          <td class="py-2 px-4 border-b">{{ obs.remark|default:"—" }}</td>
+          {% if perms.EHS.delete_pssr_observation %}
+          <td class="py-2 px-4 border-b">
+            <form method="post" action="{% url 'delete_pssr_observation' pk=obs.pk %}"
+                  onsubmit="return confirm('Delete this observation?');">
+              {% csrf_token %}
+              <button type="submit" title="Delete"
+                      class="text-red-600 hover:text-red-800">
+                <i class="fa fa-trash"></i>
+              </button>
+            </form>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{% if perms.EHS.delete_pssr_observation %}10{% else %}9{% endif %}"
+              class="py-6 text-center text-gray-500">
+            No observations.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends 'hr/HRone_base.html' %}
+
+{% block HRone_title %}
+<title>Helpdesk Ticket Detail – {{ status|default:"All" }}</title>
+{% endblock HRone_title %}
+
+{% block HRone_report_header %}
+<div class="flex justify-between items-center mb-4">
+  <h2 class="text-xl font-bold text-gray-600">Helpdesk Ticket Detail</h2>
+  <h2 class="text-xl font-bold text-gray-600">Status: {{ status|default:"All" }}</h2>
+</div>
+{% endblock HRone_report_header %}
+
+{% block HRone_report_content %}
+<div class="container mx-auto py-6 px-4">
+
+  <!-- Filter Form -->
+  <form method="get" class="flex flex-wrap justify-center gap-4 items-end mb-6 bg-white shadow-md p-4 rounded-lg">
+    <!-- Full Name -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Full Name</label>
+      <input type="text" name="full_name" value="{{ selected_full_name }}" placeholder="Search name..." class="text-xs border border-gray-300 rounded px-3 py-2">
+    </div>
+
+    <!-- Department -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Department</label>
+      <select name="department" class="text-xs border border-gray-300 rounded px-3 py-2">
+        <option value="">All</option>
+        {% for d in department_list %}
+        <option value="{{ d }}" {% if d == selected_department %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Sub Category -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Sub Category</label>
+      <select name="sub_category" class="text-xs border border-gray-300 rounded px-3 py-2">
+        <option value="">All</option>
+        {% for s in sub_category_list %}
+        <option value="{{ s }}" {% if s == selected_sub_category %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Priority -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Priority</label>
+      <select name="priority" class="text-xs border border-gray-300 rounded px-3 py-2">
+        <option value="">All</option>
+        {% for p in priority_list %}
+        <option value="{{ p }}" {% if p == selected_priority %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Month -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Month</label>
+      <select name="month" class="text-xs border border-gray-300 rounded px-3 py-2">
+        {% for num, name in months %}
+        <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Year -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Year</label>
+      <select name="year" class="text-xs border border-gray-300 rounded px-3 py-2">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Filter Buttons -->
+    <div class="flex gap-2 pt-1">
+      <button type="submit" class="text-xs bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">
+        Filter
+      </button>
+      <a href="{% url 'helpdesk_ticket_detail' status %}" class="bg-gray-400 text-white px-4 py-1 rounded hover:bg-gray-500">
+        Clear
+      </a>
+      <a href="{% url 'download_helpdesk_ticket_excel' status %}?month={{ selected_month }}&year={{ selected_year }}&department={{ selected_department }}&sub_category={{ selected_sub_category }}&priority={{ selected_priority }}&full_name={{ selected_full_name }}">
+        <i class="fa-solid fa-file-excel fa-2xl text-green-700 hover:text-green-900"></i>
+    </a>
+    </div>
+  </form>
+
+  <!-- Detail Table -->
+  <div class="overflow-x-auto bg-white shadow rounded">
+    <table class="min-w-full text-sm border">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Ticket ID</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Raised On</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Employee Code</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Full Name</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Employment Status</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Company</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Business Unit</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Department</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Designation</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Branch</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Sub Branch</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Ticket Details</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Category</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Sub Category</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Priority</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Assigned To</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pending With</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Closed By</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Closed On</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Closed On Time?</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Feedback Rating</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Escalated</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Escalated To</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RCA</th>
+          <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time to Close</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        {% for ticket in tickets %}
+        <tr>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.ticket_id }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.raised_on|date:"d-m-Y H:i" }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.employee_code }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.full_name }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.employment_status }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.company }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.business_unit }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.department }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.designation }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.branch }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.sub_branch }}</td>
+          <td class="px-4 py-2 ">{{ ticket.ticket_details }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.category }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.sub_category }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.priority }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.status }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.assigned_to }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.pending_with }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.closed_by }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.closed_on|date:"d-m-Y H:i" }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.is_closed_on_time }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.feedback_rating }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.was_ticket_escalated }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.escalated_to }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.rca }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ ticket.time_to_close }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="26" class="text-center text-sm text-gray-500 py-4">No entries found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock HRone_report_content %}

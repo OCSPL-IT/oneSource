@@ -1,0 +1,417 @@
+<!-- contract/templates/contract/assignment_dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Casual Employee Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+<div class="p-4 sm:p-6 lg:p-8">
+    <style>
+        .card { background: #fff; border-radius: 0.75rem; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+        .row-hover:hover { background: #f8fafc; cursor: pointer; }
+        .active-row { background: #eef2ff !important; border-left: 4px solid #4f46e5; }
+        .active-row td:first-child { padding-left: calc(0.75rem - 4px); }
+        .data-table-wrap { overflow-y: auto; }
+        .data-table { width: 100%; font-size: 0.875rem; border-collapse: separate; border-spacing: 0; }
+        .data-table thead th { position: sticky; top: 0; z-index: 1; background: #f8fafc; padding: 0.5rem 0.75rem; border-bottom: 1px solid #e2e8f0; }
+        .data-table tbody td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+        .data-table tbody tr:last-child td { border-bottom: 0; }
+
+        /* tiny saving badge */
+        .saving-badge { font-size: 11px; padding: 2px 8px; border-radius: 9999px; }
+    </style>
+
+    <header class="mb-4">
+        <h1 class="text-3xl font-bold text-slate-800">Casual Employee Dashboard</h1>
+        <p class="mt-1 text-slate-500">Track casual employee assignments by contractor, department, and location.</p>
+    </header>
+
+    <div class="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 items-end">
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-slate-600 mb-1">From</label>
+              <input type="date" id="from" class="block w-full rounded-md border-slate-300 shadow-sm" value="{{ default_from }}">
+            </div>
+            <div class="lg:col-span-2">
+              <label class="block text-sm font-medium text-slate-600 mb-1">To</label>
+              <input type="date" id="to" class="block w-full rounded-md border-slate-300 shadow-sm" value="{{ default_to }}">
+            </div>
+            <div class="lg:col-span-4">
+              <label class="block text-sm font-medium text-slate-600 mb-1">Search Employee</label>
+              <input id="q" placeholder="Start typing employee name..." class="block w-full rounded-md border-slate-300 shadow-sm">
+            </div>
+            <div class="lg:col-span-4 flex items-center gap-2 pt-1 sm:pt-6">
+              <button id="applyBtn" class="w-full justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">Apply Filters</button>
+              <button id="resetBtn" class="w-auto justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="mb-4">
+          <div class="card p-5">
+            <div class="text-sm font-medium text-slate-500">Total Assign Employee</div>
+            <div id="kpiTotal" class="text-3xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div class="card"><header class="p-4 border-b"><h3 class="font-semibold text-slate-800">Contractor-wise</h3></header><div class="data-table-wrap max-h-80"><table class="data-table"><thead><tr><th class="text-left">Contractor</th><th class="text-right">Count</th></tr></thead><tbody id="tblContractor"></tbody></table></div></div>
+            <div class="card"><header class="p-4 border-b"><h3 class="font-semibold text-slate-800">Department-wise</h3></header><div class="data-table-wrap max-h-80"><table class="data-table"><thead><tr><th class="text-left">Department</th><th class="text-right">Count</th></tr></thead><tbody id="tblDepartment"></tbody></table></div></div>
+            <div class="card"><header class="p-4 border-b"><h3 class="font-semibold text-slate-800">Block-wise</h3></header><div class="data-table-wrap max-h-80"><table class="data-table"><thead><tr><th class="text-left">Block</th><th class="text-right">Count</th></tr></thead><tbody id="tblBlock"></tbody></table></div></div>
+            <div class="card"><header class="p-4 border-b"><h3 class="font-semibold text-slate-800">Shift-wise</h3></header><div class="data-table-wrap max-h-80"><table class="data-table"><thead><tr><th class="text-left">Shift</th><th class="text-right">Count</th></tr></thead><tbody id="tblShift"></tbody></table></div></div>
+        </div>
+
+        <div class="card">
+            <header class="flex items-center justify-between p-4 border-b">
+              <h3 class="font-semibold text-slate-800">Detailed View (Latest 500 Records)</h3>
+              <a id="btnExport" class="rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700">Download Excel</a>
+            </header>
+
+            <div class="data-table-wrap max-h-[32rem] overflow-x-auto">
+                {% csrf_token %}
+                {{ SHIFT_CHOICES|json_script:"SHIFT_CHOICES" }}
+
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Punch Date</th>
+                      <th>Employee</th>
+                      <th>Contractor</th>
+                      <th>Department</th>
+                      <th>Block</th>
+                      <th>Shift</th>
+                      <th>Punch In</th>
+                      <th>Punch Out</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tblDetail"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const DATA_URL     = "{% url 'assignment_dashboard_data' %}";
+    const EXPORT_URL   = "{% url 'assignment_dashboard_export' %}";
+    const UPDATE_URL   = "{% url 'update_punch_out' %}";
+    const REASSIGN_URL = "{% url 'reassign_employee' %}";
+    const UPDATE_SHIFT_URL = "{% url 'update_shift' %}";
+
+    const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const SHIFT_CHOICES = JSON.parse(document.getElementById('SHIFT_CHOICES').textContent);
+
+    const state = {
+      from: document.getElementById('from').value,
+      to: document.getElementById('to').value,
+      q: '',
+      contractor: '',
+      department: '',
+      block_location: '',
+      shift: ''
+    };
+
+    const numberFmt = (n) => (n || 0).toLocaleString('en-US');
+    const formatDate = (iso) => !iso ? '' : iso.split('-').reverse().join('-');
+    const buildQueryString = (params) => {
+      const sp = new URLSearchParams();
+      for (const [k, v] of Object.entries(params)) { if (v) sp.append(k, v); }
+      return sp.toString();
+    };
+
+    const escapeHtml = (s) => (s ?? '').toString()
+      .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+      .replaceAll('"','&quot;').replaceAll("'","&#039;");
+
+    const shiftSelectHtml = (currentShift, disabledAttr) => {
+      const options = SHIFT_CHOICES.map(sh => {
+        const sel = (sh === currentShift) ? 'selected' : '';
+        return `<option value="${escapeHtml(sh)}" ${sel}>${escapeHtml(sh)}</option>`;
+      }).join('');
+      return `
+        <div class="flex items-center gap-2">
+          <select class="shift-select block w-full rounded-md border-slate-300 shadow-sm text-sm p-1" ${disabledAttr}>
+            ${options}
+          </select>
+          <span class="shift-status saving-badge hidden bg-slate-100 text-slate-600">Saving…</span>
+        </div>
+      `;
+    };
+
+    async function loadData() {
+        const url = `${DATA_URL}?${buildQueryString(state)}`;
+        const response = await fetch(url);
+        if (!response.ok) { console.error("Failed to fetch data"); return; }
+        const data = await response.json();
+
+        document.getElementById('kpiTotal').textContent = numberFmt(data.total_assignments);
+        fillSummary('tblContractor', data.by_contractor, 'contractor', 'contractor__name');
+        fillSummary('tblDepartment', data.by_department, 'department', 'department');
+        fillSummary('tblBlock', data.by_block, 'block_location', 'block_location');
+        fillSummary('tblShift', data.by_shift, 'shift', 'shift');
+
+        const detailBody = document.getElementById('tblDetail');
+        detailBody.innerHTML = (!data.table_rows || data.table_rows.length === 0)
+          ? `<tr><td colspan="8" class="text-center py-6 text-slate-500">No records found.</td></tr>`
+          : '';
+
+        data.table_rows?.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.dataset.id = r.id;
+
+            const punchOutValue = r.punch_out ? r.punch_out.substring(0, 5) : '';
+            const isReassigned = r.is_reassigned;
+
+            const controlsDisabled = isReassigned ? 'disabled' : '';
+            const reassignBtnDisabled = (isReassigned || !punchOutValue) ? 'disabled' : '';
+            const reassignBtnText = isReassigned ? 'Reassigned' : 'Reassign';
+            const reassignBtnClasses = isReassigned
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed';
+
+            tr.innerHTML = `
+              <td>${formatDate(r.punch_date) || ''}</td>
+              <td>${escapeHtml(r.employee__name || '')}</td>
+              <td>${escapeHtml(r.contractor__name || '')}</td>
+              <td>${escapeHtml(r.department || '')}</td>
+              <td>${escapeHtml(r.block_location || '')}</td>
+
+              <!-- ✅ Shift auto-save on change -->
+              <td>
+                ${shiftSelectHtml(r.shift || SHIFT_CHOICES[0], controlsDisabled)}
+              </td>
+
+              <td>${r.punch_in ? r.punch_in.substring(0, 5) : ''}</td>
+
+              <td class="flex items-center gap-2">
+                  <input type="time" class="punch-out-input block w-full rounded-md border-slate-300 shadow-sm text-sm p-1"
+                         value="${punchOutValue}" ${controlsDisabled}>
+                  <button class="save-punch-out-btn rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1"
+                          ${controlsDisabled}>
+                    Save
+                  </button>
+                  <button class="reassign-btn rounded-md text-white text-xs px-2 py-1 ${reassignBtnClasses}"
+                          ${reassignBtnDisabled}>
+                    ${reassignBtnText}
+                  </button>
+              </td>
+            `;
+            detailBody.appendChild(tr);
+        });
+
+        bindRowActionEvents();
+        document.getElementById('btnExport').href = `${EXPORT_URL}?${buildQueryString(state)}`;
+    }
+
+    function fillSummary(tbodyId, rows, filterKey, nameKey) {
+        const tbody = document.getElementById(tbodyId);
+        tbody.innerHTML = (!rows || rows.length === 0)
+          ? `<tr><td colspan="2" class="text-center py-6 text-slate-500">No data</td></tr>`
+          : '';
+        rows?.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.className = 'row-hover';
+            const name = r[nameKey] || '(Not Assigned)';
+            if (state[filterKey] === name) tr.classList.add('active-row');
+            tr.innerHTML = `<td>${escapeHtml(name)}</td><td class="text-right font-medium">${numberFmt(r.count)}</td>`;
+            tr.addEventListener('click', () => {
+                state[filterKey] = (state[filterKey] === name) ? '' : name;
+                loadData();
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    function bindRowActionEvents() {
+        document.querySelectorAll('#tblDetail tr[data-id]').forEach(row => {
+            const assignmentId = row.dataset.id;
+
+            const punchOutInput = row.querySelector('.punch-out-input');
+            const savePunchBtn  = row.querySelector('.save-punch-out-btn');
+            const reassignBtn   = row.querySelector('.reassign-btn');
+
+            const shiftSelect   = row.querySelector('.shift-select');
+            const shiftStatus   = row.querySelector('.shift-status');
+
+            // If disabled, skip binding
+            if (punchOutInput && punchOutInput.disabled) return;
+
+            // Punch out / reassign (same)
+            if (punchOutInput && reassignBtn) {
+              punchOutInput.addEventListener('input', () => reassignBtn.disabled = !punchOutInput.value);
+            }
+            if (savePunchBtn) {
+              savePunchBtn.addEventListener('click', () => updatePunchOut(assignmentId, punchOutInput.value, savePunchBtn));
+            }
+            if (reassignBtn) {
+              reassignBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to make this employee available for a new assignment?')) {
+                  reassignEmployee(assignmentId, row);
+                }
+              });
+            }
+
+            // ✅ Shift auto save on change
+            if (shiftSelect) {
+              shiftSelect.dataset.prev = shiftSelect.value;
+              shiftSelect.addEventListener('change', async () => {
+                const newShift = shiftSelect.value;
+                const oldShift = shiftSelect.dataset.prev;
+
+                // If user selects same value, do nothing
+                if (newShift === oldShift) return;
+
+                // show status
+                if (shiftStatus) {
+                  shiftStatus.textContent = 'Saving…';
+                  shiftStatus.classList.remove('hidden', 'bg-rose-100', 'text-rose-700', 'bg-emerald-100', 'text-emerald-700');
+                  shiftStatus.classList.add('bg-slate-100', 'text-slate-600');
+                }
+
+                // disable select while saving
+                shiftSelect.disabled = true;
+
+                const ok = await updateShiftAuto(assignmentId, newShift);
+
+                if (ok) {
+                  shiftSelect.dataset.prev = newShift;
+                  if (shiftStatus) {
+                    shiftStatus.textContent = 'Saved';
+                    shiftStatus.classList.remove('bg-slate-100', 'text-slate-600');
+                    shiftStatus.classList.add('bg-emerald-100', 'text-emerald-700');
+                    setTimeout(() => shiftStatus.classList.add('hidden'), 900);
+                  }
+                } else {
+                  // rollback
+                  shiftSelect.value = oldShift;
+                  if (shiftStatus) {
+                    shiftStatus.textContent = 'Failed';
+                    shiftStatus.classList.remove('bg-slate-100', 'text-slate-600');
+                    shiftStatus.classList.add('bg-rose-100', 'text-rose-700');
+                    setTimeout(() => shiftStatus.classList.add('hidden'), 1500);
+                  }
+                }
+
+                shiftSelect.disabled = false;
+              });
+            }
+        });
+    }
+
+    async function updateShiftAuto(assignmentId, shift) {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+        formData.append('assignment_id', assignmentId);
+        formData.append('shift', shift);
+
+        try {
+            const response = await fetch(UPDATE_SHIFT_URL, { method: 'POST', body: formData });
+            const result = await response.json();
+            return !!(response.ok && result.success);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    async function updatePunchOut(assignmentId, punchOutTime, button) {
+        button.textContent = '...'; button.disabled = true;
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+        formData.append('assignment_id', assignmentId);
+        formData.append('punch_out_time', punchOutTime);
+
+        try {
+            const response = await fetch(UPDATE_URL, { method: 'POST', body: formData });
+            const result = await response.json();
+            if (response.ok && result.success) {
+                button.textContent = 'Saved!';
+                button.classList.replace('bg-blue-500', 'bg-green-500');
+                button.classList.remove('hover:bg-blue-600');
+                setTimeout(() => {
+                    button.textContent = 'Save';
+                    button.classList.replace('bg-green-500', 'bg-blue-500');
+                    button.classList.add('hover:bg-blue-600');
+                    button.disabled = false;
+                }, 2000);
+            } else {
+                alert('Error: ' + (result.error || 'Could not update time.'));
+                button.textContent = 'Save'; button.disabled = false;
+            }
+        } catch (error) {
+            alert('A network error occurred.');
+            button.textContent = 'Save'; button.disabled = false;
+        }
+    }
+
+    async function reassignEmployee(assignmentId, tableRow) {
+        const reassignButton = tableRow.querySelector('.reassign-btn');
+        reassignButton.textContent = '...'; reassignButton.disabled = true;
+
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+        formData.append('assignment_id', assignmentId);
+
+        try {
+            const response = await fetch(REASSIGN_URL, { method: 'POST', body: formData });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                const punchOutInput = tableRow.querySelector('.punch-out-input');
+                const saveButton = tableRow.querySelector('.save-punch-out-btn');
+
+                const shiftSelect = tableRow.querySelector('.shift-select');
+
+                reassignButton.textContent = 'Reassigned';
+                reassignButton.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+                reassignButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+
+                saveButton.disabled = true;
+                punchOutInput.disabled = true;
+
+                if (shiftSelect) shiftSelect.disabled = true;
+
+            } else {
+                alert('Error: ' + (result.error || 'Could not reassign employee.'));
+                reassignButton.textContent = 'Reassign';
+                reassignButton.disabled = tableRow.querySelector('.punch-out-input').value === '';
+            }
+        } catch (error) {
+            alert('A network error occurred while reassigning.');
+            reassignButton.textContent = 'Reassign';
+            reassignButton.disabled = false;
+        }
+    }
+
+    document.getElementById('applyBtn').addEventListener('click', () => {
+      state.from = document.getElementById('from').value;
+      state.to   = document.getElementById('to').value;
+      state.q    = document.getElementById('q').value.trim();
+      state.contractor = state.department = state.block_location = state.shift = '';
+      loadData();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('from').value = '{{ default_from }}';
+      document.getElementById('to').value   = '{{ default_to }}';
+      document.getElementById('q').value    = '';
+      Object.keys(state).forEach(k => state[k] = '');
+      state.from = '{{ default_from }}';
+      state.to   = '{{ default_to }}';
+      loadData();
+    });
+
+    document.getElementById('q').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('applyBtn').click();
+    });
+
+    loadData();
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,160 @@
+{# templates/reports/maintenance.html #}
+{% load static %}
+
+<style>
+  /* Compact, cardy look to match the rest of the dashboard */
+  #mntRoot .card{border-radius:.75rem;border:1px solid #e2e8f0;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  #mntRoot .pill{padding:.35rem .7rem;border-radius:999px;border:1px solid #e2e8f0;background:#fff;font-size:.75rem;font-weight:600;color:#475569;cursor:pointer;display:inline-flex;align-items:center}
+  #mntRoot .pill[data-active="true"]{background:#eef2ff;border-color:#c7d2fe;color:#4338ca}
+  #mntRoot .input{border:1px solid #e2e8f0;border-radius:.5rem;padding:.45rem .6rem}
+  #mntRoot table{border-collapse:separate;border-spacing:0}
+  #mntRoot th,#mntRoot td{padding:.6rem .65rem;vertical-align:top}
+  #mntRoot thead th{position:sticky;top:0;background:#ffffff;z-index:5;font-size:.8rem;letter-spacing:.02em;border-bottom:1px solid #e2e8f0}
+  #mntRoot tbody tr{border-bottom:1px solid #f1f5f9}
+  #mntRoot .badge{display:inline-flex;align-items:center;gap:.35rem;padding:.15rem .5rem;border-radius:999px;border:1px solid #e2e8f0;background:#fff;font-size:.75rem;font-weight:600;color:#475569;white-space:nowrap}
+  #mntRoot .badge[data-variant="scheduled"]{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}
+  #mntRoot .badge[data-variant="done"]{background:#ecfdf5;border-color:#bbf7d0;color:#047857}
+  #mntRoot .badge[data-variant="postponed"]{background:#fff7ed;border-color:#fed7aa;color:#c2410c}
+  #mntRoot .muted{color:#64748b}
+  #mntRoot .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+</style>
+
+<div id="mntRoot" class="space-y-4">
+  <!-- Header + Filters -->
+  <div class="flex flex-wrap items-end gap-3">
+    <div class="mr-auto">
+      <h2 class="text-lg font-semibold text-slate-900">Maintenance Schedule</h2>
+      <p class="text-sm text-slate-500">Showing: {{ mnt_label }} (defaults to today). Use pills or pick a range.</p>
+    </div>
+
+    <!-- Quick pills -->
+    <div class="flex flex-wrap items-center gap-2">
+      <a href="{{ mnt_qs.today }}"    class="pill" data-active="{% if mnt_active == 'today' %}true{% else %}false{% endif %}">Today</a>
+      <a href="{{ mnt_qs.tomorrow }}" class="pill" data-active="{% if mnt_active == 'tomorrow' %}true{% else %}false{% endif %}">Tomorrow</a>
+      <a href="{{ mnt_qs.thisweek }}" class="pill" data-active="{% if mnt_active == 'thisweek' %}true{% else %}false{% endif %}">This Week</a>
+      <a href="{{ mnt_qs.mtd }}"      class="pill" data-active="{% if mnt_active == 'mtd' %}true{% else %}false{% endif %}">MTD</a>
+      <a href="{{ mnt_qs.fytd }}"     class="pill" data-active="{% if mnt_active == 'fytd' %}true{% else %}false{% endif %}">FYTD</a>
+      <a href="{{ mnt_qs.clear }}"    class="pill" data-active="false">Clear</a>
+    </div>
+
+    <!-- Custom range -->
+    <form method="get" class="flex items-end gap-2">
+      {# Preserve other GET params #}
+      {% for k,v in request.GET.items %}
+        {% if k != 'm_from' and k != 'm_to' %}
+          <input type="hidden" name="{{ k }}" value="{{ v }}">
+        {% endif %}
+      {% endfor %}
+      <div>
+        <label class="text-xs text-slate-500">From</label>
+        <input class="input" type="date" name="m_from" value="{{ mnt_from|date:'Y-m-d' }}">
+      </div>
+      <div>
+        <label class="text-xs text-slate-500">To</label>
+        <input class="input" type="date" name="m_to" value="{{ mnt_to|date:'Y-m-d' }}">
+      </div>
+      <button class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium shadow hover:bg-indigo-700">Apply</button>
+    </form>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Total</div>
+      <div class="mt-1 text-2xl font-bold">{{ mnt_kpi.total|default:0 }}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Scheduled</div>
+      <div class="mt-1 text-2xl font-bold">{{ mnt_kpi.scheduled|default:0 }}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Done</div>
+      <div class="mt-1 text-2xl font-bold">{{ mnt_kpi.done|default:0 }}</div>
+    </div>
+    <div class="card p-4">
+      <div class="text-xs text-slate-500">Postponed</div>
+      <div class="mt-1 text-2xl font-bold">{{ mnt_kpi.postponed|default:0 }}</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="border-b px-4 py-3 flex items-center justify-between">
+      <div class="text-sm font-semibold text-slate-800">Schedules ({{ mnt_rows|length }})</div>
+      <div class="text-xs text-slate-500">
+        Total downtime ({{ mnt_label }}): <span class="font-semibold">{{ mnt_downtime_minutes|default:0 }} min</span>
+      </div>
+    </div>
+
+    <div class="overflow-auto" style="max-height: calc(100vh - 24rem)">
+      <table class="min-w-full text-sm">
+        <thead>
+          <tr>
+            <th class="text-left">Effective Date</th>
+            <th class="text-left">Equipment</th>
+            <th class="text-left">Location</th>
+            <th class="text-left">Status</th>
+            <th class="text-left">Rescheduled To</th>
+            <th class="text-right">Downtime (min)</th>
+            <th class="text-left">Reason / Notes</th>
+            <th class="text-left">Completed By</th>
+            <th class="text-left">Completed At</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in mnt_rows %}
+            <tr class="hover:bg-slate-50">
+              <td class="mono">{{ r.effective_date|date:"d-M-Y" }}</td>
+              <td class="font-semibold">{{ r.equipment_id }}</td>
+              <td>{{ r.location|default:"—" }}</td>
+              <td>
+                {% if r.status == 'SCHEDULED' %}
+                  <span class="badge" data-variant="scheduled">Scheduled</span>
+                {% elif r.status == 'DONE' %}
+                  <span class="badge" data-variant="done">Done</span>
+                {% else %}
+                  <span class="badge" data-variant="postponed">Postponed</span>
+                {% endif %}
+              </td>
+              <td class="mono">{{ r.rescheduled_to|date:"d-M-Y"|default:"—" }}</td>
+              <td class="text-right">{{ r.downtime_minutes|default:"0" }}</td>
+              <td>
+                {% if r.downtime_reason %}
+                  <div class="text-slate-700">{{ r.downtime_reason }}</div>
+                {% endif %}
+                {% if r.notes %}
+                  <div class="text-slate-500 text-xs mt-1">{{ r.notes }}</div>
+                {% endif %}
+                {% if not r.downtime_reason and not r.notes %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if r.completed_by %}
+                  {{ r.completed_by.get_full_name|default:r.completed_by.username }}
+                {% else %}
+                  <span class="muted">—</span>
+                {% endif %}
+              </td>
+              <td class="mono">
+                {% if r.completed_at %}{{ r.completed_at|date:"d-M-Y H:i" }}{% else %}<span class="muted">—</span>{% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-slate-500 py-8">No schedules in this range.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="text-xs text-slate-500">
+    <span class="badge" data-variant="scheduled">Scheduled</span>
+    <span class="ml-2 badge" data-variant="done">Done</span>
+    <span class="ml-2 badge" data-variant="postponed">Postponed</span>
+    <span class="ml-3">· <span class="mono">Effective Date</span> = <span class="mono">rescheduled_to</span> if set, else <span class="mono">scheduled_date</span></span>
+  </div>
+</div>

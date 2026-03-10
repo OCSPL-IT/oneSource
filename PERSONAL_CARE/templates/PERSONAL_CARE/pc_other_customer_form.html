@@ -1,0 +1,333 @@
+{# templates/PERSONAL_CARE/pc_other_customer_form.html #}
+{% extends 'main/index.html' %}
+
+{% block maincontent %}
+<div class="max-w-5xl mx-auto py-8">
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-semibold text-gray-800">
+      {% if is_edit %}Edit Other Lead Customer{% else %}Add Other Lead Customer{% endif %}
+    </h1>
+    <a href="{% url 'pc_other_customer_list' %}"
+       class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium
+              bg-blue-600 text-white hover:bg-blue-700">
+       List Other Customers
+    </a>
+  </div>
+
+  <!-- Messages Section -->
+  {% if messages %}
+  <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+      <div
+        class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+               {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">
+          ✖
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="bg-white shadow rounded-lg p-6">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="mb-4 text-sm text-red-600">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.created_at.label }}
+          </label>
+          {{ form.created_at }}
+          {% if form.created_at.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.created_at.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Customer Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.customer_name.label }}
+          </label>
+          {{ form.customer_name }}
+          <datalist id="customer_name_list">
+            {% for v in customer_name_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.customer_name.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.customer_name.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Customer Profile -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.customer_profile.label }}
+          </label>
+          {{ form.customer_profile }}
+          <datalist id="customer_profile_list">
+            {% for v in customer_profile_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.customer_profile.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.customer_profile.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Sub Profile -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.sub_profile.label }}
+          </label>
+          {{ form.sub_profile }}
+          <datalist id="sub_profile_list">
+            {% for v in sub_profile_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.sub_profile.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.sub_profile.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+         <!-- Core Business -->
+        <div class="block text-sm font-medium text-gray-700">
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.core_business.label }}
+          </label>
+          {{ form.core_business }}
+          {% if form.core_business.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.core_business.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Contact Person -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.contact_person.label }}
+          </label>
+          {{ form.contact_person }}
+          {% if form.contact_person.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.contact_person.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Designation -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.designation.label }}
+          </label>
+          {{ form.designation }}
+          <datalist id="designation_list">
+            {% for v in designation_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.designation.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.designation.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Contact No -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.contact_no.label }}
+          </label>
+          {{ form.contact_no }}
+          {% if form.contact_no.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.contact_no.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Email ID -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.email_id.label }}
+          </label>
+          {{ form.email_id }}
+          {% if form.email_id.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.email_id.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Place -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.place.label }}
+          </label>
+          {{ form.place }}
+          <datalist id="place_list">
+            {% for v in place_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.place.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.place.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- City -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.city.label }}
+          </label>
+          {{ form.city }}
+          <datalist id="city_list">
+            {% for v in city_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.city.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.city.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- State -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.state.label }}
+          </label>
+          {{ form.state }}
+          <datalist id="state_list">
+            {% for v in state_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.state.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.state.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Zone -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.zone.label }}
+          </label>
+          {{ form.zone }}
+          <datalist id="zone_list">
+            {% for v in zone_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.zone.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.zone.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Executive Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.executive_name.label }}<span class="text-red-500">*</span>
+          </label>
+          {{ form.executive_name }}
+          <datalist id="executive_list">
+            {% for v in executive_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.executive_name.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.executive_name.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Source -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.source.label }}
+          </label>
+          {{ form.source }}
+          <datalist id="source_list">
+            {% for v in source_options %}
+              <option value="{{ v }}"></option>
+            {% endfor %}
+          </datalist>
+          {% if form.source.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.source.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+
+        <!-- Address (full width) -->
+        <div class="block text-sm font-medium text-gray-700">
+          <label class="block text-sm font-medium text-gray-700">
+            {{ form.address.label }}
+          </label>
+          {{ form.address }}
+          {% if form.address.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.address.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end space-x-3">
+        <a href="javascript:history.back()"
+           class="inline-flex items-center px-4 py-2 border border-gray-300
+                  rounded-md text-sm font-medium text-gray-700 bg-white
+                  hover:bg-gray-50">
+          Cancel
+        </a>
+        <button type="submit"
+                class="inline-flex items-center px-4 py-2 border border-transparent
+                       text-sm font-medium rounded-md shadow-sm text-white
+                       bg-indigo-600 hover:bg-indigo-700 focus:outline-none
+                       focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+          {% if is_edit %}Update Customer{% else %}Save Customer{% endif %}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if form.executive_name.errors %}
+<script>
+  window.addEventListener('load', function () {
+    var el = document.getElementById('id_executive_name');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus();
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

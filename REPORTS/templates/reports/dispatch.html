@@ -1,0 +1,344 @@
+{# templates/reports/partials/dispatch_plan_vs_actual_split.html #}
+{% load reports_dict %}
+{% load indnum %}
+
+<style>
+  .wrap { max-height: calc(100vh - 16rem); overflow: auto; }
+  .th-sticky { position: sticky; top: 0; z-index: 10; background: #f8fafc; }
+  .first-sticky { position: sticky; left: 0; z-index: 20; background: #fff; }
+  .first-sticky-head { position: sticky; left: 0; z-index: 30; background: #f1f5f9; }
+  .plan-bg { background: #e0f7fa; }    /* Plan background (light blue) */
+  .est-bg  { background: #eef2ff; }    /* EST (MTD) background (light indigo) */
+  .act-bg  { background: #fff4e5; }    /* Actual background (light peach) */
+  .var-bg  { background: #f8fafc; }    /* Variance background (neutral) */
+  .table   { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .table th, .table td {
+    border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+    padding: .5rem .6rem; white-space: nowrap;
+  }
+  .table th:last-child, .table td:last-child { border-right: none; }
+  .head-1 { text-transform: uppercase; font-size: 11px; letter-spacing: .02em; color: #475569; }
+  .section { border: 1px solid #e2e8f0; border-radius: .5rem; overflow: hidden; background: #fff; }
+  .titlebar { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid #e2e8f0; position: relative; }
+  .titlebar .stripe { position: absolute; inset-inline: 0; top: -1px; height: 4px; background: linear-gradient(90deg, #7dd3fc, #fcd34d, #86efac); }
+  .controls { border: 1px solid #e2e8f0; background: #f8fafc; border-radius: .5rem; padding: .75rem; margin: .75rem 1rem; }
+  .controls .row { display: grid; gap: .5rem; grid-template-columns: repeat(12, minmax(0,1fr)); align-items: end; }
+  .controls label { font-size: 12px; color: #334155; margin-bottom: .25rem; display: block; }
+  .controls input[type="date"], .controls select, .controls button, .controls a {
+    font-size: 14px; border: 1px solid #cbd5e1; border-radius: .375rem; padding: .4rem .5rem;
+  }
+  .btn-primary { background: #0284c7; color: #fff; border-color: #0284c7; }
+  .btn-primary:hover { background: #0369a1; border-color: #0369a1; }
+  .btn-ghost { background: #fff; color: #334155; }
+  .btn-ghost:hover { background: #f1f5f9; }
+  .w-260 { width: 260px; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .text-red { color: #dc2626; font-weight: 600; }
+  .text-green { color: #059669; font-weight: 600; }
+  .fw-semibold { font-weight: 600; }
+  .muted { color: #64748b; font-size: 12px; }
+
+  /* Dropdown helpers */
+  .dd-btn {
+    width: 100%; text-align: left; border: 1px solid #cbd5e1; border-radius: .375rem;
+    padding: .4rem .5rem; background:#fff; display:flex; justify-content:space-between; align-items:center; gap:.5rem;
+  }
+  .dd-panel {
+    position:absolute; z-index:50; inset-inline:0; margin-top:.25rem; border:1px solid #cbd5e1;
+    border-radius:.375rem; background:#fff; max-height:260px; overflow:auto; display:none;
+    box-shadow:0 8px 24px rgba(0,0,0,.08);
+  }
+  .dd-actions { padding:.4rem .5rem; border-bottom:1px solid #e2e8f0; display:flex; gap:.5rem; }
+  .dd-grid { padding:.4rem .5rem; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.25rem; }
+  .chipbar { display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.35rem; }
+  .chip { background:#e2e8f0; border-radius:999px; padding:.15rem .55rem; font-size:12px; color:#334155; }
+  .chip button { border:none; background:transparent; margin-left:.35rem; cursor:pointer; color:#0f172a; }
+</style>
+
+<div class="section">
+  <!-- Header -->
+  <div class="titlebar">
+    <div class="stripe"></div>
+    <div class="fw-semibold">Dispatch · Plan vs Actual</div>
+    <div class="muted">
+      {{ period }} • {{ from_date|date:"Y-m-d" }} → {{ to_date|date:"Y-m-d" }}
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="controls" id="disp-filters">
+    <div class="row">
+      <div style="grid-column: span 2 / span 2;">
+        <label>Period</label>
+        <select name="period">
+          <option value="MTD"   {% if period == "MTD" %}selected{% endif %}>MTD</option>
+          <option value="YTD"   {% if period == "YTD" %}selected{% endif %}>YTD</option>
+          <option value="DAILY" {% if period == "DAILY" %}selected{% endif %}>Daily</option>
+          <option value="CUSTOM"{% if period == "CUSTOM" %}selected{% endif %}>Custom</option>
+        </select>
+      </div>
+
+      <div style="grid-column: span 2 / span 2;">
+        <label>From</label>
+        <input type="date" name="from" value="{{ from_date|date:'Y-m-d' }}">
+      </div>
+
+      <div style="grid-column: span 2 / span 2;">
+        <label>To</label>
+        <input type="date" name="to" value="{{ to_date|date:'Y-m-d' }}">
+      </div>
+
+      <!-- FG (alpha) -->
+      <div style="grid-column: span 4 / span 4; position:relative;">
+        <label>FG (alpha)</label>
+
+        <button type="button" id="fg-dd-btn" class="dd-btn" aria-expanded="false" aria-controls="fg-dd-panel">
+          <span>
+            {% if selected_fgs and selected_fgs|length > 0 %}{{ selected_fgs|length }} selected{% else %}Choose FG (alpha)…{% endif %}
+          </span>
+          <span aria-hidden="true">▾</span>
+        </button>
+
+        <div id="fg-dd-panel" class="dd-panel" role="listbox" aria-multiselectable="true">
+          <div class="dd-actions">
+            <button type="button" id="fg-select-all" class="btn-ghost" style="padding:.2rem .5rem;">Select all</button>
+            <button type="button" id="fg-clear-all"  class="btn-ghost" style="padding:.2rem .5rem;">Clear</button>
+          </div>
+          <div class="dd-grid">
+            {% for fg in all_fg_list %}
+              <label style="display:flex; align-items:center; gap:.5rem; font-size:14px;">
+                <input type="checkbox" name="fg_name" value="{{ fg }}" {% if selected_fgs and fg in selected_fgs %}checked{% endif %}>
+                <span>{{ fg }}</span>
+              </label>
+            {% empty %}
+              <div class="muted" style="padding:.5rem;">No FG items</div>
+            {% endfor %}
+          </div>
+        </div>
+
+        {% if selected_fgs %}
+          <div class="chipbar" id="fg-chipbar">
+            {% for a in selected_fgs %}
+              <span class="chip" data-fg="{{ a|escapejs }}">{{ a }}
+                <button type="button" title="Remove" aria-label="Remove {{ a }}" data-remove="{{ a|escapejs }}">×</button>
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div style="grid-column: span 2 / span 2; display:flex; gap:.5rem; justify-content:flex-end;">
+        <button class="btn-primary" type="submit">Apply</button>
+        <a class="btn-ghost" href="{{ request.path }}">Clear</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="wrap">
+    <table class="table">
+      <thead class="head-1">
+        <tr>
+          <th class="th-sticky first-sticky-head w-260 text-left">FG (alpha)</th>
+        {% for dlabel in disp_grid.months %}
+          {% if period == "DAILY" %}
+            <th class="text-center" colspan="2">{{ dlabel }}</th>
+          {% else %}
+            <th class="text-center" colspan="4">{{ dlabel }}</th>
+          {% endif %}
+        {% endfor %}
+          <th class="th-sticky text-center" style="right:0;">Stock QTY</th>
+
+        </tr>
+        <tr>
+          <th class="th-sticky first-sticky-head"></th>
+        {% for _ in disp_grid.months %}
+          {% if period == "DAILY" %}
+            <th class="plan-bg text-center">Plan</th>
+            <th class="act-bg  text-center">Actual</th>
+          {% else %}
+            <th class="plan-bg text-center">Plan (Month)</th>
+            <th class="est-bg  text-center">EST (MTD)</th>
+            <th class="act-bg  text-center">Actual</th>
+            <th class="var-bg  text-center">Var&nbsp;%</th>
+          {% endif %}
+        {% endfor %}
+          <th class="th-sticky text-center" style="right:0;"></th>
+        </tr>
+      </thead>
+
+      <tbody>
+      {% if disp_grid.rows %}
+        {% for r in disp_grid.rows %}
+          <tr>
+            <td class="first-sticky fw-semibold" title="{{ r.fg }}">{{ r.alias }}</td>
+            {% for c in r.cells %}
+              {% if period == "DAILY" %}
+                <td class="plan-bg text-right" data-plan="{{ c.plan|default_if_none:0 }}">{{ c.plan|indnum }}</td>
+                <td class="act-bg  text-right">
+                  <span class="act-ind"
+                        data-est="{{ c.plan|default_if_none:0 }}"
+                        data-actual="{{ c.actual|default_if_none:0 }}">{{ c.actual|indnum }}</span>
+                </td>
+              {% else %}
+                <td class="plan-bg text-right" data-plan="{{ c.plan|default_if_none:0 }}">{{ c.plan|indnum }}</td>
+
+                <td class="est-bg  text-right" data-est="{{ c.est|default_if_none:0 }}">{{ c.est|indnum }}</td>
+
+                <td class="act-bg  text-right">
+                  <span class="act-ind"
+                        data-est="{{ c.est|default_if_none:0 }}"
+                        data-actual="{{ c.actual|default_if_none:0 }}">{{ c.actual|indnum }}</span>
+                </td>
+
+                <td class="var-bg text-right var-cell"
+                    data-est="{{ c.est|default_if_none:0 }}"
+                    data-actual="{{ c.actual|default_if_none:0 }}">—</td>
+              {% endif %}
+            {% endfor %}
+            <td class="text-right fw-semibold" title="Closing stock">{{ r.stock_close|default_if_none:0|indnum }}</td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        {% with m=disp_grid.months|length %}
+          {% if period == "DAILY" %}
+            {% widthratio m 1 2 as per_label_cols %}
+          {% else %}
+            {% widthratio m 1 4 as per_label_cols %}
+          {% endif %}
+          {% with totalcols=1|add:per_label_cols|add:"1" %} {# 1 FG col + per_label_cols + 1 stock col #}
+          <tr>
+            <td class="text-center" colspan="{{ totalcols }}">
+              No dispatch data in this range.
+            </td>
+          </tr>
+          {% endwith %}
+        {% endwith %}
+      {% endif %}
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td class="first-sticky fw-semibold text-right">Total</td>
+          {% for f in disp_grid.footer.months %}
+            {% if period == "DAILY" %}
+              <td class="plan-bg text-right fw-semibold" data-plan="{{ f.plan|default_if_none:0 }}">{{ f.plan|indnum }}</td>
+              <td class="act-bg  text-right fw-semibold">
+                <span class="act-ind"
+                      data-est="{{ f.plan|default_if_none:0 }}"
+                      data-actual="{{ f.actual|default_if_none:0 }}">{{ f.actual|indnum }}</span>
+              </td>
+            {% else %}
+              <td class="plan-bg text-right fw-semibold" data-plan="{{ f.plan|default_if_none:0 }}">{{ f.plan|indnum }}</td>
+
+              <td class="est-bg  text-right fw-semibold" data-est="{{ f.est|default_if_none:0 }}">{{ f.est|indnum }}</td>
+
+              <td class="act-bg  text-right fw-semibold">
+                <span class="act-ind"
+                      data-est="{{ f.est|default_if_none:0 }}"
+                      data-actual="{{ f.actual|default_if_none:0 }}">{{ f.actual|indnum }}</span>
+              </td>
+
+              <td class="var-bg text-right fw-semibold var-cell"
+                  data-est="{{ f.est|default_if_none:0 }}"
+                  data-actual="{{ f.actual|default_if_none:0 }}">—</td>
+            {% endif %}
+          {% endfor %}
+          <td class="text-right fw-semibold">{{ disp_grid.footer.stock_total|default_if_none:0|indnum }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Dropdown behavior
+  const btn    = document.getElementById('fg-dd-btn');
+  const panel  = document.getElementById('fg-dd-panel');
+  const selAll = document.getElementById('fg-select-all');
+  const clrAll = document.getElementById('fg-clear-all');
+  const chipbar= document.getElementById('fg-chipbar');
+  const form   = document.getElementById('disp-filters');
+
+  if (btn && panel) {
+    function setOpen(open){
+      panel.style.display = open ? 'block' : 'none';
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) setTimeout(()=>document.addEventListener('click', outside), 0);
+      else document.removeEventListener('click', outside);
+    }
+    function outside(e){
+      if (!panel.contains(e.target) && !btn.contains(e.target)) setOpen(false);
+    }
+    btn.addEventListener('click', function(){ setOpen(panel.style.display !== 'block'); });
+    selAll && selAll.addEventListener('click', function(){
+      panel.querySelectorAll('input[type="checkbox"][name="fg_name"]').forEach(cb => cb.checked = true);
+    });
+    clrAll && clrAll.addEventListener('click', function(){
+      panel.querySelectorAll('input[type="checkbox"][name="fg_name"]').forEach(cb => cb.checked = false);
+    });
+    if (chipbar && form) {
+      chipbar.addEventListener('click', function(e){
+        const rm = e.target.closest('button[data-remove]');
+        if (!rm) return;
+        const val = rm.getAttribute('data-remove');
+        const cb  = panel.querySelector(`input[type="checkbox"][name="fg_name"][value="${CSS.escape(val)}"]`);
+        if (cb) cb.checked = false;
+        form.submit();
+      });
+    }
+  }
+
+  // ---------- Helpers ----------
+  function toNum(v){
+    if (v === null || v === undefined) return 0;
+    return parseFloat(String(v).replace(/[, ]+/g,'').trim()) || 0;
+  }
+  function formatPct(n){
+    if (!isFinite(n)) return '—';
+    return (Math.round(n * 10) / 10).toFixed(1) + '%';
+  }
+
+  // Variance % = (Actual - EST) / EST * 100
+  // Positive variance → GREEN, Negative → RED
+  document.querySelectorAll('.var-cell').forEach(td => {
+    const est = toNum(td.getAttribute('data-est'));
+    const act = toNum(td.getAttribute('data-actual'));
+    let txt = '—';
+    let cls = '';
+
+    if (est === 0) {
+      if (act === 0) {
+        txt = '—';
+      } else {
+        txt = '100.0%';
+        cls = 'text-green';
+      }
+    } else {
+      const v = ((act - est) / est) * 100;
+      txt = formatPct(v);
+      cls = (v >= 0) ? 'text-green' : 'text-red';
+    }
+
+    td.textContent = txt;
+    td.classList.remove('text-green','text-red');
+    if (cls) td.classList.add(cls);
+  });
+
+  // ACTUAL color rule:
+  // - DAILY: compare Actual vs Plan
+  // - Monthly modes: compare Actual vs EST
+  document.querySelectorAll('.act-ind').forEach(el => {
+    const est = toNum(el.getAttribute('data-est'));
+    const act = toNum(el.getAttribute('data-actual'));
+    el.classList.remove('text-green','text-red');
+    if (act >= est) {
+      el.classList.add('text-green');
+    } else {
+      el.classList.add('text-red');
+    }
+  });
+})();
+</script>

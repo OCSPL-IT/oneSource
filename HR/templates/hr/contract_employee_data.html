@@ -1,0 +1,126 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto px-4 py-4">
+    <div class="bg-gray-50 p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-4 items-end">
+            <!-- Date From -->
+            <div>
+                <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Date From:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ filters.start_date|default:'' }}"
+                       class="py-2 px-2  block w-full rounded-md shadow-sm border focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            </div>
+            
+            <!-- Date To -->
+            <div>
+                <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">Date To:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ filters.end_date|default:'' }}"
+                       class="py-2 px-2  block w-full rounded-md border  shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            </div>
+            
+            <!-- Employee Name -->
+            <div>
+                <label for="employee_name" class="block text-sm font-medium text-gray-700 mb-1">Employee Name:</label>
+                <input type="text" id="employee_name" name="employee_name" value="{{ filters.employee_name|default:'' }}" placeholder="Enter name"
+                       class="py-2 px-2  block w-full rounded-md  shadow-sm border focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            </div>
+            
+            <!-- Company Name -->
+            <div>
+                <label for="company_name" class="block text-sm font-medium text-gray-700 mb-1">Company Name:</label>
+                <input type="text" id="company_name" name="company_name" value="{{ filters.company_name|default:'' }}" placeholder="Enter company"
+                       class="py-2 px-2  block w-full rounded-md  shadow-sm border focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            </div>
+            
+            <!-- Shift Select -->
+            <div>
+                <label for="shift" class="block text-sm font-medium text-gray-700 mb-1">Shift:</label>
+                <select id="shift" name="shift"
+                        class="py-2 px-2 block w-full rounded-md  shadow-sm border focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                    <option value="">Any Shift</option>
+                    {% for shift_option in distinct_shifts %}
+                    <option value="{{ shift_option }}" {% if filters.shift == shift_option %}selected{% endif %}>{{ shift_option }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Apply Filters Button -->
+            <div>
+                <button type="submit"
+                        class="inline-flex items-center justify-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+                    Apply Filters
+                </button>
+            </div>
+
+            <!-- Clear Filters Button -->
+            <div>
+                <a href="{{ request.path }}" 
+                   class="inline-flex items-center justify-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm text-gray-700 bg-gray-400 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+                    Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+    <!-- Dashboard Metrics -->
+    <div class="grid grid-cols-2 gap-4">
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Total Records</h3>
+                <div class="mt-2 text-3xl font-bold text-gray-900">{{ total_records }}</div>
+            </div>
+        </div>
+        <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Total OT Time</h3>
+                <div class="mt-2 text-3xl font-bold text-gray-900">{{ total_ot_time }}</div>
+            </div>
+        </div>
+    </div>
+    <!-- Data Table -->
+    <div class="overflow-x-auto relative mt-4">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="py-3 px-6 whitespace-nowrap">Login Date</th>
+                    <th scope="col" class="py-3 px-6 whitespace-nowrap ">Emp Code</th>
+                    <th scope="col" class="py-3 px-6">Employee Name</th>
+                    <th scope="col" class="py-3 px-6">Department</th>
+                    <th scope="col" class="py-3 px-6 whitespace-nowrap">Co ID</th>
+                    <th scope="col" class="py-3 px-6 whitespace-nowrap">Company Name</th>
+                    <th scope="col" class="py-3 px-6 whitespace-nowrap">Company SName</th>
+                    <th scope="col" class="py-3 px-6">In Time</th>
+                    <th scope="col" class="py-3 px-6">Out Time</th>
+                    <th scope="col" class="py-3 px-6">Shift</th>
+                    <th scope="col" class="py-3 px-6 whitespace-nowrap">Total Working Hours</th>
+                    <th scope="col" class="py-3 px-6">OT</th>
+                    <th scope="col" class="py-3 px-6 whitespace-nowrap">Early Leaves</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for row in data %}
+                <tr>
+                    <td class="py-4 px-6 whitespace-nowrap text-center">{{ row.LogDate }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.EmployeeCode }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.EmployeeName }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.DepartmentName }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.CompanyId }}</td>
+                    <td class="py-4 px-6 whitespace-nowrap text-center">{{ row.CompanyName }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.CompanySName }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.InTime }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.OutTime }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.Shift }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.TotalWorkingHours }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.OT }}</td>
+                    <td class="py-4 px-6 text-center">{{ row.EarlyGoing }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="13" class="text-center py-4 px-6">No data available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

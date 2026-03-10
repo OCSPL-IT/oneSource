@@ -1,0 +1,195 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto py-8">
+    <div class="container mx-auto px-6">
+        <div class="flex items-center justify-between mb-4">
+            <!-- Back to Main Page Button -->
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-xs text-white font-bold py-2 px-4 rounded shadow-md">
+                Back to Main Page
+            </a>
+            <!-- Heading -->
+            <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Leading Analysis chart</h2>
+            <!-- View Records Button -->
+            <a href="{% url 'view_downtime' %}" class="text-xs bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                View Records
+            </a>
+        </div>
+    </div>
+    <form method="get" class="flex flex-wrap gap-4 items-end mb-8 justify-center">
+        <!-- Date Fields (as before) -->
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">From Date</label>
+            <input type="date" name="from_date" value="{{ from_date }}" class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">To Date</label>
+            <input type="date" name="to_date" value="{{ to_date }}" class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+    
+        <!-- Text Filters -->
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+            <input type="text" name="status" value="{{ status_filter }}" placeholder="Status"
+                   class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Department</label>
+            <input type="text" name="department" value="{{ department_filter }}" placeholder="Department"
+                   class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Physical Location</label>
+            <input type="text" name="physical_location" value="{{ physical_location_filter }}" placeholder="Physical Location"
+                   class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Risk Factor</label>
+            <input type="text" name="risk_factor" value="{{ risk_factor_filter }}" placeholder="Risk Factor"
+                   class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+    
+        <!-- Buttons -->
+        <div class="mt-6">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow mr-2">
+                <i class="fa-solid fa-filter"></i>
+            </button>
+            <button type="submit" name="clear" value="1" class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded shadow">
+                <i class="fa-solid fa-eraser"></i>
+            </button>
+        </div>
+    </form>
+    
+
+    <!-- Status Count Cards -->
+    <div class="flex flex-wrap justify-center gap-6 mb-8">
+        {% for stat in status_counts %}
+        <div class="bg-white shadow rounded p-3 text-center min-w-[150px]">
+            <h3 class="text-lg font-semibold text-gray-700">{{ stat.status|default:"Unknown" }}</h3>
+            <p class="text-3xl font-bold text-blue-700">{{ stat.count }}</p>
+        </div>
+        {% empty %}
+        <div>No status data found.</div>
+        {% endfor %}
+    </div>
+
+
+    <!-- Bar Chart for Physical Locations -->
+    <div class="bg-white shadow rounded p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-center">Observations by Physical Location</h3>
+        <canvas id="locationBarChart" height="80"></canvas>
+    </div>
+
+    <!-- Bar Chart for Department -->
+    <div class="bg-white shadow rounded p-6">
+        <h3 class="text-lg font-semibold mb-4 text-center">Observations by Department</h3>
+        <canvas id="departmentBarChart" height="80"></canvas>
+    </div>
+
+    <!-- Bar Chart for PSL Member Name (Open/Due) -->
+    <div class="bg-white shadow rounded p-6 mt-8">
+        <h3 class="text-lg font-semibold mb-4 text-center">Open/Due Observations by PSL Member</h3>
+        <canvas id="pslBarChart" height="80"></canvas>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Bar Chart for Physical Location
+    const ctx = document.getElementById('locationBarChart').getContext('2d');
+    const locationLabels = {{ location_labels|safe }};
+    const locationData = {{ location_data|safe }};
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: locationLabels,
+            datasets: [{
+                label: 'Observations',
+                data: locationData,
+                borderWidth: 1,
+                backgroundColor: 'rgba(59,130,246,0.5)',
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    // Colors array for department (for bar chart)
+    const departmentColors = [
+        'rgba(59,130,246,0.7)',  'rgba(16,185,129,0.7)',  'rgba(234,179,8,0.7)',
+        'rgba(239,68,68,0.7)',   'rgba(99,102,241,0.7)',  'rgba(253,224,71,0.7)',
+        'rgba(251,191,36,0.7)',  'rgba(147,51,234,0.7)',  'rgba(236,72,153,0.7)',
+        'rgba(75,85,99,0.7)'
+    ];
+
+    // Bar Chart for Department (with different color bars)
+    const deptBarCtx = document.getElementById('departmentBarChart').getContext('2d');
+    const departmentLabels = {{ department_labels|safe }};
+    const departmentData = {{ department_data|safe }};
+    new Chart(deptBarCtx, {
+        type: 'bar',
+        data: {
+            labels: departmentLabels,
+            datasets: [{
+                label: 'Observations',
+                data: departmentData,
+                backgroundColor: departmentColors,
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+
+    // Bar Chart for PSL Member (Open/Due only)
+    const pslMemberLabels = {{ psl_member_labels|safe }};
+    const pslMemberData = {{ psl_member_data|safe }};
+
+    // Calculate min and max for scaling
+    const minCount = Math.min(...pslMemberData);
+    const maxCount = Math.max(...pslMemberData);
+
+    // Function to get color: light blue to dark blue
+    function getBarColor(count) {
+        if (maxCount === minCount) {
+            // All counts are same; use medium blue
+            return 'rgba(59,130,246,0.6)';
+        }
+        // Scale: 0 (min) -> 0.3 alpha, max -> 1 alpha
+        const alpha = 0.3 + 0.7 * ((count - minCount) / (maxCount - minCount));
+        // More count = more intense blue
+        return `rgba(59,130,246,${alpha})`;
+    }
+
+    const pslMemberBarColors = pslMemberData.map(count => getBarColor(count));
+
+    const pslBarCtx = document.getElementById('pslBarChart').getContext('2d');
+    new Chart(pslBarCtx, {
+        type: 'bar',
+        data: {
+            labels: pslMemberLabels,
+            datasets: [{
+                label: 'Open/Due Observations',
+                data: pslMemberData,
+                backgroundColor: pslMemberBarColors,
+                borderWidth: 1,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+</script>
+{% endblock maincontent %}

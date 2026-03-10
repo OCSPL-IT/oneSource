@@ -1,0 +1,250 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50/50">
+  <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+    <style>
+      .card{background:#fff;border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 2px 0 rgb(0 0 0 / .05)}
+      .card:hover{box-shadow:0 4px 6px -1px rgb(0 0 0 /.1),0 2px 4px -2px rgb(0 0 0 /.1)}
+      .data-wrap{overflow:auto}
+      .data-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.875rem}
+      .data-table thead th{position:sticky;top:0;background:#f8fafc;color:#475569;border-bottom:1px solid #e2e8f0;padding:.5rem .75rem;white-space:nowrap;font-weight:600;font-size:.75rem}
+      .data-table tbody td{padding:.5rem .75rem;border-bottom:1px solid #f1f5f9}
+      .num{text-align:right;font-variant-numeric:tabular-nums}
+      .row-hover{cursor:pointer}
+      .row-hover:hover{background:#f8fafc}
+      .row-hover.selected{background-color:#eff6ff;font-weight:600;color:#1d4ed8;}
+      .pill{display:inline-flex;align-items:center;gap:.375rem;background:#e0e7ff;border:1px solid #c7d2fe;color:#4338ca;padding:.25rem .6rem;border-radius:9999px;font-size:.75rem}
+      .pill button{opacity:.75}
+      .pill button:hover{opacity:1}
+      .status-card { cursor: pointer; }
+      .status-card.selected { border-color: #6366f1; background-color: #eef2ff; }
+    </style>
+
+    <header class="mb-4">
+      <h1 class="text-3xl font-bold text-slate-800">Daily Block Production Dashboard</h1>
+      <p class="mt-1 text-slate-500">Batch and Equipment Performance Overview</p>
+    </header>
+
+    <!-- Filters -->
+    <div class="mb-4 card p-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 items-end">
+        <div class="lg:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">From</label><input type="date" id="from" class="block w-full rounded-md border-slate-300 shadow-sm" value="{{ default_from|default:'' }}"></div>
+        <div class="lg:col-span-2"><label class="block text-sm font-medium text-slate-600 mb-1">To</label><input type="date" id="to" class="block w-full rounded-md border-slate-300 shadow-sm" value="{{ default_to|default:'' }}"></div>
+        <div class="lg:col-span-5"><label class="block text-sm font-medium text-slate-600 mb-1">Search</label><input id="q" placeholder="Item, Stage, Batch No, Equipment…" class="block w-full rounded-md border-slate-300 shadow-sm"></div>
+        <div class="lg:col-span-3 flex items-center gap-2 pt-1 sm:pt-6">
+          <button id="applyBtn" class="inline-flex w-full justify-center items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">Apply</button>
+          <button id="resetBtn" class="inline-flex w-auto justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Reset</button>
+          <a id="exportBtn" href="#" class="inline-flex w-auto justify-center items-center gap-2 rounded-md border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm hover:bg-emerald-100">Export</a>
+        </div>
+      </div>
+      <div id="activePills" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-4">
+      <div class="card p-5"><div class="text-sm text-slate-500">Total Batches</div><div id="kpiTotalBatches" class="text-2xl font-bold text-slate-800">0</div></div>
+      <div class="card p-5"><div class="text-sm text-slate-500">Total Quantity (Kg)</div><div id="kpiTotalQty" class="text-2xl font-bold text-amber-700">0</div></div>
+      <div class="card p-5"><div class="text-sm text-slate-500">Average BCT (Hrs)</div><div id="kpiAvgBct" class="text-2xl font-bold text-emerald-700">0</div></div>
+    </div>
+
+    <!-- Grouped Data -->
+    <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 mb-4">
+      <div class="card lg:col-span-2"><header class="p-4 border-b"><h3 class="font-semibold">Product Wise</h3></header><div class="data-wrap max-h-60"><table class="data-table"><thead></thead><tbody id="tblItem"></tbody></table></div></div>
+      <div class="card lg:col-span-2"><header class="p-4 border-b"><h3 class="font-semibold">Stage wise</h3></header><div class="data-wrap max-h-60"><table class="data-table"><thead></thead><tbody id="tblStage"></tbody></table></div></div>
+      <div class="card lg:col-span-1"><header class="p-4 border-b"><h3 class="font-semibold">Block wise</h3></header><div class="data-wrap max-h-60"><table class="data-table"><thead></thead><tbody id="tblBlock"></tbody></table></div></div>
+      <div class="lg:col-span-1 flex flex-col gap-4">
+        <div id="cardOnline" class="card p-5 status-card"><div class="text-sm text-slate-500">Online</div><div id="kpiOnline" class="text-2xl font-bold text-cyan-700">0</div></div>
+        <div id="cardCompleted" class="card p-5 status-card"><div class="text-sm text-slate-500">Completed</div><div id="kpiCompleted" class="text-2xl font-bold text-green-700">0</div></div>
+      </div>
+    </div>
+
+    <!-- Equipment wise card -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <!-- Inputs -->
+        <div class="card">
+          <header class="p-4 border-b">
+            <h3 class="font-semibold">Input Item</h3>
+          </header>
+          <div class="data-wrap max-h-48">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Material</th>
+                  <th class="num">Plan Qty</th>
+                  <th class="num">Actual Qty</th>
+                </tr>
+              </thead>
+              <tbody id="tblInput"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Outputs -->
+        <div class="card">
+          <header class="p-4 border-b">
+            <h3 class="font-semibold">Output Item</h3>
+          </header>
+          <div class="data-wrap max-h-48">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Material</th>
+                  <th class="num">Plan Qty</th>
+                  <th class="num">Actual Qty</th>
+                </tr>
+              </thead>
+              <tbody id="tblOutput"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Waste -->
+        <div class="card">
+          <header class="p-4 border-b">
+            <h3 class="font-semibold">Waste </h3>
+          </header>
+          <div class="data-wrap max-h-48">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Waste</th>
+                  <th class="num">Plan Qty</th>
+                  <th class="num">Actual Qty</th>
+                </tr>
+              </thead>
+              <tbody id="tblWaste"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Equipment (existing card, just moved here) -->
+        <div class="card">
+          <header class="p-4 border-b">
+            <h3 class="font-semibold">Equipment</h3>
+          </header>
+          <div class="data-wrap max-h-48">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Equipment ID</th>
+                  <th class="num">Std BCT (Avg)</th>
+                  <th class="num">Actual BCT (Avg)</th>
+                </tr>
+              </thead>
+              <tbody id="tblEquipment"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+    <!-- Batch-wise card -->
+    <div class="card">
+        <header class="p-4 border-b"><h3 class="font-semibold">Batch-wise Details (latest 100)</h3></header>
+        <div class="data-wrap max-h-80">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <!-- ADDED: Date column header -->
+                <th class="text-left ">Date</th>
+                <th class="text-left">Item ID</th>
+                <th class="text-left">Stage</th>
+                <th class="text-left">Block</th>
+                <th class="text-left">Batch No (BNO)</th>
+                <th class="text-left">Prepared By</th>
+              </tr>
+            </thead>
+            <tbody id="tblBatch"></tbody>
+          </table>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    const PROD_DATA_URL = "{% url 'daily_checks:production_dashboard_data' %}";
+    const EXPORT_DATA_URL = "{% url 'daily_checks:export_production_data' %}";
+
+    const state = {
+      from: document.getElementById('from').value,
+      to: document.getElementById('to').value,
+      q: '', item: '', stage: '', block: '', status: '',
+    };
+    
+    function qs(base, params){ const sp=new URLSearchParams(); Object.entries(params).forEach(([k,v])=>{ if(v) sp.append(k,v) }); const q=sp.toString(); return q?`${base}?${q}`:base; }
+    function updateExportLink() { document.getElementById('exportBtn').href = qs(EXPORT_DATA_URL, state); }
+    function setFilter(key, value) { state[key] = (state[key] === value) ? '' : value; if (key === 'item') { state.stage = ''; state.block = ''; state.status = ''; } if (key === 'stage') { state.block = ''; state.status = ''; } if (key === 'block') { state.status = ''; } renderPills(); load(); }
+    function clearFilter(key) { state[key] = ''; if (key === 'q') { document.getElementById('q').value = ''; } if (key === 'item') { state.stage = ''; state.block = ''; state.status = ''; } if (key === 'stage') { state.block = ''; state.status = ''; } if (key === 'block') { state.status = ''; } renderPills(); load(); }
+    function renderPills() { const wrap = document.getElementById('activePills'); wrap.innerHTML = ''; const labels = { item: 'Item', stage: 'Stage', block: 'Block', status: 'Status', q: 'Search' }; Object.entries(state).forEach(([k, v]) => { if (['from', 'to'].includes(k) || !v) return; const pill = document.createElement('span'); pill.className = 'pill'; pill.innerHTML = `<span><b>${labels[k]}:</b> ${v}</span> <button type="button" onclick="clearFilter('${k}')">✖</button>`; wrap.appendChild(pill); }); }
+    function fillTable(tbodyId, rows, renderFunc, clickMeta){ const tb=document.getElementById(tbodyId); tb.innerHTML=''; if(!rows || rows.length===0){ const colspan = tb.previousElementSibling.firstElementChild.children.length || 1; tb.innerHTML=`<tr><td colspan="${colspan}" class="text-center text-slate-500 py-6">No data</td></tr>`; return; } rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML = renderFunc(r); if(clickMeta){ const value = r[clickMeta.field]; tr.classList.add('row-hover'); if (state[clickMeta.key] === value) { tr.classList.add('selected'); } tr.addEventListener('click', () => setFilter(clickMeta.key, value)); } tb.appendChild(tr); }); }
+    function loadStatusCards(data) { const onlineCard = document.getElementById('cardOnline'); const completedCard = document.getElementById('cardCompleted'); document.getElementById('kpiOnline').textContent = data.by_status.online || 0; document.getElementById('kpiCompleted').textContent = data.by_status.completed || 0; onlineCard.classList.toggle('selected', state.status === 'Online'); completedCard.classList.toggle('selected', state.status === 'Completed'); }
+    
+    // Helper functions for formatting
+    function formatNum(num, dec=2) { return isNaN(Number(num)) ? '0.00' : Number(num).toFixed(dec); }
+    function formatDate(isoString) { if (!isoString) return ''; return isoString.split('T')[0]; }
+
+    async function load(){
+      updateExportLink();
+      const res = await fetch(qs(PROD_DATA_URL, state)); 
+      if(!res.ok) { alert("Failed to load dashboard data."); return; };
+      const data = await res.json();
+      
+      document.getElementById('kpiTotalBatches').textContent = data.totals.total_batches || 0;
+      document.getElementById('kpiTotalQty').textContent = formatNum(data.totals.total_qty);
+      document.getElementById('kpiAvgBct').textContent = formatNum(data.totals.avg_bct);
+
+      loadStatusCards(data);
+
+            fillTable('tblItem', data.by_item, r => `<td>${r.item}</td>`, {key: 'item', field: 'item'});
+      fillTable('tblStage', data.by_stage, r => `<td>${r.stage}</td>`, {key: 'stage', field: 'stage'});
+      fillTable('tblBlock', data.by_block, r => `<td>${r.block}</td>`, {key: 'block', field: 'block'});
+      
+      // Batch-wise details
+      fillTable('tblBatch', data.by_batch, r => `
+        <td class='whitespace-nowrap'>${formatDate(r.updated_at)}</td>
+        <td>${r.item}</td>
+        <td>${r.stage}</td>
+        <td class='whitespace-nowrap'>${r.block}</td>
+        <td>${r.bno}</td>
+        <td>${r.prepared_by}</td>
+      `);
+
+      // NEW: BOM Input / Output / Waste tables
+      fillTable('tblInput', data.by_input, r => `
+        <td>${r.material_name}</td>
+        <td class="num">${formatNum(r.quantity)}</td>
+        <td class="num">${formatNum(r.actual_qty)}</td>
+      `);
+      fillTable('tblOutput', data.by_output, r => `
+        <td>${r.material_name}</td>
+        <td class="num">${formatNum(r.quantity)}</td>
+        <td class="num">${formatNum(r.actual_qty)}</td>
+      `);
+      fillTable('tblWaste', data.by_waste, r => `
+        <td>${r.waste_name}</td>
+        <td class="num">${formatNum(r.quantity)}</td>
+        <td class="num">${formatNum(r.actual_qty)}</td>
+      `);
+
+      // Existing equipment-wise table
+      fillTable('tblEquipment', data.by_equipment, r => `
+        <td>${r.equipment_id}</td>
+        <td class="num">${formatNum(r.std_bct)}</td>
+        <td class="num font-semibold ${r.actual_bct > r.std_bct ? 'text-rose-600' : 'text-emerald-600'}">
+          ${formatNum(r.actual_bct)}
+        </td>
+      `);
+    }
+
+    document.getElementById('applyBtn').addEventListener('click', ()=>{ state.from=document.getElementById('from').value; state.to=document.getElementById('to').value; state.q=document.getElementById('q').value.trim(); state.item=''; state.stage=''; state.block=''; state.status=''; renderPills(); load(); });
+    document.getElementById('resetBtn').addEventListener('click', ()=>{ state.from="{{ default_from|default:'' }}"; state.to="{{ default_to|default:'' }}"; state.q=''; state.item=''; state.stage=''; state.block=''; state.status=''; document.getElementById('from').value=state.from; document.getElementById('to').value=state.to; document.getElementById('q').value=''; renderPills(); load(); });
+    document.getElementById('cardOnline').addEventListener('click', () => setFilter('status', 'Online'));
+    document.getElementById('cardCompleted').addEventListener('click', () => setFilter('status', 'Completed'));
+    document.getElementById('q').addEventListener('keypress', (e)=>{ if(e.key==='Enter') document.getElementById('applyBtn').click(); });
+
+    renderPills();
+    load();
+  </script>
+</div>
+{% endblock %}

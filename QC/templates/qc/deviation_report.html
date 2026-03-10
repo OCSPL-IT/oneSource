@@ -1,0 +1,71 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Deviation Report – QC Project{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#f5f7fb; --surface:#fff; --border:#e5e7eb; --text:#374151;
+    --brand:#3b82f6; --brand-dark:#1e40af; --thead:#eef2ff;
+  }
+  .devr-body{background:var(--bg); font-family:Inter,system-ui,sans-serif; color:var(--text); margin:0}
+  .wrap{max-width:1100px; margin:32px auto; padding:0 24px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.06); padding:20px; margin-bottom:20px}
+  .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px}
+  .toolbar h2{margin:0; color:var(--brand-dark)}
+  .btn{border:1px solid var(--brand); color:var(--brand-dark); padding:8px 12px; border-radius:8px; text-decoration:none; font-weight:600; background:#fff; display:inline-block}
+  .btn:hover{background:var(--brand); color:#fff}
+  table{width:100%; border-collapse:collapse}
+  th,td{padding:10px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top}
+  th{background:var(--thead); color:var(--brand-dark)}
+  .muted{color:#64748b}
+</style>
+
+<div class="devr-body">
+  <div class="wrap">
+    <div class="toolbar">
+      <h2>Deviation Report</h2>
+      <div>
+        <a class="btn" href="{% url 'qc:deviation_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">Download Excel</a>
+        <a class="btn" href="{% url 'qc:deviation_list' %}">Back to List</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Deviation No.</th>
+            <th>Date</th>
+            <th>Product</th>
+            <th>Plant</th>
+            <th>Batch</th>
+            <th>Status</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr>
+              <td>{{ r.deviation_no }}</td>
+              <td>{{ r.date|date:"d-m-Y" }}</td>
+              <td>{{ r.product }}</td>
+              <td>{{ r.plant }}</td>
+              <td>{{ r.batch_no }}</td>
+              <td>{{ r.get_status_display }}</td>
+              <td>{{ r.description|truncatechars:80 }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="7" class="muted" style="text-align:center; padding:16px">No data.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock maincontent %}

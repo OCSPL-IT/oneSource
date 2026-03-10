@@ -1,0 +1,77 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>oneSource | Real-Time QC Status{% block title %}{% endblock %}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Tailwind + Alpine + Icons (global) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="{% static 'main/css/fontawesome.css' %}">
+  <script src="{% static 'main/js/fontawesome.js' %}"></script>
+
+  <style>
+    /* Lock the viewport — no window scrolling */
+    html, body { height: 100%; overflow: hidden; max-width: 100vw; }
+    [x-cloak]{display:none!important}
+
+    /* (Optional) reusable scroll-card pattern kept for convenience */
+    .scroll-card{ display:flex; flex-direction:column; max-height:var(--scroll-card-max-h,70vh); background:#fff; border-radius:0.5rem; }
+    .scroll-card .scroll-header, .scroll-card .scroll-footer{ flex:0 0 auto; position:sticky; z-index:1; background:inherit; }
+    .scroll-card .scroll-header{ top:0; } .scroll-card .scroll-footer{ bottom:0; }
+    .scroll-card .scroll-body{ flex:1 1 auto; overflow-y:auto; min-height:0; -webkit-overflow-scrolling:touch; }
+  </style>
+
+  {% block head_extra %}{% endblock %}
+</head>
+
+<body class="bg-gray-50">
+
+  <!-- App shell (fixed to viewport height) -->
+  <div x-data="{ isSidebarOpen:false }"
+       class="relative lg:flex h-screen overflow-hidden">
+
+    {% include 'main/sidebar.html' %}
+
+    <!-- Right side: column layout; header/footer fixed, main scrolls -->
+    <div class="flex-1 flex flex-col min-w-0 min-h-0">
+      {% include 'main/navbar.html' %}
+
+      <!-- Only this area scrolls -->
+      <main class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-6 sm:p-8 lg:p-10">
+        {% block content %}{% endblock %}
+      </main>
+
+      <footer class="flex-none border-t bg-white h-14 flex items-center justify-center text-sm text-gray-500">
+        © {% now "Y" %} OC Specialities Pvt. Ltd. All rights reserved.
+      </footer>
+    </div>
+
+    <!-- Mobile overlay -->
+    <div x-show="isSidebarOpen" x-cloak @click="isSidebarOpen=false"
+         class="fixed inset-0 z-20 bg-black/50 lg:hidden"></div>
+  </div>
+
+  <!-- Helper for scroll-card components (optional) -->
+  <script>
+    (function(){
+      function sizeScrollCards() {
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        document.querySelectorAll('.scroll-card').forEach(el => {
+          const rect = el.getBoundingClientRect();
+          const max = Math.max(160, vh - rect.top - 16); // 16px bottom space
+          el.style.setProperty('--scroll-card-max-h', max + 'px');
+        });
+      }
+      window.addEventListener('load', sizeScrollCards, { once: true });
+      window.addEventListener('resize', sizeScrollCards);
+      window.sizeScrollCards = sizeScrollCards;
+    })();
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,38 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="{% static 'store/css/store.css' %}">
+
+<div class="flex justify-center items-center mt-10">
+    <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-5">
+        <h2 class="text-2xl font-semibold text-gray-700 text-center mb-4">Vehicle Details</h2>
+
+        <hr>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div><strong>Record Date:</strong> {{ vehicle.record_date|date:"d/m/Y"  }}</div>
+            <div><strong>Invoice:</strong> {{ vehicle.invoice }}</div>
+            <div><strong>Supplier Name:</strong> {{ vehicle.name_of_supplier }}</div>
+            <div><strong>Material:</strong> {{ vehicle.material }}</div>
+            <div><strong>Unit:</strong> {{ vehicle.unit }}</div>
+            <div><strong>Quantity:</strong> {{ vehicle.qty }}</div>
+            <div><strong>Reporting Date:</strong> {{ vehicle.reporting_date|date:"d/m/Y"  }}</div>
+            <div><strong>Reporting Time:</strong> {{ vehicle.report_time }}</div>
+            <div><strong>Unloading Date:</strong> {{ vehicle.unloading_date|date:"d/m/Y"  }}</div>
+            <div><strong>Unloading Time:</strong> {{ vehicle.unloading_time }}</div>
+            <div><strong>Unloading Days:</strong> {{ vehicle.unloading_days }}</div>
+            <div><strong>Status:</strong> {{ vehicle.status }}</div>
+            <div><strong>Vehicle No:</strong> {{ vehicle.vehicle_no }}</div>
+            <div><strong>Name of Transporter:</strong> {{ vehicle.name_of_transporter }}</div>
+            <div><strong>Manufacture:</strong> {{ vehicle.manufacture }}</div>
+            <div><strong>Remarks:</strong> {{ vehicle.remark }}</div>
+        </div>
+
+        <div class="flex justify-between mt-6">
+            <a href="{% url 'vehicle_list' %}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">Back</a>
+            <a href="{% url 'edit_vehicle' vehicle.id %}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Edit</a>
+        </div>
+    </div>
+</div>
+{% endblock maincontent %}

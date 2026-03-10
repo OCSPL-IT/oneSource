@@ -1,0 +1,96 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Party Master{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Party Master</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Manage customers, internal parties, and contacts
+      </p>
+    </div>
+
+    <a href="{% url 'accounts:party_create' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-md
+              bg-indigo-600 text-white text-sm font-medium
+              hover:bg-indigo-700">
+      <i class="fa-solid fa-plus"></i>
+      New Party
+    </a>
+  </div>
+
+  <!-- Search -->
+  <form method="get" class="flex gap-2 max-w-md">
+    <input
+      type="text"
+      name="q"
+      value="{{ q }}"
+      placeholder="Search party name…"
+      class="w-full border border-slate-300 rounded-md px-3 py-2 text-sm
+             focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    <button
+      type="submit"
+      class="px-4 py-2 rounded-md border border-slate-300
+             bg-white text-sm hover:bg-slate-50">
+      Search
+    </button>
+  </form>
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600">
+        <tr>
+          <th class="px-4 py-3 text-left font-medium">Party Code</th>
+          <th class="px-4 py-3 text-left font-medium">Party Name</th>
+          <th class="px-4 py-3 text-left font-medium">Status</th>
+          <th class="px-4 py-3 text-right font-medium">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        {% for p in parties %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-3 text-slate-700">
+            {{ p.party_code }}
+          </td>
+          <td class="px-4 py-3 font-medium text-slate-900">
+            {{ p.party_name }}
+          </td>
+          <td class="px-4 py-3">
+            {% if p.is_active %}
+              <span class="inline-flex px-2 py-1 text-xs rounded-full
+                           bg-emerald-100 text-emerald-700">
+                Active
+              </span>
+            {% else %}
+              <span class="inline-flex px-2 py-1 text-xs rounded-full
+                           bg-rose-100 text-rose-700">
+                Inactive
+              </span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-right">
+            <a href="{% url 'accounts:party_edit' p.pk %}"
+               class="text-indigo-600 hover:text-indigo-800 font-medium">
+              Edit
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-4 py-6 text-center text-slate-500">
+            No parties found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

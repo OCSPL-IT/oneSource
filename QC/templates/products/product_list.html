@@ -1,0 +1,228 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Products – QC Project{% endblock %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* ───────────────────────────────────
+      THEME & LAYOUT (ALIGNED)
+  ─────────────────────────────────── */
+  :root {
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --color-surface: #ffffff;
+    --color-border: #e5e7eb; /* slate-200 */
+    --color-bg-subtle: #f8fafc; /* slate-50 */
+    --text-heading: #111827; /* slate-900 */
+    --text-body: #374151; /* slate-700 */
+    --text-muted: #6b7280; /* slate-500 */
+    --color-primary: #2563eb; /* blue-600 */
+    --color-primary-hover: #1d4ed8; /* blue-700 */
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  
+  .product-list-page {
+    font-family: var(--font-sans);
+    padding: 1.5rem; /* p-6 */
+  }
+
+  /* --- MESSAGES STYLES (ALIGNED) --- */
+  .messages-container { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .message-box {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.75rem 1rem; border-radius: var(--radius-md);
+    font-size: 0.875rem; font-weight: 500; border: 1px solid transparent;
+  }
+  .message-box.success { color: #166534; background-color: #dcfce7; border-color: #bbf7d0; }
+  .message-box.error { color: #991b1b; background-color: #fee2e2; border-color: #fecaca; }
+  .message-box.warning { color: #92400e; background-color: #fef3c7; border-color: #fde68a; }
+  .message-box.info { color: #1e40af; background-color: #dbeafe; border-color: #bfdbfe; }
+  .message-box .close-btn { background: none; border: none; color: inherit; opacity: 0.7; font-size: 1.2rem; cursor: pointer; }
+
+  /* --- HEADER & CONTROLS (ALIGNED) --- */
+  .list-page-header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 1rem; margin-bottom: 1.5rem;
+  }
+  .list-page-header h1 { font-size: 1.875rem; font-weight: 700; color: var(--text-heading); margin: 0; }
+  .btn-add-new {
+    display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem;
+    font-size: 0.875rem; font-weight: 500; text-decoration: none; color: white;
+    background-color: var(--color-primary); border: none; border-radius: var(--radius-md);
+    transition: all 0.2s ease; box-shadow: var(--shadow-sm);
+  }
+  .btn-add-new:hover { background-color: var(--color-primary-hover); }
+
+  .controls-container {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 1rem; padding: 1.25rem; border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); background-color: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .search-wrapper { position: relative; flex-grow: 1; }
+  .search-icon { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  #product-search-input {
+    width: 100%; padding: 0.625rem 1rem 0.625rem 2.5rem; font-size: 0.875rem;
+    border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  }
+  #product-search-input:focus {
+    outline: none; border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
+
+  /* --- TABLE STYLING (ALIGNED) --- */
+  .table-container {
+    margin-top: 1.5rem; border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    background-color: var(--color-surface); box-shadow: var(--shadow-sm);
+  }
+  .styled-product-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .styled-product-table thead th {
+    padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-subtle); color: var(--text-muted);
+    font-weight: 500; text-align: left; white-space: nowrap;
+    text-transform: uppercase; font-size: 0.75rem;
+  }
+  .styled-product-table tbody tr { border-bottom: 1px solid var(--color-border); }
+  .styled-product-table tbody tr:last-child { border-bottom: none; }
+  .styled-product-table tbody tr.clickable-row { cursor: pointer; }
+  .styled-product-table tbody tr.clickable-row:hover { background-color: var(--color-bg-subtle); }
+  .styled-product-table td { padding: 1rem; vertical-align: top; }
+
+  .spec-group-list { list-style: none; padding: 0; margin: 0; }
+  .spec-group-title { font-weight: 600; color: var(--text-body); margin-bottom: 0.25rem; }
+  .spec-item-list { list-style: disc; margin: 0; padding-left: 1.25rem; font-size: 0.8rem; color: var(--text-muted); }
+
+  .actions-cell { text-align: right; }
+  .actions-cell .btn-group { display: inline-flex; gap: 0.5rem; }
+  .actions-cell .btn {
+    text-decoration: none; padding: 0.375rem 0.875rem; font-size: 0.75rem;
+    font-weight: 500; border-radius: 9999px; transition: all .2s ease;
+  }
+  .actions-cell .edit { color: #15803d; background-color: #dcfce7; }
+  .actions-cell .edit:hover { color: #fff; background-color: #16a34a; }
+  .actions-cell .delete { color: #b91c1c; background-color: #fee2e2; }
+  .actions-cell .delete:hover { color: #fff; background-color: #dc2626; }
+
+  /* --- PAGINATION (ALIGNED) --- */
+  .pagination { display: flex; list-style: none; padding: 0; margin: 0; }
+  .page-item .page-link {
+    display: block; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+    color: var(--text-body); text-decoration: none; background-color: white;
+    border: 1px solid var(--color-border); border-left-width: 0;
+  }
+  .page-item:first-child .page-link { border-left-width: 1px; border-top-left-radius: var(--radius-md); border-bottom-left-radius: var(--radius-md); }
+  .page-item:last-child .page-link { border-top-right-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); }
+  .page-link:hover { background-color: var(--color-bg-subtle); }
+  .page-item.active .page-link { z-index: 1; color: var(--color-primary); background-color: #dbeafe; border-color: #93c5fd; }
+  .page-item.disabled .page-link { color: var(--text-muted); pointer-events: none; background-color: var(--color-bg-subtle); }
+
+  .empty-state-message { text-align: center; padding: 4rem 1.5rem; font-size: 1rem; color: var(--text-muted); }
+
+  .btn-excel{display:inline-flex;align-items:center;gap:.5rem;background:#16a34a;color:#fff;
+             border:1px solid #16a34a;border-radius:.5rem;padding:.5rem .8rem;text-decoration:none}
+  .btn-excel:hover{background:#15803d}
+</style>
+
+<div class="product-list-page">
+    <header class="list-page-header">
+      <h1>Products</h1>
+      {% if perms.QC.add_product %}
+      <a href="{% url 'qc:product_create' %}" class="btn-add-new">
+        <i class="fa-solid fa-plus fa-sm"></i> New Product
+      </a>
+      {% endif %}
+    </header>
+
+    {% if messages %}
+    <div class="messages-container">
+      {% for message in messages %}
+      <div class="message-box {{ message.tags }}" role="alert">
+        <span>{{ message }}</span>
+        <button type="button" class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="controls-container">
+        <form method="GET" action="{% url 'qc:product_list' %}" class="search-wrapper">
+          <span class="search-icon"><i class="fa-solid fa-search"></i></span>
+          <input type="text" name="q" id="product-search-input" placeholder="Search by name, code, stage, or spec..." value="{{ search_query|default:'' }}" aria-label="Search products" />
+        </form>
+        <a class="btn btn-excel" 
+          href="{% url 'qc:product_export_xlsx' %}?{% if search_query %}q={{ search_query|urlencode }}{% endif %}">
+          <i class="fa-regular fa-file-excel"></i> Excel
+        </a>
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation">
+          <ul class="pagination">
+            {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">&laquo;</a></li>{% else %}<li class="page-item disabled"><span class="page-link">&laquo;</span></li>{% endif %}
+            {% for num in page_obj.paginator.get_elided_page_range %}{% if num == page_obj.paginator.ELLIPSIS %}<li class="page-item disabled"><span class="page-link">&hellip;</span></li>{% else %}<li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}">{{ num }}</a></li>{% endif %}{% endfor %}
+            {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}">&raquo;</a></li>{% else %}<li class="page-item disabled"><span class="page-link">&raquo;</span></li>{% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+    </div>
+
+    <div class="table-container">
+      {% if products %}
+          <table class="styled-product-table" aria-label="Products table">
+            <thead><tr><th>Name</th><th>Stage</th><th>BOM Code</th><th>Item Type</th><th>Specifications</th>{% if perms.QC.change_product or perms.QC.delete_product %}<th>Actions</th>{% endif %}</tr></thead>
+            <tbody>
+              {% for p in products %}
+              <tr class="clickable-row" data-href="{% url 'qc:product_detail' p.pk %}">
+                <td>{{ p.name }}</td><td>{{ p.stages }}</td><td>{{ p.code }}</td><td>{{ p.item_type }}</td>
+                <td>
+                  {% if p.visible_specs %}<ul class="spec-group-list">{% regroup p.visible_specs by group as spec_groups %}{% for grp in spec_groups %}<li><div class="spec-group-title">{{ grp.grouper|default:'General' }}</div><ul class="spec-item-list">{% for s in grp.list %}<li>{{ s.name }}{% if s.unit %} ({{ s.unit }}){% endif %}{% if s.spec_type == 'numeric' %}: {{ s.min_val|default:'–' }}–{{ s.max_val|default:'–' }}{% elif s.spec_type == 'choice' %}: {{ s.allowed_choices|default:'–' }}{% endif %}</li>{% endfor %}</ul></li>{% endfor %}</ul>
+                  {% else %}<div style="color: var(--text-muted); font-size: 0.8rem;">No specs defined</div>{% endif %}
+                </td>
+                {% if perms.QC.change_product or perms.QC.delete_product %}
+                <td class="actions-cell">
+                  <div class="btn-group">
+                    {% if perms.QC.change_product %}<a href="{% url 'qc:product_update' p.pk %}" class="btn edit" aria-label="Edit {{ p.name }}">Edit</a>{% endif %}
+                    {% if perms.QC.delete_product %}<a href="{% url 'qc:product_delete' p.pk %}" class="btn delete" onclick="return confirm('Delete {{ p.name|escapejs }}?');" aria-label="Delete {{ p.name }}">Delete</a>{% endif %}
+                  </div>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+      {% else %}
+        <div class="empty-state-message">
+          {% if search_query %}<p>No products found for “{{ search_query }}”.</p>{% else %}<p>No products have been created yet.</p>{% endif %}
+        </div>
+      {% endif %}
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const searchForm = document.querySelector('.controls-container form');
+  const searchInput = document.getElementById('product-search-input');
+  let debounceTimer;
+  searchInput.addEventListener('input', function(e) {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => { searchForm.submit(); }, 400);
+  });
+  searchForm.addEventListener('submit', function(e) {
+      if (!searchInput.value.trim()) {
+          // Prevent submitting an empty search, effectively clearing it
+          window.location = "{% url 'qc:product_list' %}";
+          e.preventDefault();
+      }
+  });
+  document.querySelectorAll('tr.clickable-row').forEach(r => {
+    r.addEventListener('click', e => {
+      if (e.target.closest('.actions-cell')) return;
+      if (r.dataset.href) window.location = r.dataset.href;
+    });
+  });
+});
+</script>
+
+{% endblock maincontent %}

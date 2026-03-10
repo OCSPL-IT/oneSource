@@ -1,0 +1,394 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-6xl mx-auto bg-white shadow-xl rounded-3xl p-6 sm:p-8 mt-6">
+
+  <!-- Messages -->
+  {% if messages %}
+  <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-2xl space-y-2">
+    {% for message in messages %}
+    <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+      {% if message.tags == 'debug' %}bg-gray-500
+      {% elif message.tags == 'info' %}bg-blue-500
+      {% elif message.tags == 'success' %}bg-green-500
+      {% elif message.tags == 'warning' %}bg-yellow-500
+      {% elif message.tags == 'error' %}bg-red-500
+      {% endif %}">
+      <span class="flex-1">{{ message }}</span>
+      <button type="button" class="ml-3 text-white hover:text-gray-200" onclick="this.parentElement.remove()">✖</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Top bar -->
+  <div class="flex items-center justify-between mb-4 gap-2">
+    <a href="{% url 'indexpage' %}"
+       class="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+      Back to Main Page
+    </a>
+
+    <h1 class="text-xl sm:text-2xl font-semibold text-gray-800 text-center">
+      ATFD Entry Form
+    </h1>
+
+    <a href="{% url 'mee:atfd_reading_list' %}"
+       class="inline-flex items-center px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600">
+      View Records
+    </a>
+  </div>
+
+  <hr class="my-3">
+
+  <form method="post" class="space-y-6" id="atfdForm">
+    {% csrf_token %}
+
+    <!-- Reading Date -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-2">
+      <label class="font-medium text-gray-700 w-full sm:w-44 mb-2 sm:mb-0">
+        Reading Date:
+      </label>
+      {{ form.reading_date }}{{ form.reading_date.errors }}
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Reading Fields -->
+    <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200">
+
+      <!-- =================== ATFD PARAMETERS =================== -->
+      <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">ATFD Parameters</h2>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Effluent Feed (KL)</label>
+          {{ form.effluent_feed }}{{ form.effluent_feed.errors }}
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Steam Consume (MT)</label>
+          {{ form.steam_consume }}{{ form.steam_consume.errors }}
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Steam Economy (KL/MT)</label>
+          {{ form.steam_economy }}{{ form.steam_economy.errors }}
+          <p class="text-[11px] text-gray-500 mt-1">Auto: Effluent Feed / Steam Consume</p>
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Blower Draft (mmWC)</label>
+          {{ form.blower_draft }}{{ form.blower_draft.errors }}
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Steam Inlet Pressure (kg/cm2)</label>
+          {{ form.steam_inlet_pressure }}{{ form.steam_inlet_pressure.errors }}
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">ATFD RPM</label>
+          {{ form.atfd_rpm }}{{ form.atfd_rpm.errors }}
+        </div>
+
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">ATFD Salt (MT)</label>
+          {{ form.atfd_salt }}{{ form.atfd_salt.errors }}
+        </div>
+      </div>
+
+      <hr class="my-6">
+
+      <!-- =================== FEED EFFLUENT =================== -->
+      <h3 class="text-base font-semibold text-gray-800 mb-3">FEED Effluent</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Effluent Feed pH</label>
+          {{ form.effluent_feed_ph }}{{ form.effluent_feed_ph.errors }}
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Effluent Feed TDS (%)</label>
+          {{ form.effluent_feed_TDS }}{{ form.effluent_feed_TDS.errors }}
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Effluent Feed COD (%)</label>
+          {{ form.effluent_feed_cod }}{{ form.effluent_feed_cod.errors }}
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Effluent Feed spGr</label>
+          {{ form.effluent_feed_spgr }}{{ form.effluent_feed_spgr.errors }}
+        </div>
+      </div>
+
+      <hr class="my-6">
+
+      <!-- =================== ATFD VAPOR CONDENSATE =================== -->
+      <h3 class="text-base font-semibold text-gray-800 mb-3">ATFD Vapor Condensate</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">ATFD Vapor condensate Qty (KL)</label>
+          {{ form.atfd_qty }}{{ form.atfd_qty.errors }}
+          <p class="text-[11px] text-gray-500 mt-1">Auto: (Effluent Feed × spGr) − ATFD Salt</p>
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Vapor Condensate pH</label>
+          {{ form.vapor_contensate_ph }}{{ form.vapor_contensate_ph.errors }}
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Vapor Condensate TDS (%)</label>
+          {{ form.vapor_contensate_tds }}{{ form.vapor_contensate_tds.errors }}
+        </div>
+        <div>
+          <label class="block text-gray-700 text-sm mb-1">Vapor Condensate COD (%)</label>
+          {{ form.vapor_contensate_cod }}{{ form.vapor_contensate_cod.errors }}
+        </div>
+      </div>
+
+    </div>
+
+    <hr class="my-6">
+
+    <!-- Downtimes -->
+    <div class="mt-4">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-base font-semibold text-gray-800">Downtimes</h2>
+        <button type="button" id="btn-add-dt"
+                class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700">
+          + Add Downtime
+        </button>
+      </div>
+
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
+        <table class="min-w-full text-xs">
+          <thead class="bg-gray-50 text-gray-600">
+            <tr>
+              <th class="px-3 py-2 text-left">Start time</th>
+              <th class="px-3 py-2 text-left">End time</th>
+              <th class="px-3 py-2 text-left">Total (hrs)</th>
+              <th class="px-3 py-2 text-left">Reason</th>
+              <th class="px-3 py-2"></th>
+            </tr>
+          </thead>
+
+          <tbody id="dt-rows">
+            {% if edit_mode and existing_downtimes %}
+              {% for dt in existing_downtimes %}
+              <tr class="dt-row">
+                <td class="px-3 py-2">
+                  <input type="datetime-local" name="dt_start[]"
+                         class="dt-start border border-gray-300 rounded-lg px-2 py-1 w-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                         value="{{ dt.downtime_start|date:'Y-m-d\\TH:i' }}">
+                </td>
+                <td class="px-3 py-2">
+                  <input type="datetime-local" name="dt_end[]"
+                         class="dt-end border border-gray-300 rounded-lg px-2 py-1 w-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                         value="{{ dt.downtime_end|date:'Y-m-d\\TH:i' }}">
+                </td>
+                <td class="px-3 py-2">
+                  <input type="number" step="0.01" name="dt_total[]"
+                         class="dt-total border border-gray-300 bg-slate-100 rounded-lg px-2 py-1 w-full text-xs" readonly
+                         value="{{ dt.downtime_hours }}">
+                </td>
+                <td class="px-3 py-2">
+                  <input type="text" name="dt_reason[]"
+                         class="dt-reason border border-gray-300 rounded-lg px-2 py-1 w-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                         value="{{ dt.reason }}">
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <button type="button" class="btn-remove-dt text-red-500 hover:text-red-700 text-sm">✕</button>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr class="dt-row">
+                <td class="px-3 py-2">
+                  <input type="datetime-local" name="dt_start[]"
+                         class="dt-start border border-gray-300 rounded-lg px-2 py-1 w-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="px-3 py-2">
+                  <input type="datetime-local" name="dt_end[]"
+                         class="dt-end border border-gray-300 rounded-lg px-2 py-1 w-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="px-3 py-2">
+                  <input type="number" step="0.01" name="dt_total[]"
+                         class="dt-total border border-gray-300 bg-slate-100 rounded-lg px-2 py-1 w-full text-xs" readonly>
+                </td>
+                <td class="px-3 py-2">
+                  <input type="text" name="dt_reason[]"
+                         class="dt-reason border border-gray-300 rounded-lg px-2 py-1 w-full text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <button type="button" class="btn-remove-dt text-red-500 hover:text-red-700 text-sm">✕</button>
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div id="dt-error" class="mt-2 text-sm text-red-600 hidden"></div>
+    </div>
+
+    <!-- Save -->
+    <div class="pt-4 flex justify-end">
+      <button type="submit"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-8 rounded-xl text-sm sm:text-base">
+        Save ATFD Reading
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  // ---- Steam Economy auto preview ----
+  const effluentFeed  = document.getElementById("id_effluent_feed");
+  const steamConsume  = document.getElementById("id_steam_consume");
+  const steamEconomy  = document.getElementById("id_steam_economy");
+
+  function recalcSteamEconomy() {
+    if (!steamEconomy) return;
+    const a = parseFloat(effluentFeed?.value || "");
+    const s = parseFloat(steamConsume?.value || "");
+    if (!isNaN(a) && !isNaN(s) && s > 0) steamEconomy.value = (a / s).toFixed(4);
+    else steamEconomy.value = "";
+  }
+  [effluentFeed, steamConsume].forEach(el => el && el.addEventListener("input", recalcSteamEconomy));
+  recalcSteamEconomy();
+
+  // ---- ATFD Qty auto preview: (Effluent Feed × spGr) − ATFD Salt ----
+  const spgr    = document.getElementById("id_effluent_feed_spgr");
+  const salt    = document.getElementById("id_atfd_salt");
+  const atfdQty = document.getElementById("id_atfd_qty");
+
+  function recalcAtfdQty() {
+    if (!atfdQty) return;
+    const f = parseFloat(effluentFeed?.value || "");
+    const g = parseFloat(spgr?.value || "");
+    const s = parseFloat(salt?.value || "");
+    if (!isNaN(f) && !isNaN(g) && !isNaN(s)) atfdQty.value = ((f * g) - s).toFixed(2);
+    else atfdQty.value = "";
+  }
+  [effluentFeed, spgr, salt].forEach(el => el && el.addEventListener("input", recalcAtfdQty));
+  recalcAtfdQty();
+
+  // ---- Downtime rows (same as your code) ----
+  const dtRowsBody = document.getElementById("dt-rows");
+  const btnAddDt   = document.getElementById("btn-add-dt");
+  const dtError    = document.getElementById("dt-error");
+  const form       = document.getElementById("atfdForm");
+
+  function setDtError(msg) {
+    if (!dtError) return;
+    if (msg) { dtError.textContent = msg; dtError.classList.remove("hidden"); }
+    else { dtError.textContent = ""; dtError.classList.add("hidden"); }
+  }
+
+  function parseDt(str) {
+    if (!str) return null;
+    const d = new Date(str);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  function recalcRow(tr) {
+    const startInput = tr.querySelector(".dt-start");
+    const endInput   = tr.querySelector(".dt-end");
+    const totalInput = tr.querySelector(".dt-total");
+    if (!startInput || !endInput || !totalInput) return;
+
+    const sVal = startInput.value;
+    const eVal = endInput.value;
+
+    if (!sVal || !eVal) { totalInput.value = ""; return; }
+
+    const sDt = parseDt(sVal);
+    const eDt = parseDt(eVal);
+
+    if (!sDt || !eDt || eDt <= sDt) {
+      totalInput.value = "";
+      setDtError("Start date/time should be less than end date/time for all downtime rows.");
+      return;
+    }
+
+    const hours = (eDt - sDt) / 3600000;
+    totalInput.value = hours.toFixed(2);
+    setDtError("");
+  }
+
+  document.querySelectorAll("#dt-rows .dt-row").forEach(tr => recalcRow(tr));
+
+  function createDtRow() {
+    const tr = document.createElement("tr");
+    tr.className = "dt-row";
+    tr.innerHTML = `
+      <td class="px-3 py-2">
+        <input type="datetime-local" name="dt_start[]"
+               class="dt-start border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </td>
+      <td class="px-3 py-2">
+        <input type="datetime-local" name="dt_end[]"
+               class="dt-end border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </td>
+      <td class="px-3 py-2">
+        <input type="number" step="0.01" name="dt_total[]"
+               class="dt-total border border-gray-300 bg-slate-100 rounded-lg px-2 py-1 w-full text-xs" readonly>
+      </td>
+      <td class="px-3 py-2">
+        <input type="text" name="dt_reason[]"
+               class="dt-reason border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </td>
+      <td class="px-3 py-2 text-right">
+        <button type="button" class="btn-remove-dt text-red-500 hover:text-red-700 text-sm">✕</button>
+      </td>
+    `;
+    return tr;
+  }
+
+  btnAddDt?.addEventListener("click", () => dtRowsBody.appendChild(createDtRow()));
+
+  dtRowsBody?.addEventListener("input", function (e) {
+    if (e.target.classList.contains("dt-start") || e.target.classList.contains("dt-end")) {
+      const tr = e.target.closest(".dt-row");
+      if (tr) recalcRow(tr);
+    }
+  });
+
+  dtRowsBody?.addEventListener("click", function (e) {
+    if (e.target.classList.contains("btn-remove-dt")) {
+      const tr = e.target.closest(".dt-row");
+      if (!tr) return;
+
+      if (dtRowsBody.querySelectorAll(".dt-row").length > 1) tr.remove();
+      else tr.querySelectorAll("input").forEach(inp => inp.value = "");
+
+      setDtError("");
+    }
+  });
+
+  form?.addEventListener("submit", function (e) {
+    let hasError = false;
+    dtRowsBody.querySelectorAll(".dt-row").forEach(tr => {
+      const s  = tr.querySelector(".dt-start")?.value || "";
+      const en = tr.querySelector(".dt-end")?.value || "";
+      const r  = tr.querySelector(".dt-reason")?.value || "";
+
+      if (!s && !en && !r) return;
+
+      const sDt = parseDt(s);
+      const eDt = parseDt(en);
+      if (!s || !en || !sDt || !eDt || eDt <= sDt) hasError = true;
+    });
+
+    if (hasError) {
+      e.preventDefault();
+      setDtError("Please ensure all filled downtime rows have valid start < end date/time.");
+    }
+  });
+});
+</script>
+{% endblock %}

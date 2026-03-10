@@ -1,0 +1,62 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-3xl mx-auto my-10 bg-white p-6 md:p-8 rounded-xl shadow-md">
+
+  {% if messages %}
+    <div class="space-y-2 mb-4">
+      {% for message in messages %}
+        <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm border
+          {% if message.tags == 'success' %}
+            bg-emerald-50 text-emerald-800 border-emerald-200
+          {% elif message.tags == 'warning' %}
+            bg-amber-50 text-amber-800 border-amber-200
+          {% elif message.tags == 'info' %}
+            bg-sky-50 text-sky-800 border-sky-200
+          {% else %}
+            bg-rose-50 text-rose-800 border-rose-200
+          {% endif %}">
+          <span>{{ message }}</span>
+          <button type="button"
+                  class="ml-3 text-xs opacity-70 hover:opacity-100"
+                  onclick="this.parentElement.remove()">✖</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <h1 class="text-xl font-bold text-slate-900 mb-4">
+    Delete Domestic ETA Record
+  </h1>
+
+  <p class="text-sm text-slate-700 mb-4">
+    Are you sure you want to delete this Domestic ETA record?
+  </p>
+
+  <div class="border rounded-lg p-4 bg-slate-50 text-sm text-slate-800 mb-6">
+    <p><span class="font-semibold">PO No.:</span> {{ obj.PoNumber }}</p>
+    <p><span class="font-semibold">Raw Material:</span> {{ obj.RawMaterial }}</p>
+    <p><span class="font-semibold">Status:</span> {{ obj.Status }}</p>
+    <p><span class="font-semibold">Required Date:</span> {{ obj.RequiredDate|date:"d-m-Y" }}</p>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="px-5 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-700
+                     text-white text-sm font-semibold shadow-sm focus:outline-none
+                     focus:ring-2 focus:ring-offset-2 focus:ring-rose-500">
+        Yes, delete
+      </button>
+
+      <a href="{% url 'domestic_eta:domestic_eta_list' %}"
+         class="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200
+                text-sm font-semibold text-slate-700 shadow-sm">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,314 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}{% if edit_mode %}Edit{% else %}New{% endif %} Deviation – QC Project{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root { --brand:#3b82f6; --brand-dark:#1e40af; --bg:#f5f7fb; --surface:#ffffff; --border:#e5e7eb; --text:#374151; }
+  .dev-body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;color:var(--text);}
+  .wrap{max-width:1100px;margin:32px auto;padding:0 24px;}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+  .toolbar h2{margin:0;color:var(--brand-dark);}
+  .btn{border:1px solid var(--brand);color:var(--brand-dark);padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;background:#fff;display:inline-block;}
+  .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .btn:hover{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.06);padding:20px;}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));}
+  label{font-weight:600;margin-bottom:6px;display:block;}
+  input,textarea,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px;}
+  input[readonly]{background:#f9fafb;color:#6b7280;}
+  textarea{min-height:100px;resize:vertical;}
+  .hint{font-size:12px;color:#6b7280;margin-top:4px;}
+  .actions{margin-top:18px;display:flex;gap:10px;}
+  .errorlist{margin:6px 0 0;padding:0;list-style:none;color:#b91c1c;font-size:12px;}
+  #id_product { color:#dc2626; font-weight:600; }
+
+  /* Picker */
+  .picker { position:relative; }
+  .picker-btn { position:absolute; right:8px; top:50%; transform:translateY(-50%); border:none; background:transparent; cursor:pointer; font-size:14px; }
+  .picker-menu { position:absolute; z-index:20; left:0; right:0; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 20px rgba(0,0,0,.08); max-height:260px; overflow:auto; margin-top:6px; display:none; }
+  .picker-menu.show { display:block; }
+  .picker-search { position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); padding:6px; }
+  .picker-search input { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; }
+  .picker-item { padding:8px 12px; cursor:pointer; }
+  .picker-item:hover, .picker-item.active { background:#eef2ff; }
+  .picker mark { background:#fff3b0; padding:0 2px; border-radius:4px; }
+</style>
+
+<div class="dev-body">
+  <div class="wrap">
+    <div class="toolbar">
+      <h2>{% if edit_mode %}Edit{% else %}New{% endif %} Deviation</h2>
+      <div>
+        <a class="btn" href="{% url 'qc:deviation_list' %}">Back to List</a>
+        <a class="btn" href="/">Home</a>
+      </div>
+    </div>
+
+    <form method="post" class="card" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <ul class="errorlist">{{ form.non_field_errors }}</ul>
+      {% endif %}
+
+      <div class="grid">
+        <div>
+          <label>Deviation No.</label>
+          {% if form.instance.pk and form.instance.deviation_no %}
+            <input type="text" value="{{ form.instance.deviation_no }}" readonly>
+            <div class="hint">Auto-generated; cannot be edited.</div>
+          {% else %}
+            <input type="text" value="(will be auto-generated on save)" readonly>
+            <div class="hint">Format: <code>DEV/YY-YY/00001</code> (financial year Apr–Mar).</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label for="{{ form.date.id_for_label }}">Date</label>
+          {{ form.date }} {{ form.date.errors }}
+        </div>
+
+        <div>
+          <label for="{{ form.status.id_for_label }}">Status</label>
+          {{ form.status }} {{ form.status.errors }}
+        </div>
+
+        <div>
+          <label for="{{ form.product.id_for_label }}">Product</label>
+          {{ form.product }} {{ form.product.errors }}
+          <datalist id="alfa-options">
+            {% for name in alfa_options|default:form.alfa_options %}
+              <option value="{{ name }}"></option>
+            {% endfor %}
+          </datalist>
+          <div class="hint">Start typing to search Alfa product.</div>
+        </div>
+
+        <div>
+          <label for="{{ form.finished_product.id_for_label }}">Finished Product</label>
+          {{ form.finished_product }} {{ form.finished_product.errors }}
+          <div class="hint">Auto-filled from the Alfa Product Master.</div>
+        </div>
+
+        <div>
+          <label for="{{ form.plant.id_for_label }}">Plant</label>
+          {{ form.plant }}
+          {{ form.plant.errors }}
+          <div class="hint">Select the production block for this deviation.</div>
+        </div>
+
+        <!-- BATCH: datalist + clickable searchable picker (BATCH ONLY) -->
+        <div>
+          <label for="{{ form.batch_no.id_for_label }}">Batch No</label>
+          <div class="picker">
+            {{ form.batch_no }} {{ form.batch_no.errors }}
+            <button type="button" class="picker-btn" aria-label="Show batches" title="Show batches">▾</button>
+            <div class="picker-menu" id="batch-menu">
+              <div class="picker-search"><input id="batch-filter" type="text" placeholder="Type to search batch…"></div>
+              <div id="batch-list"></div>
+            </div>
+          </div>
+          <datalist id="batch-options"></datalist>
+          <div class="hint">Shows batch numbers only. Type to filter; ↑/↓ then Enter to select.</div>
+        </div>
+      </div>
+
+      <div class="grid" style="grid-template-columns:1fr;">
+        <div>
+          <label for="{{ form.description.id_for_label }}">Description of Deviation</label>
+          {{ form.description }} {{ form.description.errors }}
+        </div>
+        <div>
+          <label for="{{ form.root_cause.id_for_label }}">Root Cause</label>
+          {{ form.root_cause }} {{ form.root_cause.errors }}
+        </div>
+        <div>
+          <label for="{{ form.corrective_action.id_for_label }}">Corrective Action</label>
+          {{ form.corrective_action }} {{ form.corrective_action.errors }}
+        </div>
+        <div>
+          <label for="{{ form.preventive_action.id_for_label }}">Preventive Action</label>
+          {{ form.preventive_action }} {{ form.preventive_action.errors }}
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" type="submit">
+          {% if edit_mode %}Update{% else %}Save{% endif %}
+        </button>
+        <a class="btn" href="{% url 'qc:deviation_report' %}">View Report</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script id="alfa-map" type="application/json">
+  {{ alfa_map_json|default:'{}'|safe }}
+</script>
+
+<script>
+(function(){
+  const script        = document.getElementById('alfa-map');
+  const productInput  = document.getElementById('id_product');
+  const finishedInput = document.getElementById('id_finished_product');
+  const batchInput    = document.getElementById('id_batch_no');
+  const datalistEl    = document.getElementById('batch-options');
+  const menu          = document.getElementById('batch-menu');
+  const listBox       = document.getElementById('batch-list');
+  const filterBox     = document.getElementById('batch-filter');
+  const toggleBtn     = document.querySelector('.picker .picker-btn');
+  const alfaList      = document.getElementById('alfa-options');
+
+  if (!productInput || !batchInput) return;
+  productInput.setAttribute('autofocus', 'autofocus');
+
+  // ---- Finished product autofill (unchanged) ----
+  let ALFA_MAP = {};
+  try { ALFA_MAP = script ? JSON.parse(script.textContent || '{}') : {}; } catch(e){ ALFA_MAP = {}; }
+  if (!productInput.getAttribute('list')) productInput.setAttribute('list','alfa-options');
+  if (alfaList && alfaList.children.length === 0 && Object.keys(ALFA_MAP).length) {
+    const frag = document.createDocumentFragment();
+    Object.keys(ALFA_MAP).sort().forEach(name => {
+      const opt = document.createElement('option'); opt.value = name; frag.appendChild(opt);
+    });
+    alfaList.appendChild(frag);
+  }
+  function applyFinished(){
+    const key = (productInput.value || '').trim();
+    if (!key) { if (finishedInput) finishedInput.value = ''; return; }
+    let hit = ALFA_MAP[key] || '';
+    if (!hit) {
+      const q = key.toLowerCase();
+      const first = Object.keys(ALFA_MAP).find(k => k.toLowerCase().includes(q));
+      if (first) hit = ALFA_MAP[first];
+    }
+    if (finishedInput && finishedInput.value !== hit) finishedInput.value = hit || '';
+  }
+
+  // ---- Batches (3 months; show batch only) ----
+  if (!batchInput.getAttribute('list')) batchInput.setAttribute('list','batch-options');
+
+  let cache = [];         // [{batch}]
+  let loaded = false;
+  let fetching = false;
+  let active = -1;
+
+  function setOpen(open){ menu.classList.toggle('show', !!open); if (open) setTimeout(() => filterBox.focus(), 0); }
+  function hi(text, needle){
+    if (!needle) return text;
+    const re = new RegExp('(' + needle.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'ig');
+    return text.replace(re, '<mark>$1</mark>');
+  }
+
+  function render(items, q=''){
+    listBox.innerHTML = '';
+    datalistEl.innerHTML = '';
+    if (!items.length){ listBox.innerHTML = '<div class="picker-item">No batches found</div>'; return; }
+
+    const fragMenu = document.createDocumentFragment();
+    const fragOpt  = document.createDocumentFragment();
+
+    items.forEach((it, i) => {
+      const batch = (it.batch || it || '').trim();
+      if (!batch) return;
+
+      const row = document.createElement('div');
+      row.className = 'picker-item';
+      row.dataset.index = String(i);
+      row.innerHTML = hi(batch, q);
+      row.addEventListener('click', () => { batchInput.value = batch; setOpen(false); });
+      fragMenu.appendChild(row);
+
+      const opt = document.createElement('option'); opt.value = batch; fragOpt.appendChild(opt);
+    });
+
+    listBox.appendChild(fragMenu);
+    datalistEl.appendChild(fragOpt);
+    active = -1;
+  }
+
+  async function fetchBatches(force=false){
+    if (loaded && !force){ render(cache); return; }
+    if (fetching) return;
+    fetching = true;
+    try{
+      const url  = "{% url 'qc:api_all_batches' %}?months=3";  // server limits to recent 3 months
+      const resp = await fetch(url, { headers: { "X-Requested-With":"XMLHttpRequest" } });
+      const data = await resp.json();
+      const items = Array.isArray(data?.items) ? data.items
+                 : Array.isArray(data?.batches) ? data.batches.map(b => ({batch:b}))
+                 : [];
+      cache = items;
+      loaded = true;
+      render(cache);
+    } finally { fetching = false; }
+  }
+
+  function filter(){
+    const q = (filterBox.value || '').trim().toLowerCase();
+    if (!q) { render(cache); return; }
+    render(cache.filter(it => (it.batch || '').toLowerCase().includes(q)), q);
+  }
+
+  function move(delta){
+    const rows = listBox.querySelectorAll('.picker-item');
+    if (!rows.length) return;
+    active = Math.max(0, Math.min(rows.length - 1, active + delta));
+    rows.forEach(r => r.classList.remove('active'));
+    rows[active].classList.add('active');
+    rows[active].scrollIntoView({ block:'nearest' });
+  }
+  function choose(){
+    const rows = listBox.querySelectorAll('.picker-item');
+    if (active >= 0 && active < rows.length) rows[active].click();
+  }
+
+  // Openers
+  toggleBtn?.addEventListener('click', async () => {
+    if (menu.classList.contains('show')) setOpen(false);
+    else { await fetchBatches(); setOpen(true); }
+  });
+  batchInput.addEventListener('focus', async () => { await fetchBatches(); setOpen(true); });
+  batchInput.addEventListener('input', () => { if (!menu.classList.contains('show')) setOpen(true); filterBox.value = batchInput.value; filter(); });
+
+  // Search box filter
+  filterBox.addEventListener('input', filter);
+
+  // Keyboard
+  menu.addEventListener('keydown', e => {
+    if (e.key === 'ArrowDown'){ e.preventDefault(); move(1); }
+    if (e.key === 'ArrowUp'){ e.preventDefault(); move(-1); }
+    if (e.key === 'Enter'){ e.preventDefault(); choose(); }
+    if (e.key === 'Escape'){ setOpen(false); }
+  });
+  batchInput.addEventListener('keydown', e => {
+    if (!menu.classList.contains('show')) return;
+    if (e.key === 'ArrowDown'){ e.preventDefault(); move(1); }
+    if (e.key === 'ArrowUp'){ e.preventDefault(); move(-1); }
+    if (e.key === 'Enter'){ e.preventDefault(); choose(); }
+    if (e.key === 'Escape'){ setOpen(false); }
+  });
+
+  // Close on outside click
+  document.addEventListener('click', e => {
+    if (!menu.contains(e.target) && e.target !== batchInput && e.target !== toggleBtn) setOpen(false);
+  });
+
+  // Product autofill
+  let t;
+  function onChange(){ clearTimeout(t); t = setTimeout(applyFinished, 160); }
+  productInput.addEventListener('input', onChange);
+  productInput.addEventListener('change', onChange);
+  finishedInput?.addEventListener('input', onChange);
+  finishedInput?.addEventListener('change', onChange);
+  applyFinished();
+
+  // warm cache
+  if ('requestIdleCallback' in window) requestIdleCallback(() => fetchBatches());
+})();
+</script>
+{% endblock maincontent %}

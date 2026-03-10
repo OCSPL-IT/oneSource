@@ -1,0 +1,353 @@
+{% load static %}
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f5f7fb;--surface:#fff;--border:#e5e7eb;--muted:#64748b;--text:#0f172a;
+    --brand:#3b82f6;--danger:#ef4444
+  }
+  .dq-wrap{max-width:1100px;margin:28px auto;padding:0 16px}
+  .dq-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(2,6,23,.06);padding:18px;margin-bottom:18px}
+  h2{margin:0 0 8px}
+  h3{margin:0 0 10px}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid var(--border);padding:8px 10px;font-size:14px;vertical-align:top}
+  th{background:#fafafa;text-align:left}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
+  .muted{color:var(--muted);font-size:12px}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between;margin-bottom:12px}
+  .btn{appearance:none;border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:10px;padding:8px 12px;font-weight:600;cursor:pointer}
+  .btn.line{background:#fff;color:var(--brand)}
+  .kv{display:flex;gap:12px;align-items:center}
+  .kv label{font-weight:600;margin-right:6px}
+  .pill{display:inline-block;background:#eef2ff;border:1px solid var(--border);padding:4px 8px;border-radius:999px}
+  .print-only{display:none}
+  @media print{ .toolbar{display:none} .dq-card{box-shadow:none} .print-only{display:inline} body{background:#fff} }
+</style>
+
+{# API endpoints from qc app #}
+{% url 'qc:api_fetch_other_header' as hdr_api %}
+{% url 'qc:api_fetch_pdl_samples'   as pdl_api %}
+{% url 'qc:api_ftr_table'           as ftr_api %}
+
+<div class="dq-wrap" data-hdr-api="{{ hdr_api }}" data-pdl-api="{{ pdl_api }}" data-ftr-api="{{ ftr_api }}">
+
+  <!-- Toolbar -->
+  <div class="toolbar dq-card">
+    <div class="kv">
+      <label for="rep-date">Date</label>
+      <input id="rep-date" type="date"
+             value="{{ to_date|date:'Y-m-d' }}"
+             style="padding:8px;border:1px solid var(--border);border-radius:8px">
+      <button class="btn line" id="go-date" type="button">View</button>
+    </div>
+    <div>
+      <button class="btn line" type="button" id="export-csv">Export Incoming CSV</button>
+      <button class="btn line" type="button" id="export-pdl-csv">Export PDL CSV</button>
+    </div>
+  </div>
+
+  <!-- Header / Summary -->
+  <div class="dq-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <h2>Daily QA Report</h2>
+      <span class="muted">Report</span>
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="muted">Report Date</div>
+        <div class="pill">
+          {% if to_date %}{{ to_date|date:"d-m-Y" }}{% else %}—{% endif %}
+        </div>
+      </div>
+      <div>
+        <div class="muted">FTR %</div>
+        <div id="val_ftr_percent">—</div>
+      </div>
+      <div>
+        <div class="muted">Analytical Downtime (hrs)</div>
+        <div id="val_analytical_downtime_hrs">0</div>
+      </div>
+      <div>
+        <div class="muted">FG Inspections</div>
+        <div id="val_fg_inspections">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incoming (read-only) -->
+  <div class="dq-card">
+    <h3>Incoming Material [RM/PM]</h3>
+    <table id="incoming-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Material</th>
+          <th>Supplier</th>
+          <th style="text-align:right">Qty (MT)</th>
+          <th>Status</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% if incoming_fs and incoming_fs.forms %}
+        {% for f in incoming_fs.forms %}
+          <tr>
+            <td>{% firstof f.instance.material_type f.material_type.value "" %}</td>
+            <td>{% firstof f.instance.material f.material.value "" %}</td>
+            <td>{% firstof f.instance.supplier f.supplier.value "" %}</td>
+            <td style="text-align:right">{% firstof f.instance.qty_mt f.qty_mt.value "0" %}</td>
+            <td>{% firstof f.instance.status f.status.value "" %}</td>
+            <td>{% firstof f.instance.remarks f.remarks.value "" %}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" style="text-align:center;color:var(--muted)">No incoming records.</td></tr>
+        {% endfor %}
+      {% else %}
+        <tr><td colspan="6" style="text-align:center;color:var(--muted)">No incoming records.</td></tr>
+      {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PDL Samples (read-only) -->
+  <div class="dq-card">
+    <h3>PDL Samples</h3>
+    <table id="pdl-table">
+      <thead>
+        <tr>
+          <th style="width:22%;">Stage</th>
+          <th style="width:28%;">Sample Name</th>
+          <th style="width:18%;">Result</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody id="pdl-tbody">
+        <tr data-empty><td colspan="4" style="text-align:center;color:var(--muted)">No PDL samples.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FTR by Stage & Product -->
+  <div class="dq-card">
+    <h3>FTR by Stage &amp; Product</h3>
+    <table id="ftr-table">
+      <thead>
+        <tr>
+          <th style="width:30%;">Product</th>
+          <th style="width:24%;">Stage</th>
+          <th style="text-align:right">Total Batches</th>
+          <th style="text-align:right">Fail</th>
+          <th style="text-align:right">FTR %</th>
+        </tr>
+      </thead>
+      <tbody id="ftr-tbody">
+        <tr data-empty><td colspan="5" style="text-align:center;color:var(--muted)">No data.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Other Details -->
+  <div class="dq-card">
+    <h3>Other Details</h3>
+    <div class="grid">
+      <div>
+        <div class="muted">Customer Complaints</div>
+        <div id="val_customer_complaints">0</div>
+      </div>
+      <div>
+        <div class="muted">Analytical Mistakes</div>
+        <div id="val_analytical_mistakes">0</div>
+      </div>
+      <div>
+        <div class="muted">Process Deviations</div>
+        <div id="val_process_deviations">0</div>
+      </div>
+      <div>
+        <div class="muted">First-aid Injury Incidents</div>
+        <div id="val_first_aid_injury">0</div>
+      </div>
+      <div style="grid-column:1/-1">
+        <div class="muted">Any Other Abnormality</div>
+        <div id="val_any_other_abnormality">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dq-card print-only" style="text-align:center;color:#475569">
+    Generated from QC Project • {% if to_date %}{{ to_date|date:"d-m-Y" }}{% endif %}
+  </div>
+</div>
+
+<script>
+(function(){
+  // --- navigation inside tab (keeps user on same page, swaps ?qc_date=) ---
+  const goBtn = document.getElementById('go-date');
+  const dateInput = document.getElementById('rep-date');
+  if (goBtn && dateInput) {
+    goBtn.addEventListener('click', ()=>{
+      const v = (dateInput.value || '').trim();
+      if(!v){ alert('Pick a date'); return; }
+      const url = new URL(window.location.href);
+      url.searchParams.set('qc_date', v);     // stays on Daily Operation URL
+      history.replaceState(null, '', url.toString());
+      hydrateAll(v);
+    });
+  }
+
+  // --- CSV exports ---
+  function exportTableCSV(tableId, fname){
+    const table = document.getElementById(tableId);
+    if(!table){ alert('No table'); return; }
+    const rows = [...table.querySelectorAll('tr')].map(tr =>
+      [...tr.children].map(td => `"${String(td.textContent).replace(/"/g,'""').trim()}"`).join(',')
+    ).join('\r\n');
+    const blob = new Blob([rows], {type: 'text/csv;charset=utf-8;'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+  }
+  document.getElementById('export-csv')?.addEventListener('click', ()=>{
+    const d = dateInput?.value || 'report';
+    exportTableCSV('incoming-table', `incoming_${d}.csv`);
+  });
+  document.getElementById('export-pdl-csv')?.addEventListener('click', ()=>{
+    const d = dateInput?.value || 'report';
+    exportTableCSV('pdl-table', `pdl_${d}.csv`);
+  });
+
+  // --- API helpers ---
+  function setText(id, val, fallback="0"){
+    const el = document.getElementById(id);
+    if (el) el.textContent = (val ?? fallback);
+  }
+  const wrap = document.querySelector('.dq-wrap');
+  function apiUrlHdr(){ return wrap?.dataset.hdrApi || ''; }
+  function apiUrlPDL(){ return wrap?.dataset.pdlApi || ''; }
+  function apiUrlFTR(){ return wrap?.dataset.ftrApi || ''; }
+
+  // Header
+  async function fetchHeaderDerived(isoDate){
+    const url = apiUrlHdr();
+    if (!isoDate || !url) return;
+    try {
+      const res = await fetch(url + '?date=' + encodeURIComponent(isoDate), {
+        headers: { "Accept": "application/json" }, credentials: "same-origin"
+      });
+      if (!res.ok) return;
+      const ctype = res.headers.get('content-type') || '';
+      if (!ctype.includes('application/json')) return;
+      const json = await res.json();
+      if (json.ok && json.data){
+        setText("val_analytical_downtime_hrs", json.data.analytical_downtime_hrs, "0");
+        setText("val_customer_complaints",     json.data.customer_complaints,     "0");
+        setText("val_analytical_mistakes",     json.data.analytical_mistakes,     "0");
+        setText("val_first_aid_injury",        json.data.first_aid_injury_incidents, "0");
+        setText("val_process_deviations",      json.data.process_deviations, "0");
+        setText("val_any_other_abnormality",   json.data.any_other_abnormality, "—");
+        setText("val_fg_inspections",          json.data.finished_goods_inspections, "0");
+        setText("val_ftr_percent",             json.data.ftr_percent ?? "—", "—");
+      }
+    } catch(e){ console.error(e); }
+  }
+
+  // PDL
+  function pdlTableEmpty(){
+    const tb = document.getElementById('pdl-tbody');
+    if (!tb) return true;
+    const rows = tb.querySelectorAll('tr');
+    return rows.length === 0 || (rows.length === 1 && rows[0].hasAttribute('data-empty'));
+  }
+  function renderPDLRows(rows){
+    const tb = document.getElementById('pdl-tbody');
+    if (!tb) return;
+    tb.innerHTML = '';
+    if (!rows || !rows.length){
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="4" style="text-align:center;color:var(--muted)">No PDL samples.</td>';
+      tb.appendChild(tr);
+      return;
+    }
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${(r.stage||'').toString()}</td>
+         <td>${(r.sample_name||'').toString()}</td>
+         <td>${(r.result||'').toString()}</td>
+         <td>${(r.remarks||'').toString()}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+  async function fetchPDL(isoDate){
+    const url = apiUrlPDL();
+    if (!isoDate || !url) return;
+    try{
+      const res = await fetch(url + '?date=' + encodeURIComponent(isoDate), {
+        headers: { "Accept": "application/json" }, credentials: "same-origin"
+      });
+      if (!res.ok) return;
+      const ctype = res.headers.get('content-type') || '';
+      if (!ctype.includes('application/json')) return;
+      const json = await res.json();
+      if (json.ok){ renderPDLRows(Array.isArray(json.rows) ? json.rows : []); }
+    }catch(e){ console.error(e); }
+  }
+
+  // FTR
+  function renderFTRRows(rows){
+    const tb = document.getElementById('ftr-tbody');
+    if (!tb) return;
+    tb.innerHTML = '';
+    if (!rows || !rows.length){
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="5" style="text-align:center;color:var(--muted)">No data.</td>';
+      tb.appendChild(tr);
+      return;
+    }
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      const pct = (typeof r.ftr_percent === 'number')
+        ? r.ftr_percent.toFixed(2) : (r.ftr_percent || '0');
+      tr.innerHTML =
+        `<td>${(r.product||'').toString()}</td>
+         <td>${(r.stage||'').toString()}</td>
+         <td style="text-align:right">${(r.total_batches??0)}</td>
+         <td style="text-align:right">${(r.fail_batches??0)}</td>
+         <td style="text-align:right">${pct}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+  async function fetchFTR(isoDate){
+    const url = apiUrlFTR();
+    if (!isoDate || !url) return;
+    try{
+      const res = await fetch(url + '?date=' + encodeURIComponent(isoDate), {
+        headers: { "Accept": "application/json" }, credentials: "same-origin"
+      });
+      if (!res.ok) return;
+      const ctype = res.headers.get('content-type') || '';
+      if (!ctype.includes('application/json')) return;
+      const json = await res.json();
+      if (json.ok){ renderFTRRows(Array.isArray(json.rows) ? json.rows : []); }
+    }catch(e){ console.error(e); }
+  }
+
+  // hydrate on load or when date changes
+  function hydrateAll(isoDate){
+    fetchHeaderDerived(isoDate);
+    fetchFTR(isoDate);
+    // Only pull PDL from API if the server didn’t render rows
+    if (pdlTableEmpty()) fetchPDL(isoDate);
+  }
+
+  // Initial date (prefer qc_date param, else server-provided to_date)
+  const url = new URL(window.location.href);
+  const qcParam = url.searchParams.get('qc_date');
+  const initial = qcParam || (dateInput?.value || '');
+  if (initial){ hydrateAll(initial); }
+  dateInput?.addEventListener("change", e => hydrateAll(e.target.value));
+})();
+</script>

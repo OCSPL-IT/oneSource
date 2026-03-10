@@ -1,0 +1,286 @@
+{% extends "main/index.html" %}
+{% block maincontent %}
+<style>
+  .erp-grid { border: 1px solid #cbd5e1; }
+  .erp-row { display:grid; grid-template-columns: 260px 1fr 260px 1fr; }
+  .erp-lbl { background:#e0f2fe; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; padding:.55rem .75rem; font-size:.82rem; color:#0f172a; }
+  .erp-val { background:#f8fafc; border-right:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; padding:.35rem .5rem; }
+  .erp-row > :nth-child(4) { border-right:0; }
+  .erp-row.last > div { border-bottom:0; }
+  .erp-val .errorlist { margin: .25rem 0 0; color:#dc2626; font-size:.75rem; }
+</style>
+
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-5">
+
+    {% if messages %}
+      <div class="space-y-2 mb-4">
+        {% for message in messages %}
+          <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                      {% if message.tags == 'success' %}bg-emerald-600{% else %}bg-rose-600{% endif %}">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()">✖</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="bg-white shadow-sm rounded-xl border border-slate-200">
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <h1 class="text-base sm:text-lg font-semibold text-slate-800">Invoice – Post Shipment Details</h1>
+          <p class="text-xs text-slate-500">Fetch from ERP using Invoice No (TXNCF cfValue1)</p>
+        </div>
+
+        <div class="flex gap-2">
+          <a href="{% url 'invoice_post_shipment_list' %}"
+            class="px-4 py-2 text-sm font-medium rounded-md bg-slate-200 text-slate-800 hover:bg-slate-300 border border-slate-300">
+            ← Back to List
+          </a>
+          {% if not is_edit %}
+          <button type="submit" form="mainForm" name="action" value="fetch" formnovalidate
+                  class="px-4 py-2 rounded-md text-sm font-medium bg-blue-200 text-slate-800 hover:bg-blue-300 border border-slate-300">
+            Fetch from ERP
+          </button>
+           {% endif %}
+          <button type="submit" form="mainForm" name="action" value="save"
+                  class="px-4 py-2 rounded-md text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700">
+            Save
+          </button>
+        </div>
+      </div>
+
+      <form id="mainForm" method="post" enctype="multipart/form-data" class="p-4">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="erp-grid rounded-lg overflow-hidden">
+
+          <!-- Row 1 -->
+          <div class="erp-row">
+            <div class="erp-lbl">Invoice No.</div>
+            <div class="erp-val">{{ form.invoice_number }}{{ form.invoice_number.errors }}</div>
+            <div class="erp-lbl">Transaction Type</div>
+            <div class="erp-val">{{ form.transaction_type }}{{ form.transaction_type.errors }}</div>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="erp-row">
+            <div class="erp-lbl">Invoice Date</div>
+            <div class="erp-val">{{ form.invoice_date }}{{ form.invoice_date.errors }}</div>
+
+            <div class="erp-lbl">Buyer’s Order No.</div>
+            <div class="erp-val">{{ form.buyers_order_no }}{{ form.buyers_order_no.errors }}</div>
+          </div>
+
+          <!-- Row 3 -->
+          <div class="erp-row">
+            <div class="erp-lbl">Buyer’s Order Date</div>
+            <div class="erp-val">{{ form.buyers_order_date }}{{ form.buyers_order_date.errors }}</div>
+
+            <div class="erp-lbl">Consignee Name</div>
+            <div class="erp-val">{{ form.consignee_name }}{{ form.consignee_name.errors }}</div>
+          </div>
+
+          <!-- Row 4 (textarea left, textarea right) -->
+          <div class="erp-row" style="grid-template-columns:260px 1fr 260px 1fr;">
+            <div class="erp-lbl">Consignee Address</div>
+            <div class="erp-val">{{ form.consignee_address }}{{ form.consignee_address.errors }}</div>
+
+            <div class="erp-lbl">Notify Party 1 Name</div>
+            <div class="erp-val">{{ form.notify_party1_name }}{{ form.notify_party1_name.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Notify Party 1 Address</div>
+            <div class="erp-val">{{ form.notify_party1_address }}{{ form.notify_party1_address.errors }}</div>
+
+            <div class="erp-lbl">Notify Party 2 Name</div>
+            <div class="erp-val">{{ form.notify_party2_name }}{{ form.notify_party2_name.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Notify Party 2 Address</div>
+            <div class="erp-val">{{ form.notify_party2_address }}{{ form.notify_party2_address.errors }}</div>
+
+            <div class="erp-lbl">Country of Origin</div>
+            <div class="erp-val">{{ form.country_origin }}{{ form.country_origin.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Country of Final Destination</div>
+            <div class="erp-val">{{ form.country_destination }}{{ form.country_destination.errors }}</div>
+
+            <div class="erp-lbl">District of Origin</div>
+            <div class="erp-val">{{ form.district_origin }}{{ form.district_origin.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">State of Origin</div>
+            <div class="erp-val">{{ form.state_origin }}{{ form.state_origin.errors }}</div>
+
+            <div class="erp-lbl">Vessel Name &amp; No</div>
+            <div class="erp-val">{{ form.vessel_name_no }}{{ form.vessel_name_no.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Port of Loading</div>
+            <div class="erp-val">{{ form.port_loading }}{{ form.port_loading.errors }}</div>
+
+            <div class="erp-lbl">Port of Discharge</div>
+            <div class="erp-val">{{ form.port_discharge }}{{ form.port_discharge.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Final Destination</div>
+            <div class="erp-val">{{ form.final_destination }}{{ form.final_destination.errors }}</div>
+
+            <div class="erp-lbl">Preferential Agreement</div>
+            <div class="erp-val">{{ form.preferential_agreement }}{{ form.preferential_agreement.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Std Unit Qty Code</div>
+            <div class="erp-val">{{ form.standard_unit_qty_code }}{{ form.standard_unit_qty_code.errors }}</div>
+
+            <div class="erp-lbl">Delivery</div>
+            <div class="erp-val">{{ form.delivery }}{{ form.delivery.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Shipment Mode</div>
+            <div class="erp-val">{{ form.shipment_mode }}{{ form.shipment_mode.errors }}</div>
+
+            <div class="erp-lbl">Payment Terms</div>
+            <div class="erp-val">{{ form.payment_terms }}{{ form.payment_terms.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Due Date</div>
+            <div class="erp-val">{{ form.due_date }}{{ form.due_date.errors }}</div>
+
+            <div class="erp-lbl">Bank Name</div>
+            <div class="erp-val">{{ form.bank_name }}{{ form.bank_name.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Bank Account No</div>
+            <div class="erp-val">{{ form.bank_account_no }}{{ form.bank_account_no.errors }}</div>
+
+            <div class="erp-lbl">AD Code</div>
+            <div class="erp-val">{{ form.ad_code }}{{ form.ad_code.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Swift Code</div>
+            <div class="erp-val">{{ form.swift_code }}{{ form.swift_code.errors }}</div>
+
+            <div class="erp-lbl">Bank Address</div>
+            <div class="erp-val">{{ form.bank_address }}{{ form.bank_address.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Product Name</div>
+            <div class="erp-val">{{ form.product_name }}{{ form.product_name.errors }}</div>
+
+            <div class="erp-lbl">Container No</div>
+            <div class="erp-val">{{ form.container_no }}{{ form.container_no.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Merks/No &amp; Container No</div>
+            <div class="erp-val">{{ form.merks_and_container_no }}{{ form.merks_and_container_no.errors }}</div>
+
+            <div class="erp-lbl">Merks/No &amp; Container No 1</div>
+            <div class="erp-val">{{ form.merks_and_container_no1 }}{{ form.merks_and_container_no1.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">No. &amp; Kind of Packing</div>
+            <div class="erp-val">{{ form.packing_details }}{{ form.packing_details.errors }}</div>
+
+            <div class="erp-lbl">Description of Goods</div>
+            <div class="erp-val">{{ form.description_of_goods }}{{ form.description_of_goods.errors }}</div>
+          </div>
+
+          <div class="erp-row">
+            <div class="erp-lbl">Item No / HSN</div>
+            <div class="erp-val grid grid-cols-2 gap-2">
+              <div>{{ form.item_no }}{{ form.item_no.errors }}</div>
+              <div>{{ form.hsn_no }}{{ form.hsn_no.errors }}</div>
+            </div>
+            <div class="erp-lbl">Quantity / Unit</div>
+            <div class="erp-val grid grid-cols-2 gap-2">
+              <div>{{ form.quantity }}{{ form.quantity.errors }}</div>
+              <div>{{ form.quantity_unit }}{{ form.quantity_unit.errors }}</div>
+            </div>
+          </div>
+
+          <div class="erp-row">
+             <div class="erp-lbl">Rate / Amount (US$)</div>
+            <div class="erp-val grid grid-cols-2 gap-2">
+              <div>{{ form.rate_usd }}{{ form.rate_usd.errors }}</div>
+              <div>{{ form.amount_usd }}{{ form.amount_usd.errors }}</div>
+            </div>
+            <div class="erp-lbl">Gross Wet. / Conversion Rate</div>
+            <div class="erp-val grid grid-cols-2 gap-2">
+              <div>{{ form.gross_wt }}{{ form.gross_wt.errors }}</div>
+              <div>{{ form.conversion_rate }}{{ form.conversion_rate.errors }}</div>
+            </div>
+
+          </div>
+          <div class="erp-row">
+            <div class="erp-lbl">Bill of Lading No / Date</div>
+            <div class="erp-val grid grid-cols-2 gap-2">
+              <div>{{ form.bl_number }}{{ form.bl_number.errors }}</div>
+              <div>{{ form.bl_date }}{{ form.bl_date.errors }}</div>
+            </div>
+
+            <div class="erp-lbl">Shipping Bill No / Date</div>
+            <div class="erp-val grid grid-cols-2 gap-2">
+              <div>{{ form.shipping_bill_no }}{{ form.shipping_bill_no.errors }}</div>
+              <div>{{ form.shipping_bill_date }}{{ form.shipping_bill_date.errors }}</div>
+            </div>
+          </div>
+          <div class="erp-row">
+            <div class="erp-lbl">Attachment</div>
+            <div class="erp-val">
+              {{ form.attachment_file }}{{ form.attachment_file.errors }}
+              {% if is_edit and form.instance and form.instance.pk and form.instance.attachment %}
+                <p class="mt-1 text-xs text-emerald-700">
+                  An attachment is already stored for this invoice. Upload a new file to replace it if needed.
+                </p>
+              {% endif %}
+            </div>
+            <div class="erp-lbl"></div>
+            <div class="erp-val"></div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Auto-calc Amount USD (readonly)
+  (function () {
+    const qty = document.getElementById("id_quantity");
+    const rate = document.getElementById("id_rate_usd");
+    const amt = document.getElementById("id_amount_usd");
+
+    function calc() {
+      const q = parseFloat(qty?.value || "");
+      const r = parseFloat(rate?.value || "");
+      if (!isNaN(q) && !isNaN(r)) {
+        amt.value = (q * r).toFixed(2);
+      } else {
+        amt.value = "";
+      }
+    }
+    qty?.addEventListener("input", calc);
+    rate?.addEventListener("input", calc);
+
+  })();
+</script>
+{% endblock %}

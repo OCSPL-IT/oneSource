@@ -1,0 +1,1081 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Receivable Entry{% endblock %}
+
+{% block maincontent %}
+<!-- Tom Select CSS & JS for the Searchable Dropdown -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<div class="min-h-screen bg-[#f1f5f9] pb-12">
+    <!-- Top Header Area -->
+    <div class="bg-white border-b border-slate-200 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-200">
+                        <i class="fa-solid fa-file-invoice-dollar text-white text-lg"></i>
+                    </div>
+                    <nav class="flex" aria-label="Breadcrumb">
+                        <ol class="flex items-center space-x-2 text-sm text-slate-500">
+                            <li><a href="#" class="hover:text-blue-600">Accounts</a></li>
+                            <li><i class="fa-solid fa-chevron-right text-[10px]"></i></li>
+                            <li class="text-slate-900 font-bold">New Receivable Entry</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="{% url 'accounts:receivable_list' %}"
+                       class="group inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
+                        <i class="fa-solid fa-table-list text-slate-400 group-hover:text-blue-500"></i>
+                        View List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Validation Banner -->
+    <div id="formBanner" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 hidden">
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 shadow-sm">
+            <div class="flex items-start gap-3">
+                <div class="mt-0.5 text-rose-600">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="font-bold text-rose-900 text-sm">Please fix the highlighted fields before saving.</div>
+                    <div id="formBannerMsg" class="text-xs text-rose-800 mt-1"></div>
+                </div>
+                <button type="button" id="bannerClose" class="ml-auto text-rose-500 hover:text-rose-700">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+        <div class="w-full max-w-lg mx-4 rounded-3xl bg-white shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-100">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-widest">Confirm Save</h3>
+                    <button type="button" id="confirmClose" class="text-slate-400 hover:text-slate-600">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-slate-500 mt-1">Please confirm the details below before saving.</p>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 gap-3 text-xs">
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Customer</span>
+                        <span id="cfCustomer" class="font-semibold text-slate-900 text-right truncate">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Invoice</span>
+                        <span id="cfInvoice" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Invoice Date</span>
+                        <span id="cfInvDate" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Due Date</span>
+                        <span id="cfDueDate" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Invoice Amount</span>
+                        <span id="cfInvAmt" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Received Amount</span>
+                        <span id="cfRecvAmt" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Type</span>
+                        <span id="cfType" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Status</span>
+                        <span id="cfStatus" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Cheque/Ref No.</span>
+                        <span id="cfChqNo" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="flex justify-between gap-4">
+                        <span class="text-slate-500 font-bold uppercase tracking-wider">Cheque Date</span>
+                        <span id="cfChqDate" class="font-semibold text-slate-900 text-right">—</span>
+                    </div>
+                    <div class="pt-3 mt-1 border-t border-slate-200">
+                        <div class="text-slate-500 font-bold uppercase tracking-wider mb-1">Remarks</div>
+                        <div id="cfRemarks" class="text-slate-800 text-xs whitespace-pre-wrap bg-slate-50 border border-slate-200 rounded-xl p-3">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-white border-t border-slate-100 flex items-center justify-end gap-3">
+                <button type="button" id="confirmCancel"
+                        class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="button" id="confirmSubmit"
+                        class="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-black hover:bg-blue-500">
+                    Yes, Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <form method="post" novalidate id="receivableForm" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {% csrf_token %}
+
+            <!-- LEFT COLUMN: Form Sections -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- Section 1: Classification -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 rounded-t-2xl">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-blue-600"></i>
+                            General Classification
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-1">Classification fields are optional.</p>
+                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase">Entry Type</label>
+                            {{ form.type }}
+                            <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_type"></p>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase">Entry Date</label>
+                            {{ form.entry_date }}
+                            <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_entry_date"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Customer Selection -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 relative z-30">
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 rounded-t-2xl">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fa-solid fa-user-magnifying-glass text-blue-600"></i>
+                            Customer Selection
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-1">Customer code and name are mandatory.</p>
+                    </div>
+                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-500 uppercase">Search Customer Code <span class="text-rose-600">*</span></label>
+
+                            <select id="id_customer_code" name="customer_code" placeholder="Start typing code or name...">
+                                {% if initial_customer.code %}
+                                    <option value="{{ initial_customer.code }}" selected>
+                                        {{ initial_customer.code }} - {{ initial_customer.name }}
+                                    </option>
+                                {% endif %}
+                            </select>
+
+                            <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_customer_code"></p>
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-xs font-bold text-slate-400 uppercase">Customer Name (Auto) <span class="text-rose-600">*</span></label>
+                            {{ form.customer_name }}
+                            <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_customer_name"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Invoice Allocation -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 relative z-20">
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 rounded-t-2xl flex justify-between items-center">
+                        <div>
+                            <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                <i class="fa-solid fa-file-invoice text-blue-600"></i>
+                                Invoice Allocation
+                            </h3>
+                            <p class="text-[11px] text-slate-400 mt-1">Invoice number, dates, and amount are mandatory.</p>
+                        </div>
+                        <button type="button" onclick="addInvoiceRow()"
+                                class="text-[10px] font-bold bg-white border border-slate-300 text-slate-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-plus text-blue-500"></i> Add Extra Row
+                        </button>
+                    </div>
+
+                    <div class="p-0">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50/50 border-b border-slate-100">
+                                    <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Invoice Number <span class="text-rose-600">*</span></th>
+                                    <th class="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Dates <span class="text-rose-600">*</span></th>
+                                    <th class="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Amount <span class="text-rose-600">*</span></th>
+                                    <th class="px-4 py-3"></th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="invoice-rows-container">
+
+                                <!-- Primary line (TomSelect) -->
+                                <tr class="group hover:bg-slate-50/50 transition-colors border-b border-slate-50">
+                                    <td class="px-6 py-4 w-1/3">
+                                        <select id="id_invoice_number" name="invoice_number" placeholder="Select Invoice...">
+                                            {% if initial_invoice.invoice_number %}
+                                                <option value="{{ initial_invoice.invoice_number }}" selected>
+                                                    {{ initial_invoice.invoice_number }}
+                                                </option>
+                                            {% endif %}
+                                        </select>
+                                        <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_invoice_number"></p>
+                                    </td>
+
+                                    <td class="px-4 py-4">
+                                        <div class="flex flex-col gap-1 items-center">
+                                            <div class="flex items-center gap-2 text-[11px]">
+                                                <span class="text-slate-400 w-8 text-right italic">Inv:</span>
+                                                <span class="font-mono text-slate-700">{{ form.invoice_date }}</span>
+                                            </div>
+                                            <p class="field-err hidden text-[11px] text-rose-600 mt-1 text-center" data-err-for="id_invoice_date"></p>
+
+                                            <div class="flex items-center gap-2 text-[11px] mt-1">
+                                                <span class="text-slate-400 w-8 text-right italic">Due:</span>
+                                                <span class="font-mono text-slate-700">{{ form.due_date }}</span>
+                                            </div>
+                                            <p class="field-err hidden text-[11px] text-rose-600 mt-1 text-center" data-err-for="id_due_date"></p>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4">
+                                        <div class="relative max-w-[160px] ml-auto">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                                            {{ form.invoice_amount }}
+                                        </div>
+                                        <p class="field-err hidden text-[11px] text-rose-600 mt-1 text-right" data-err-for="id_invoice_amount"></p>
+                                    </td>
+
+                                    <td class="px-4 py-4 text-center">
+                                        <i class="fa-solid fa-lock text-slate-200"></i>
+                                    </td>
+                                </tr>
+
+                                <!-- Extra existing lines in Edit mode (manual - kept) -->
+                                {% if existing_lines and existing_lines|length > 1 %}
+                                    {% for line in existing_lines|slice:"1:" %}
+                                    <tr class="border-b border-slate-50 animate-row" data-extra="1">
+                                        <td class="px-6 py-4">
+                                            <input type="text" name="invoice_number" placeholder="Manual Inv #"
+                                                   value="{{ line.invoice_number|default:'' }}">
+                                            <p class="field-err hidden text-[11px] text-rose-600 mt-1"></p>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <input type="date" name="invoice_date" class="!text-[10px] !py-1 mb-1"
+                                                   value="{% if line.invoice_date %}{{ line.invoice_date|date:'Y-m-d' }}{% endif %}">
+                                            <input type="date" name="due_date" class="!text-[10px] !py-1"
+                                                   value="{% if line.due_date %}{{ line.due_date|date:'Y-m-d' }}{% endif %}">
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <div class="relative">
+                                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+                                                <input type="number" step="0.01" name="invoice_amount" placeholder="0.00" class="!pl-7"
+                                                       value="{% if line.invoice_amount != None %}{{ line.invoice_amount }}{% endif %}">
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4 text-center">
+                                            <button type="button" onclick="removeInvoiceRow(this)"
+                                                    class="text-slate-300 hover:text-rose-500">
+                                                <i class="fa-solid fa-trash-can text-xs"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endif %}
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Section 4: Payment Details -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200">
+                    <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 rounded-t-2xl">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fa-solid fa-credit-card text-blue-600"></i>
+                            Transaction Details
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-1">All fields are mandatory. Cheque fields required if Cheque/PDC.</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Received Amount <span class="text-rose-600">*</span></label>
+                                <div class="relative">
+                                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-blue-600 font-bold">₹</span>
+                                    <div class="received-amt-wrapper">
+                                        {{ form.received_amount }}
+                                    </div>
+                                </div>
+                                <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_received_amount"></p>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Currency <span class="text-rose-600">*</span></label>
+                                {{ form.currency }}
+                                <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_currency"></p>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Status <span class="text-rose-600">*</span></label>
+                                {{ form.status }}
+                                <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_status"></p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 bg-slate-50 rounded-2xl border border-slate-200">
+                            <div class="space-y-4">
+                                <div class="space-y-1.5">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Cheque/Ref No. <span class="text-rose-600">*</span></label>
+                                    {{ form.cheque_no }}
+                                    <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_cheque_no"></p>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Cheque Date <span class="text-rose-600">*</span></label>
+                                    {{ form.cheque_date }}
+                                    <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_cheque_date"></p>
+                                </div>
+                            </div>
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Remarks <span class="text-rose-600">*</span></label>
+                                {{ form.remarks }}
+                                <p class="field-err hidden text-[11px] text-rose-600 mt-1" data-err-for="id_remarks"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Sticky Summary -->
+            <div class="lg:col-span-4">
+                <div class="sticky top-24 space-y-6">
+                    <div class="bg-slate-900 rounded-3xl shadow-xl p-8 text-white">
+                        <h4 class="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-6">Posting Summary</h4>
+                        <div class="space-y-4 mb-8">
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400 text-xs">Customer</span>
+                                <span id="sum-cust" class="text-xs font-medium truncate ml-4">—</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-slate-400 text-xs">Invoice Ref</span>
+                                <span id="sum-inv" class="text-xs font-medium">—</span>
+                            </div>
+                            <div class="pt-4 border-t border-slate-800 flex justify-between items-end">
+                                <span class="text-slate-400 text-xs mb-1">Total Received</span>
+                                <span id="sum-amount" class="text-2xl font-bold text-blue-400">₹ 0.00</span>
+                            </div>
+                        </div>
+
+                        <button type="button" id="btnSave"
+                                class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 shadow-lg shadow-blue-900/40">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            Save Record
+                        </button>
+
+                        <a href="{% url 'accounts:receivable_dashboard' %}" class="block text-center mt-4 text-xs text-slate-400 hover:text-white transition-colors">
+                            Discard and Exit
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+        @apply w-full border-slate-200 rounded-xl text-sm py-2.5 transition-all shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 bg-white;
+    }
+
+    .ts-wrapper.dropdown-active { z-index: 100 !important; }
+    .ts-dropdown { z-index: 9999 !important; position: absolute !important; }
+
+    .ts-control { @apply !border-slate-200 !rounded-xl !py-2.5 !shadow-sm !text-sm !min-h-[42px]; }
+    .ts-control:focus { @apply !ring-4 !ring-blue-500/10 !border-blue-500; }
+    .ts-dropdown { @apply !rounded-xl !shadow-xl !border-slate-100 !mt-2; }
+    .ts-dropdown .active { @apply !bg-blue-600 !text-white; }
+
+    .received-amt-wrapper input { @apply !pl-8 !text-lg !font-bold !text-blue-600 !border-blue-100 !bg-blue-50/30; }
+    .read-only-field { @apply bg-slate-50 border-transparent text-slate-500 pointer-events-none; }
+
+    .is-invalid {
+        border-color: rgb(244 63 94) !important;
+        box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.10) !important;
+        background-color: rgba(255, 241, 242, 0.60) !important;
+    }
+    .ts-wrapper.is-invalid .ts-control {
+        border-color: rgb(244 63 94) !important;
+        box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.10) !important;
+        background-color: rgba(255, 241, 242, 0.60) !important;
+    }
+
+    @keyframes fadeInRow {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-row { animation: fadeInRow 0.3s ease-out forwards; }
+</style>
+
+<script>
+/* =========================================================
+   GLOBALS (needed for add/remove row which is outside DOMContentLoaded)
+   ========================================================= */
+window.__rcv = window.__rcv || {};
+window.__rcv.selectedInvoices = window.__rcv.selectedInvoices || new Set();
+window.__rcv.extraRowIdx = window.__rcv.extraRowIdx || 0;
+
+window.__rcv.normalizeInv = function(v){ return String(v || "").trim(); };
+
+window.__rcv.toNum = function(v){
+  const s = String(v ?? "").replace(/,/g, "").trim();
+  if (!s) return NaN;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+};
+
+window.__rcv.fmtINR = function(n){
+  const x = Number.isFinite(n) ? n : 0;
+  return "₹ " + x.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+/* =========================================================
+   Add / Remove extra invoice row
+   ========================================================= */
+function addInvoiceRow() {
+  const container = document.getElementById("invoice-rows-container");
+  if (!container) return;
+
+  const customerCode = window.__rcv.getCustomerCode ? window.__rcv.getCustomerCode() : "";
+  if (!customerCode) {
+    alert("Please select Customer first.");
+    return;
+  }
+
+  window.__rcv.extraRowIdx += 1;
+  const idx = window.__rcv.extraRowIdx;
+
+  const row = document.createElement("tr");
+  row.className = "border-b border-slate-50 animate-row";
+  row.setAttribute("data-extra", "1");
+
+  row.innerHTML = `
+    <td class="px-6 py-4 w-1/3">
+      <select class="invoice-select" name="invoice_number" id="id_invoice_number_extra_${idx}" placeholder="Select Invoice..."></select>
+      <p class="field-err hidden text-[11px] text-rose-600 mt-1"></p>
+    </td>
+
+    <td class="px-4 py-4">
+      <div class="flex flex-col gap-1 items-center">
+        <div class="flex items-center gap-2 text-[11px]">
+          <span class="text-slate-400 w-8 text-right italic">Inv:</span>
+          <input type="date" name="invoice_date" class="!text-[10px] !py-1">
+        </div>
+        <p class="field-err hidden text-[11px] text-rose-600 mt-1 text-center"></p>
+
+        <div class="flex items-center gap-2 text-[11px] mt-1">
+          <span class="text-slate-400 w-8 text-right italic">Due:</span>
+          <input type="date" name="due_date" class="!text-[10px] !py-1">
+        </div>
+        <p class="field-err hidden text-[11px] text-rose-600 mt-1 text-center"></p>
+      </div>
+    </td>
+
+    <td class="px-6 py-4">
+      <div class="relative max-w-[160px] ml-auto">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">₹</span>
+        <input type="number" step="0.01" name="invoice_amount" placeholder="0.00" class="!pl-7">
+      </div>
+      <p class="field-err hidden text-[11px] text-rose-600 mt-1 text-right"></p>
+    </td>
+
+    <td class="px-4 py-4 text-center">
+      <button type="button" onclick="removeInvoiceRow(this)" class="text-slate-300 hover:text-rose-500">
+        <i class="fa-solid fa-trash-can text-xs"></i>
+      </button>
+    </td>
+  `;
+
+  container.appendChild(row);
+
+  if (window.__rcv.initExtraInvoiceRow) window.__rcv.initExtraInvoiceRow(row);
+  if (window.__rcv.rebuildSelectedInvoices) window.__rcv.rebuildSelectedInvoices();
+  if (window.__rcv.recalcReceivedFromInvoices) window.__rcv.recalcReceivedFromInvoices();
+}
+
+function removeInvoiceRow(btn) {
+  const tr = btn.closest("tr");
+  if (!tr) return;
+
+  if (tr.__ts) {
+    const v = window.__rcv.normalizeInv(tr.__ts.getValue());
+    if (v) window.__rcv.selectedInvoices.delete(v);
+    if (typeof tr.__ts.destroy === "function") tr.__ts.destroy();
+  }
+
+  tr.remove();
+
+  if (window.__rcv.rebuildSelectedInvoices) window.__rcv.rebuildSelectedInvoices();
+  if (window.__rcv.recalcReceivedFromInvoices) window.__rcv.recalcReceivedFromInvoices();
+}
+
+/* =========================================================
+   MAIN page logic
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", function() {
+  const URL_CUSTOMERS = "{% url 'accounts:ajax_customers' %}";
+  const URL_INVOICES  = "{% url 'accounts:ajax_customer_invoices' %}";
+  window.__rcv.URL_INVOICES = URL_INVOICES;
+
+  // ✅ init guard
+  let initializing = true;
+
+  function $(id){ return document.getElementById(id); }
+
+  /* ----------------------------
+     Banner helpers
+     ---------------------------- */
+  const banner = $("formBanner");
+  const bannerMsg = $("formBannerMsg");
+  const bannerClose = $("bannerClose");
+
+  function showBanner(msg){
+    if (bannerMsg) bannerMsg.textContent = msg || "";
+    if (banner) banner.classList.remove("hidden");
+    try { window.scrollTo({ top: 0, behavior: "smooth" }); } catch(e){}
+  }
+  function hideBanner(){
+    if (banner) banner.classList.add("hidden");
+  }
+  if (bannerClose) bannerClose.addEventListener("click", hideBanner);
+
+  /* ----------------------------
+     Confirm modal
+     ---------------------------- */
+  const confirmModal  = $("confirmModal");
+  const confirmClose  = $("confirmClose");
+  const confirmCancel = $("confirmCancel");
+  const confirmSubmit = $("confirmSubmit");
+
+  function openConfirm(){
+    if (!confirmModal) return;
+    confirmModal.classList.remove("hidden");
+    confirmModal.classList.add("flex");
+  }
+  function closeConfirm(){
+    if (!confirmModal) return;
+    confirmModal.classList.add("hidden");
+    confirmModal.classList.remove("flex");
+  }
+  if (confirmClose)  confirmClose.addEventListener("click", closeConfirm);
+  if (confirmCancel) confirmCancel.addEventListener("click", closeConfirm);
+
+  function fmtMoney(v){
+    const n = window.__rcv.toNum(v);
+    if (!Number.isFinite(n)) return "—";
+    return window.__rcv.fmtINR(n);
+  }
+  function fmtDate(v){ return v || "—"; }
+
+  function fillConfirm(){
+    const custName = ($("id_customer_name") && $("id_customer_name").value) ? $("id_customer_name").value : "—";
+    const custCode = ($("id_customer_code") && $("id_customer_code").value) ? $("id_customer_code").value : "";
+    const invNo    = ($("id_invoice_number") && $("id_invoice_number").value) ? $("id_invoice_number").value : "—";
+
+    $("cfCustomer").textContent = custCode ? `${custName} (${custCode})` : custName;
+    $("cfInvoice").textContent  = invNo || "—";
+    $("cfInvDate").textContent  = fmtDate($("id_invoice_date") ? $("id_invoice_date").value : "");
+    $("cfDueDate").textContent  = fmtDate($("id_due_date") ? $("id_due_date").value : "");
+    $("cfInvAmt").textContent   = fmtMoney($("id_invoice_amount") ? $("id_invoice_amount").value : "");
+    $("cfRecvAmt").textContent  = fmtMoney($("id_received_amount") ? $("id_received_amount").value : "");
+    $("cfType").textContent     = ($("id_type") && $("id_type").value) ? $("id_type").value : "—";
+    $("cfStatus").textContent   = ($("id_status") && $("id_status").value) ? $("id_status").value : "—";
+    $("cfChqNo").textContent    = ($("id_cheque_no") && $("id_cheque_no").value) ? $("id_cheque_no").value : "—";
+    $("cfChqDate").textContent  = fmtDate($("id_cheque_date") ? $("id_cheque_date").value : "");
+    $("cfRemarks").textContent  = ($("id_remarks") && $("id_remarks").value) ? $("id_remarks").value : "—";
+  }
+
+  /* ----------------------------
+     Validation
+     ---------------------------- */
+  function clearFieldError(el){
+    if (!el) return;
+    el.classList.remove("is-invalid");
+    const id = el.id || "";
+    const err = document.querySelector(`[data-err-for="${id}"]`);
+    if (err) { err.textContent = ""; err.classList.add("hidden"); }
+  }
+
+  function setFieldError(el, msg){
+    if (!el) return;
+    el.classList.add("is-invalid");
+    const id = el.id || "";
+    const err = document.querySelector(`[data-err-for="${id}"]`);
+    if (err) { err.textContent = msg || "Required"; err.classList.remove("hidden"); }
+  }
+
+  function setRowFieldError(el, msg){
+    if (!el) return;
+    el.classList.add("is-invalid");
+    const td = el.closest("td") || el.parentElement;
+    const err = td ? td.querySelector(".field-err") : null;
+    if (err) { err.textContent = msg || "Required"; err.classList.remove("hidden"); }
+  }
+  function clearRowFieldError(el){
+    if (!el) return;
+    el.classList.remove("is-invalid");
+    const td = el.closest("td") || el.parentElement;
+    const err = td ? td.querySelector(".field-err") : null;
+    if (err) { err.textContent = ""; err.classList.add("hidden"); }
+  }
+
+  function requiredText(el){ return el && String(el.value || "").trim().length > 0; }
+  function requiredDate(el){ return el && String(el.value || "").trim().length > 0; }
+  function requiredSelect(el){ return el && String(el.value || "").trim().length > 0; }
+  function requiredPositiveNumber(el){
+    const n = window.__rcv.toNum(el ? el.value : "");
+    return Number.isFinite(n) && n > 0;
+  }
+
+  function markTomSelectInvalid(selectId, isBad){
+    const sel = $(selectId);
+    if (!sel) return;
+    const wrapper = sel.closest(".ts-wrapper");
+    if (!wrapper) return;
+    if (isBad) wrapper.classList.add("is-invalid"); else wrapper.classList.remove("is-invalid");
+  }
+
+  function validateForm(){
+    hideBanner();
+
+    document.querySelectorAll("#receivableForm input, #receivableForm select, #receivableForm textarea")
+      .forEach(el => clearFieldError(el));
+
+    const invalids = [];
+
+    const id_customer_code   = $("id_customer_code");
+    const id_customer_name   = $("id_customer_name");
+    const id_invoice_number  = $("id_invoice_number");
+    const id_invoice_date    = $("id_invoice_date");
+    const id_due_date        = $("id_due_date");
+    const id_invoice_amount  = $("id_invoice_amount");
+
+    const id_received_amount = $("id_received_amount");
+    const id_currency        = $("id_currency");
+    const id_status          = $("id_status");
+    const id_cheque_no       = $("id_cheque_no");
+    const id_cheque_date     = $("id_cheque_date");
+    const id_remarks         = $("id_remarks");
+
+    if (!requiredSelect(id_customer_code)) { setFieldError(id_customer_code, "Customer code is required."); invalids.push(id_customer_code); }
+    if (!requiredText(id_customer_name))   { setFieldError(id_customer_name, "Customer name is required."); invalids.push(id_customer_name); }
+
+    if (!requiredSelect(id_invoice_number)) { setFieldError(id_invoice_number, "Invoice number is required."); invalids.push(id_invoice_number); }
+    if (!requiredDate(id_invoice_date))     { setFieldError(id_invoice_date, "Invoice date is required."); invalids.push(id_invoice_date); }
+    if (!requiredDate(id_due_date))         { setFieldError(id_due_date, "Due date is required."); invalids.push(id_due_date); }
+    if (!requiredPositiveNumber(id_invoice_amount)) { setFieldError(id_invoice_amount, "Invoice amount must be > 0."); invalids.push(id_invoice_amount); }
+
+    if (!requiredPositiveNumber(id_received_amount)) { setFieldError(id_received_amount, "Received amount must be > 0."); invalids.push(id_received_amount); }
+    if (!requiredSelect(id_currency)) { setFieldError(id_currency, "Currency is required."); invalids.push(id_currency); }
+    if (!requiredSelect(id_status))   { setFieldError(id_status, "Status is required."); invalids.push(id_status); }
+
+    if (!requiredText(id_cheque_no))   { setFieldError(id_cheque_no, "Cheque/Ref No. is required."); invalids.push(id_cheque_no); }
+    if (!requiredDate(id_cheque_date)) { setFieldError(id_cheque_date, "Cheque date is required."); invalids.push(id_cheque_date); }
+
+    if (!requiredText(id_remarks)) { setFieldError(id_remarks, "Remarks are required."); invalids.push(id_remarks); }
+
+    // Extra rows: validate only if any field filled OR select chosen
+    document.querySelectorAll("#invoice-rows-container tr[data-extra='1']").forEach(tr => {
+      const invSel = tr.querySelector("select[name='invoice_number']");
+      const invInp = tr.querySelector("input[name='invoice_number']");
+      const inv = invSel || invInp;
+
+      const invD = tr.querySelector("input[name='invoice_date']");
+      const dueD = tr.querySelector("input[name='due_date']");
+      const amt  = tr.querySelector("input[name='invoice_amount']");
+
+      const anyFilled =
+        (inv && String(inv.value || "").trim()) ||
+        (invD && String(invD.value || "").trim()) ||
+        (dueD && String(dueD.value || "").trim()) ||
+        (amt && String(amt.value || "").trim());
+
+      if (!anyFilled) return;
+
+      if (!(inv && String(inv.value || "").trim())) { setRowFieldError(inv, "Invoice number required."); invalids.push(inv); }
+      if (!(invD && String(invD.value || "").trim())) { setRowFieldError(invD, "Invoice date required."); invalids.push(invD); }
+      if (!(dueD && String(dueD.value || "").trim())) { setRowFieldError(dueD, "Due date required."); invalids.push(dueD); }
+      if (!requiredPositiveNumber(amt)) { setRowFieldError(amt, "Amount must be > 0."); invalids.push(amt); }
+    });
+
+    markTomSelectInvalid("id_customer_code", !requiredSelect(id_customer_code));
+    markTomSelectInvalid("id_invoice_number", !requiredSelect(id_invoice_number));
+
+    if (invalids.length) {
+      const first = invalids.find(Boolean);
+      if (first && first.scrollIntoView) first.scrollIntoView({ behavior: "smooth", block: "center" });
+      showBanner(`Missing/invalid fields: ${invalids.length}. Please correct and try again.`);
+      return false;
+    }
+    return true;
+  }
+
+  // clear errors while typing
+  const formEl = $("receivableForm");
+  if (formEl) {
+    formEl.addEventListener("input", function(e){
+      const el = e.target;
+      if (!el) return;
+      clearFieldError(el);
+      if (el.closest("#invoice-rows-container")) clearRowFieldError(el);
+      if (el.id === "id_customer_code" || el.id === "id_invoice_number") {
+        const wrapper = el.closest(".ts-wrapper");
+        if (wrapper) wrapper.classList.remove("is-invalid");
+      }
+    });
+  }
+
+  /* ----------------------------
+     Received Amount = sum of all invoice amounts (MAIN + EXTRA)
+     ---------------------------- */
+  window.__rcv.recalcReceivedFromInvoices = function() {
+    const recvEl = $("id_received_amount");
+    const sumEl  = $("sum-amount");
+    if (!recvEl) return;
+
+    let total = 0;
+
+    const mainAmtEl = $("id_invoice_amount");
+    const mainAmt = window.__rcv.toNum(mainAmtEl ? mainAmtEl.value : "");
+    if (Number.isFinite(mainAmt)) total += mainAmt;
+
+    document.querySelectorAll("#invoice-rows-container tr[data-extra='1']").forEach(tr => {
+      const amtEl = tr.querySelector("input[name='invoice_amount']");
+      const n = window.__rcv.toNum(amtEl ? amtEl.value : "");
+      if (Number.isFinite(n)) total += n;
+    });
+
+    recvEl.value = total.toFixed(2);
+    recvEl.dispatchEvent(new Event("input", { bubbles: true }));
+
+    if (sumEl) sumEl.textContent = window.__rcv.fmtINR(total);
+  };
+
+  // keep summary synced
+  const recvEl = $("id_received_amount");
+  if (recvEl) {
+    recvEl.addEventListener("input", function() {
+      const sumEl = $("sum-amount");
+      if (!sumEl) return;
+      const v = window.__rcv.toNum(recvEl.value) || 0;
+      sumEl.textContent = window.__rcv.fmtINR(v);
+    });
+  }
+
+  /* ----------------------------
+     In-process invoice tracking (exclude selected invoices from other rows)
+     ---------------------------- */
+  window.__rcv.rebuildSelectedInvoices = function(){
+    window.__rcv.selectedInvoices.clear();
+
+    const mainVal = window.__rcv.normalizeInv(invoiceSelect ? invoiceSelect.getValue() : "");
+    if (mainVal) window.__rcv.selectedInvoices.add(mainVal);
+
+    document.querySelectorAll("#invoice-rows-container tr[data-extra='1']").forEach(tr => {
+      if (tr.__ts) {
+        const v = window.__rcv.normalizeInv(tr.__ts.getValue());
+        if (v) window.__rcv.selectedInvoices.add(v);
+      }
+    });
+  };
+
+  /* ----------------------------
+     Narration automation (kept)
+     ---------------------------- */
+  function parseISODate(s){
+    if(!s) return null;
+    const d = new Date(s + "T00:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function daysBetween(a, b){
+    const ms = (b.getTime() - a.getTime());
+    return Math.floor(ms / (1000 * 60 * 60 * 24));
+  }
+  function getTypeValue(){
+    const t = $("id_type");
+    return (t && t.value) ? String(t.value).toUpperCase().trim() : "";
+  }
+  function isPDC(){
+    const typeVal = getTypeValue();
+    if (typeVal.includes("PDC")) return true;
+
+    const chqDateEl = $("id_cheque_date");
+    const chqDate = parseISODate(chqDateEl ? chqDateEl.value : "");
+    if (chqDate){
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      return chqDate.getTime() > today.getTime();
+    }
+    return false;
+  }
+
+  let userEditedRemarks = false;
+
+  function buildNarration(){
+    const invDateEl = $("id_invoice_date");
+    const chqDateEl = $("id_cheque_date");
+
+    const invDate = parseISODate(invDateEl ? invDateEl.value : "");
+    const chqDate = parseISODate(chqDateEl ? chqDateEl.value : "");
+    if (!invDate || !chqDate) return "";
+
+    let dd = daysBetween(invDate, chqDate);
+    if (dd < 0) dd = Math.abs(dd);
+
+    const suffix = isPDC() ? "PDC RECD" : "RECD";
+    return `${dd} DAYS ${suffix}`;
+  }
+
+  function tryAutoSetRemarks(){
+    const remarksEl = $("id_remarks");
+    if (!remarksEl) return;
+    if (userEditedRemarks) return;
+
+    const narration = buildNarration();
+    if (!narration) return;
+
+    remarksEl.value = narration;
+    remarksEl.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  (function bindRemarksGuard(){
+    const remarksEl = $("id_remarks");
+    if (!remarksEl) return;
+    remarksEl.addEventListener("input", function() {
+      if ((remarksEl.value || "").trim() === "") { userEditedRemarks = false; return; }
+      userEditedRemarks = true;
+    });
+  })();
+
+  ["id_invoice_date","id_due_date","id_type","id_cheque_date"].forEach(id=>{
+    const el = $(id);
+    if(el) el.addEventListener("change", tryAutoSetRemarks);
+  });
+
+  /* ----------------------------
+     TomSelect dropdowns
+     ---------------------------- */
+  const customerSelect = new TomSelect("#id_customer_code", {
+    valueField: "id",
+    labelField: "text",
+    searchField: ["text", "id"],
+    dropdownParent: "body",
+    load: function(query, callback) {
+      fetch(`${URL_CUSTOMERS}?q=${encodeURIComponent(query || "")}`)
+        .then(r => r.json())
+        .then(json => callback(json.results || []))
+        .catch(() => callback());
+    },
+    render: {
+      option: function(item, escape) {
+        return `<div class="py-2 px-3 border-b border-slate-50">
+                  <div class="font-bold text-slate-800">${escape(item.id)}</div>
+                  <div class="text-[10px] text-slate-500">${escape(item.text)}</div>
+                </div>`;
+      }
+    },
+    onChange: function(value) {
+      const item = this.options[value];
+      const nameEl = $("id_customer_name");
+
+      if (nameEl && !nameEl.hasAttribute("data-manual")) {
+        nameEl.value = item ? (item.name || item.text) : "";
+      }
+      $("sum-cust").textContent = item ? (item.name || item.id) : "—";
+
+      if (initializing) return;
+
+      window.__rcv.selectedInvoices.clear();
+
+      invoiceSelect.clear();
+      invoiceSelect.clearOptions();
+      if ($("id_invoice_date")) $("id_invoice_date").value = "";
+      if ($("id_due_date")) $("id_due_date").value = "";
+      if ($("id_invoice_amount")) $("id_invoice_amount").value = "";
+
+      document.querySelectorAll("#invoice-rows-container tr[data-extra='1']").forEach(tr => {
+        if (tr.__ts) { tr.__ts.clear(); tr.__ts.clearOptions(); }
+        const invD = tr.querySelector("input[name='invoice_date']");
+        const dueD = tr.querySelector("input[name='due_date']");
+        const amt  = tr.querySelector("input[name='invoice_amount']");
+        if (invD) invD.value = "";
+        if (dueD) dueD.value = "";
+        if (amt)  amt.value = "";
+      });
+
+      if ($("id_received_amount")) $("id_received_amount").value = "0.00";
+      if ($("sum-amount")) $("sum-amount").textContent = window.__rcv.fmtINR(0);
+
+      if (value) invoiceSelect.load("");
+    }
+  });
+
+  window.__rcv.getCustomerCode = function(){ return customerSelect.getValue(); };
+
+  const invoiceSelect = new TomSelect("#id_invoice_number", {
+    valueField: "id",
+    labelField: "text",
+    searchField: "text",
+    dropdownParent: "body",
+    load: function(query, callback) {
+      const customerCode = customerSelect.getValue();
+      if (!customerCode) return callback();
+
+      fetch(`${URL_INVOICES}?customer_code=${encodeURIComponent(customerCode)}&q=${encodeURIComponent(query || "")}`)
+        .then(r => r.json())
+        .then(json => {
+          const results = (json.results || []);
+          const current = window.__rcv.normalizeInv(invoiceSelect.getValue());
+
+          const filtered = results.filter(it => {
+            const id = window.__rcv.normalizeInv(it.id);
+            if (!id) return false;
+            if (id === current) return true;
+            return !window.__rcv.selectedInvoices.has(id);
+          });
+
+          callback(filtered);
+        })
+        .catch(() => callback());
+    },
+    onChange: function(value) {
+      const opt = this.options[value];
+      if (opt) {
+        if ($("id_invoice_date")) $("id_invoice_date").value = opt.invoice_date || "";
+        if ($("id_due_date")) $("id_due_date").value = opt.due_date || "";
+        if ($("id_invoice_amount")) $("id_invoice_amount").value = opt.invoice_amount || "";
+
+        $("sum-inv").textContent = opt.id || "—";
+        tryAutoSetRemarks();
+      } else {
+        $("sum-inv").textContent = value || "—";
+      }
+
+      window.__rcv.rebuildSelectedInvoices();
+      window.__rcv.recalcReceivedFromInvoices();
+    }
+  });
+
+  window.__rcv.initExtraInvoiceRow = function(tr){
+    const sel = tr.querySelector("select.invoice-select");
+    if (!sel) return;
+
+    const invDateEl = tr.querySelector("input[name='invoice_date']");
+    const dueDateEl = tr.querySelector("input[name='due_date']");
+    const amtEl     = tr.querySelector("input[name='invoice_amount']");
+
+    // readonly look, but allow submit
+    [invDateEl, dueDateEl, amtEl].forEach(x => {
+      if (!x) return;
+      x.classList.add("read-only-field");
+      x.setAttribute("readonly", true);
+    });
+
+    const ts = new TomSelect(sel, {
+      valueField: "id",
+      labelField: "text",
+      searchField: "text",
+      dropdownParent: "body",
+      preload: true,
+      load: function(query, callback){
+        const customerCode = window.__rcv.getCustomerCode();
+        if (!customerCode) return callback();
+
+        fetch(`${window.__rcv.URL_INVOICES}?customer_code=${encodeURIComponent(customerCode)}&q=${encodeURIComponent(query || "")}`)
+          .then(r => r.json())
+          .then(json => {
+            const results = (json.results || []);
+            const current = window.__rcv.normalizeInv(ts.getValue());
+
+            const filtered = results.filter(it => {
+              const id = window.__rcv.normalizeInv(it.id);
+              if (!id) return false;
+              if (id === current) return true;
+              return !window.__rcv.selectedInvoices.has(id);
+            });
+
+            callback(filtered);
+          })
+          .catch(() => callback());
+      },
+      onDropdownOpen: function(){
+        if (!this.options || Object.keys(this.options).length === 0) this.load("");
+      },
+      onChange: function(value){
+        const opt = this.options[value];
+        if (opt){
+          if (invDateEl) invDateEl.value = opt.invoice_date || "";
+          if (dueDateEl) dueDateEl.value = opt.due_date || "";
+          if (amtEl)     amtEl.value     = opt.invoice_amount || "";
+        }
+
+        window.__rcv.rebuildSelectedInvoices();
+        window.__rcv.recalcReceivedFromInvoices();
+      }
+    });
+
+    tr.__ts = ts;
+    ts.load("");
+  };
+
+  // Primary readonlys (do NOT block submit)
+  ["id_customer_name", "id_invoice_date", "id_due_date", "id_invoice_amount"].forEach(id => {
+    const el = $(id);
+    if (el) {
+      el.classList.add("read-only-field");
+      el.setAttribute("readonly", true);
+      el.classList.remove("pointer-events-none"); // ensure no accidental blocking
+    }
+  });
+
+  // Release init guard + initial calculate
+  setTimeout(() => {
+    initializing = false;
+    window.__rcv.rebuildSelectedInvoices();
+    window.__rcv.recalcReceivedFromInvoices();
+    tryAutoSetRemarks();
+  }, 0);
+
+  /* ----------------------------
+     Save Logic (NOW works)
+     ---------------------------- */
+  const btnSave = $("btnSave");
+  let submitting = false;
+
+  if (btnSave && formEl) {
+    btnSave.addEventListener("click", function() {
+      if (submitting) return;
+      if (!validateForm()) return;
+      fillConfirm();
+      openConfirm();
+    });
+  }
+
+  if (confirmSubmit && formEl) {
+    confirmSubmit.addEventListener("click", function() {
+      if (submitting) return;
+      submitting = true;
+      closeConfirm();
+      formEl.submit();
+    });
+  }
+});
+</script>
+{% endblock %}

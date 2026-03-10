@@ -1,0 +1,51 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Delete Receivable{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
+      <h1 class="text-lg font-bold text-slate-900">Delete Receivable Entry</h1>
+      <p class="text-xs text-slate-500 mt-1">This action cannot be undone.</p>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+        <p class="text-sm text-rose-900 font-semibold">
+          Are you sure you want to delete this receivable entry?
+        </p>
+
+        <div class="mt-2 text-xs text-rose-800 space-y-1">
+          <div>
+            <span class="font-bold">Customer:</span>
+            {{ object.customer_name|default:"-" }}
+            {% if object.customer_code %} ({{ object.customer_code }}){% endif %}
+          </div>
+          <div>
+            <span class="font-bold">Invoice:</span>
+            {{ object.invoice_number|default:"-" }}
+          </div>
+          <div>
+            <span class="font-bold">Invoice Date:</span>
+            {{ object.invoice_date|date:"d M, Y"|default:"-" }}
+          </div>
+        </div>
+      </div>
+
+      <form method="post" class="flex items-center gap-3">
+        {% csrf_token %}
+        <a href="{% url 'accounts:receivable_list' %}"
+           class="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 text-xs font-bold hover:bg-slate-50">
+          Cancel
+        </a>
+        <button type="submit"
+                class="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700">
+          Yes, Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

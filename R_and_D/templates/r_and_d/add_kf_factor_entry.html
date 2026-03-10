@@ -1,0 +1,136 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<!-- Messages Section -->
+{% if messages %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+    <div
+        class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+            {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+            onclick="this.parentElement.remove()">✖</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="container mx-auto px-6 mt-4">
+    <div class="flex items-center justify-between mb-4">
+        <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded shadow-md">
+            Back to Main Page
+        </a>
+        <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">
+            {% if form.instance.pk %}Edit{% else %}Add{% endif %} KF Factor Entry
+        </h2>
+        <a href="{% url 'kf_factor_entry_list' %}"
+            class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+            View All
+        </a>
+    </div>
+</div>
+
+<div class="flex justify-center items-center min-h-[60vh]">
+    <form method="post" class="max-w-2xl w-full bg-white p-8 rounded-lg shadow" novalidate>
+        {% csrf_token %}
+
+        <div class="space-y-6">
+            <!-- Main Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="{{ form.instrument.id_for_label }}" class="block font-semibold text-gray-700 mb-1">Instrument Used:</label>
+                    {{ form.instrument }}
+                    {% for error in form.instrument.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+                <div>
+                    <label for="{{ form.analysed_by.id_for_label }}" class="block font-semibold text-gray-700 mb-1">Analysed By:</label>
+                    {{ form.analysed_by }}
+                    {% for error in form.analysed_by.errors %}
+                        <p class="text-red-600 text-xs mt-1">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Table for Sample Weights and Burette Readings -->
+            <div>
+                <div class="font-bold text-lg mb-2">KF Factor Samples</div>
+                <table class="min-w-full border text-xs rounded mb-2">
+                    <thead class="bg-blue-100">
+                        <tr>
+                            <th class="border px-2 py-1 text-center">Sr. No.</th>
+                            <th class="border px-2 py-1 text-center">Sample Weight (gm)</th>
+                            <th class="border px-2 py-1 text-center">Burette Reading (mL)</th>
+                            <th class="border px-2 py-1 text-center">KF Factor (mg/mL)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ formset.management_form }}
+                        {% for formline in formset.forms %}
+                        <tr>
+                            <td class="border px-2 py-1 text-center">{{ forloop.counter }}</td>
+                            <td class="border px-2 py-1">{{ formline.sample_weight_mg }}</td>
+                            <td class="border px-2 py-1">{{ formline.burette_reading_ml }}</td>
+                            <td class="border px-2 py-1 text-center js-kf-factor"></td>
+                            {% for hidden in formline.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if formset.non_form_errors %}
+                <div class="text-red-500 text-xs mt-2">
+                    {{ formset.non_form_errors }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Average Row (JS will fill this) -->
+            <div class="flex items-center">
+                <div class="font-semibold mr-2">Average KF Factor:</div>
+                <div id="kf-factor-average" class="font-bold text-blue-700 text-lg"></div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="mt-3 bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-6 rounded-lg shadow">
+                    {% if form.instance.pk %}Update{% else %}Submit{% endif %}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    function calculateKFFactors() {
+        // Loop through table rows, calculate & set value in last cell
+        let sum = 0, count = 0;
+        document.querySelectorAll('tbody tr').forEach(function(row) {
+            let weightInput = row.querySelector('input[name$="sample_weight_mg"]');
+            let buretteInput = row.querySelector('input[name$="burette_reading_ml"]');
+            let kfFactorTd = row.querySelector('.js-kf-factor');
+            if (weightInput && buretteInput && kfFactorTd) {
+                let weight = parseFloat(weightInput.value) || 0;
+                let burette = parseFloat(buretteInput.value) || 0;
+                let kf = '';
+                if (weight > 0 && burette > 0) {
+                    // sample_weight / burette_reading
+                    kf = (weight / burette).toFixed(4);
+                    sum += (weight / burette);
+                    count++;
+                }
+                kfFactorTd.textContent = kf;
+            }
+        });
+        // Set average
+        let avg = count ? (sum / count).toFixed(4) : '';
+        document.getElementById('kf-factor-average').textContent = avg;
+    }
+
+    document.addEventListener('input', calculateKFFactors);
+    document.addEventListener('DOMContentLoaded', calculateKFFactors);
+</script>
+{% endblock %}

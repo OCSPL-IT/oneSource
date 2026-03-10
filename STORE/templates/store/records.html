@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supplier & Item Records</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-6xl w-full bg-white shadow-lg rounded-lg p-6">
+        <h1 class="text-3xl font-bold text-gray-800 text-center mb-6">Supplier & Item Records</h1>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+                <thead class="bg-gray-200 text-gray-700 uppercase text-sm leading-normal">
+                    <tr>
+                        <th class="py-3 px-6 text-left border">Supplier Name</th>
+                        <th class="py-3 px-6 text-left border">Item Name</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-800 text-sm">
+                    {% for record in records %}
+                    <tr class="border-b hover:bg-gray-100">
+                        <td class="py-3 px-6 border">{{ record.supplier_name }}</td>
+                        <td class="py-3 px-6 border">{{ record.item_name }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center py-3 text-gray-500">No records found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

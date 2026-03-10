@@ -1,0 +1,176 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="{% static 'store/css/store.css' %}">
+
+<!-- Messages Section -->
+{% if messages %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+            <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                        {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+                <span class="flex-1">{{ message }}</span>
+                <!-- Close Button -->
+                <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none" 
+                        onclick="this.parentElement.remove()">
+                    ✖
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+
+{% if form.non_field_errors %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for error in form.non_field_errors %}
+    <div class="relative p-4 border-l-4 rounded-md bg-red-50 border-red-500">
+        <span class="text-red-700">{{ error }}</span>
+        <button type="button" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 p-1" onclick="this.parentElement.remove()">
+            X
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-6">
+        <div class="container mx-auto px-6 mt-6">
+            <div class="flex items-center justify-between mb-4">
+                <!-- Back to Main Page Button -->
+                <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                    Back to Main Page
+                </a>
+                <!-- Heading -->
+                <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Edit Vehicle Entry</h2>
+                <!-- Back to Create Button -->
+                <a href="{% url 'vehicle_list' %}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                    View Records
+                </a>
+            </div>
+        </div>
+        <hr>
+
+        <form method="POST" class="space-y-4" novalidate>
+            {% csrf_token %}
+            
+            <!-- Record Date -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Record Date</label>
+                {{ form.record_date }}
+            </div>
+
+            <!-- Invoice -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Invoice</label>
+                {{ form.invoice }}
+            </div>
+
+            <label class="block text-sm font-medium text-gray-700">Supplier Name</label>
+            <select id="id_name_of_supplier" name="name_of_supplier" class="w-full p-2 border border-gray-300 rounded-lg">
+                {% if form.name_of_supplier.value %}
+                    <option value="{{ form.name_of_supplier.value }}" selected>{{ form.name_of_supplier.value }}</option>
+                {% endif %}
+            </select>
+
+            <label class="block text-sm font-medium text-gray-700">Material</label>
+            <select id="id_material" name="material" class="w-full p-2 border border-gray-300 rounded-lg">
+                {% if form.material.value %}
+                    <option value="{{ form.material.value }}" selected>{{ form.material.value }}</option>
+                {% endif %}
+            </select>
+
+
+            <!-- Unit and Quantity -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Unit</label>
+                    {{ form.unit }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Quantity</label>
+                    {{ form.qty }}
+                </div>
+            </div>
+
+            <!-- Reporting & Unloading Dates -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Reporting Date</label>
+                    {{ form.reporting_date }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Unloading Date</label>
+                    {{ form.unloading_date }}
+                </div>
+            </div>
+
+            <!-- Reporting & Unloading Times -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Reporting Time</label>
+                    {{ form.report_time }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Unloading Time</label>
+                    {{ form.unloading_time }}
+                </div>
+            </div>
+
+            <!-- Unloading Days -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Unloading Days</label>
+                <input type="number" id="unloading_days" name="unloading_days" value="{{ form.unloading_days.value|default:0 }}" readonly class="w-full p-2 border border-gray-300 bg-gray-100 rounded-lg">
+                <input type="hidden" id="id_unloading_days" name="unloading_days" value="{{ form.unloading_days.value|default:0 }}">
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Status</label>
+                {{ form.status }}
+            </div>
+
+            <!-- Vehicle Details -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Vehicle No</label>
+                {{ form.vehicle_no }}
+            </div>
+
+            <!-- Transporter Name -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Name of Transporter</label>
+                {{ form.name_of_transporter }}
+            </div>
+
+            <!-- Manufacture -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Manufacture</label>
+                {{ form.manufacture }}
+            </div>
+
+            <!-- Remarks -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Remarks</label>
+                {{ form.remark }}
+            </div>
+
+            <!-- Submit & Cancel Buttons -->
+            <div class="flex justify-between">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Update</button>
+                <a href="{% url 'vehicle_list' %}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- jQuery & Select2 -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+
+<!-- JavaScript for Auto-Calculating Unloading Days -->
+<script src="{% static 'store/js/vehicle_page.js' %}"></script>
+
+{% endblock maincontent %}

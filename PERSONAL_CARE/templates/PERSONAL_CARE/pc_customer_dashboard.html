@@ -1,0 +1,2228 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50/50">
+  <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+
+    <style>
+      .card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / .05)
+      }
+
+      .card:hover {
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 /.1), 0 2px 4px -2px rgb(0 0 0 /.1)
+      }
+
+      .data-wrap {
+        overflow: auto
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: .875rem
+      }
+
+      .data-table thead th {
+        position: sticky;
+        top: 0;
+        background: #f8fafc;
+        color: #475569;
+        border-bottom: 1px solid #e2e8f0;
+        padding: .5rem .75rem;
+        white-space: nowrap;
+        font-weight: 600;
+        font-size: .75rem
+      }
+
+      .data-table tbody td {
+        padding: .5rem .75rem;
+        border-bottom: 1px solid #f1f5f9
+      }
+
+      .num {
+        text-align: right;
+        font-variant-numeric: tabular-nums
+      }
+
+      .row-hover {
+        cursor: pointer
+      }
+
+      .row-hover:hover {
+        background: #f8fafc
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .375rem;
+        background: #e0e7ff;
+        border: 1px solid #c7d2fe;
+        color: #4338ca;
+        padding: .25rem .6rem;
+        border-radius: 9999px;
+        font-size: .75rem
+      }
+
+      .pill button {
+        opacity: .75
+      }
+
+      .pill button:hover {
+        opacity: 1
+      }
+
+      .tab-btn {
+        padding: .5rem 1rem;
+        border-radius: .5rem .5rem 0 0;
+        border: 1px solid transparent;
+        font-size: .875rem;
+        font-weight: 500;
+        color: #64748b;
+        background: transparent
+      }
+
+      .tab-btn-active {
+        border-color: #e2e8f0;
+        border-bottom-color: #ffffff;
+        background: #ffffff;
+        color: #0f172a
+      }
+    </style>
+
+    <header class="mb-4">
+      <h1 class="text-3xl font-bold text-slate-800">Personal Care — Dashboard</h1>
+      <p class="mt-1 text-slate-500">
+        Customers &amp; Sample Requests overview.
+      </p>
+    </header>
+
+    {# Tabs #}
+    <div class="border-b border-slate-200 mb-4">
+      <nav class="-mb-px flex gap-2">
+        <button id="tabBtnCustomers" class="tab-btn tab-btn-active" data-tab="customers">
+          Customers
+        </button>
+        <button id="tabBtnSamples" class="tab-btn" data-tab="samples">
+          Sample Requests
+        </button>
+        <button id="tabBtnFollowups" class="tab-btn" data-tab="followups">
+          Customer Follow-ups
+        </button> <button id="tabBtnCoverage" class="tab-btn" data-tab="coverage">Customer Activity Coverage</button>
+        <button id="tabBtnOtherCustomers" class="tab-btn" data-tab="other_customers">
+          Other Customers
+        </button>
+
+      </nav>
+    </div>
+
+    {# ---------------- TAB 1: CUSTOMERS ---------------- #}
+    <div id="tab-customers" class="space-y-4">
+
+      <!-- Filter bar -->
+      <div class="mb-4 card p-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+          <!-- Created From -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Created date (From)
+            </label>
+            <input type="date" id="created_from" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                     focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+          </div>
+
+          <!-- Created To -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Created date (To)
+            </label>
+            <input type="date" id="created_to" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                     focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+          </div>
+
+          <!-- Customer name -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Customer name
+            </label>
+            <input type="text" id="f_customer_name" list="customer_name_filter_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+            <datalist id="customer_name_filter_list">
+              {% for v in customer_name_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <!-- Sub profile -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Sub profile
+            </label>
+            <input type="text" id="f_sub_profile" list="sub_profile_filter_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+            <datalist id="sub_profile_filter_list">
+              {% for v in sub_profile_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <!-- Contact person -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Contact person
+            </label>
+            <input type="text" id="f_contact_person" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <!-- City -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              City
+            </label>
+            <input type="text" id="f_city" list="city_filter_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+            <datalist id="city_filter_list">
+              {% for v in city_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <!-- State -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              State
+            </label>
+            <input type="text" id="f_state" list="state_filter_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+            <datalist id="state_filter_list">
+              {% for v in state_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <!-- Zone -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Zone
+            </label>
+            <input type="text" id="f_zone" list="zone_filter_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+            <datalist id="zone_filter_list">
+              {% for v in zone_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <!-- Executive name -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Executive name
+            </label>
+            <input type="text" id="f_executive" list="executive_filter_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+            <datalist id="executive_filter_list">
+              {% for v in executive_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+
+          <!-- Source -->
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Source
+            </label>
+            <input type="text" id="f_source" list="source_filter_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                     focus:border-indigo-500 focus:ring-indigo-500">
+            <datalist id="source_filter_list">
+              {% for v in source_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+        </div>
+
+        <div class="mt-4 flex justify-end gap-2">
+          <button id="resetBtn" type="button" class="inline-flex items-center px-3 py-1.5 rounded-md border border-gray-300
+                         text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+            Clear
+          </button>
+          <button id="applyBtn" type="button" class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium
+                         text-white bg-indigo-600 hover:bg-indigo-700">
+            Filter
+          </button>
+        </div>
+
+        <div id="activePills" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
+      </div>
+
+      {# KPI cards #}
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-4">
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Total Customers</div>
+          <div id="kpiCustomers" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">States</div>
+          <div id="kpiStates" class="text-2xl font-bold text-amber-700">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Cities</div>
+          <div id="kpiCities" class="text-2xl font-bold text-emerald-700">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Executives</div>
+          <div id="kpiExecutives" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+      </div>
+
+      {# Summary tables #}
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Executives</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Executive</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="tblExecutive"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">States</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">State</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="tblState"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Cities</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">City</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="tblCity"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Sub Profile</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Sub Profile</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="tblSubProfile"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Customers</h3>
+          <p class="text-xs text-slate-500">Click a row to see only that customer in detail below.</p>
+        </header>
+        <div class="data-wrap max-h-64">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Customer</th>
+                <th class="num">Entries</th>
+              </tr>
+            </thead>
+            <tbody id="tblCustomer"></tbody>
+          </table>
+        </div>
+      </div>
+
+      {# Detailed table #}
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Detailed View (top 500)</h3>
+        </header>
+        <div class="data-wrap max-h-[32rem]">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Created Date</th>
+                <th class="text-left">Customer Name</th>
+                <th class="text-left">Customer Profile</th>
+                <th class="text-left">Sub Profile</th>
+                <th class="text-left">Contact Person</th>
+                <th class="text-left">Contact No</th>
+                <th class="text-left">Email ID</th>
+                <th class="text-left">Address</th>
+                <th class="text-left">Place</th>
+                <th class="text-left">City</th>
+                <th class="text-left">State</th>
+                <th class="text-left">Zone</th>
+                <th class="text-left">Executive</th>
+                <th class="text-left">Source</th>
+              </tr>
+            </thead>
+            <tbody id="tblDetail"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {# ---------------- TAB 2: SAMPLE REQUESTS ---------------- #}
+    <div id="tab-samples" class="space-y-4 hidden">
+
+      <div class="card p-4">
+        <div class="flex flex-col gap-4">
+          <div>
+            <h2 class="text-xl font-semibold text-slate-800">PC Sample Requests</h2>
+          </div>
+
+          {# Filter row for sample requests #}
+          <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-2">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Sample dispatch (From)
+              </label>
+              <input type="date" id="sample_from" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Sample dispatch (To)
+              </label>
+              <input type="date" id="sample_to" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Customer name
+              </label>
+              <input id="sf_customer" type="text" list="sf_customer_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_customer_list">
+                {% for v in sample_customer_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Product name
+              </label>
+              <input id="sf_product" type="text" list="sf_product_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_product_list">
+                {% for v in sample_product_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Project name
+              </label>
+              <input id="sf_project" type="text" list="sf_project_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_project_list">
+                {% for v in sample_project_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Supplier name
+              </label>
+              <input id="sf_supplier" type="text" list="sf_supplier_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_supplier_list">
+                {% for v in sample_supplier_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Stage
+              </label>
+              <input id="sf_stage" type="text" list="sf_stage_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_stage_list">
+                {% for v in sample_stage_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Remarks
+              </label>
+              <input id="sf_remarks" type="text" list="sf_remarks_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_remarks_list">
+                {% for v in sample_remarks_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Executive name
+              </label>
+              <input id="sf_executive" type="text" list="sf_executive_list" class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_executive_list">
+                {% for v in sample_executive_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">
+                Approval by NMP
+              </label>
+              <input id="sf_approval" type="text" list="sf_approval_list" placeholder="YES / NO / DONE / HOLD / PENDING"
+                class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                            focus:border-indigo-500 focus:ring-indigo-500">
+              <datalist id="sf_approval_list">
+                {% for v in sample_approval_options %}
+                <option value="{{ v }}"></option>
+                {% endfor %}
+              </datalist>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2">
+            <button id="sampleApplyBtn" class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium
+                           bg-indigo-600 text-white hover:bg-indigo-700">
+              Apply
+            </button>
+            <button id="sampleResetBtn" class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium
+                           border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-4">
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Total Sample Requests</div>
+          <div id="skpiRequests" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Executives</div>
+          <div id="skpiExecutives" class="text-2xl font-bold text-emerald-700">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Customers</div>
+          <div id="skpiCustomers" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Products</div>
+          <div id="skpiProducts" class="text-2xl font-bold text-amber-700">0</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Executive-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Executive</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblExecutive"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Customer-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblCustomer"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Product-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblProduct"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Project Name-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblProject"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Project Type-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Project Type</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblProjectType"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Supplier-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Supplier</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblSupplier"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Remarks-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Remarks</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblRemarks"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Stage-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Stage</th>
+                  <th class="num">Requests</th>
+                </tr>
+              </thead>
+              <tbody id="stblStage"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Approval Status-wise</h3>
+        </header>
+        <div class="data-wrap max-h-56">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Approval By NMP</th>
+                <th class="num">Requests</th>
+              </tr>
+            </thead>
+            <tbody id="stblApproval"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Sample Request Details (top 500)</h3>
+        </header>
+        <div class="data-wrap max-h-[32rem]">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Inquiry Date</th>
+                <th>Sample Dispatch Date</th>
+                <th>Project Close Date</th>
+                <th>Customer Name</th>
+                <th>Product Name</th>
+                <th>Project Name</th>
+                <th>Project Type</th>
+                <th>Supplier Name</th>
+                <th>Remarks</th>
+                <th>Stage</th>
+                <th>Executive</th>
+                <th>Contact Person</th>
+                <th>Contact No</th>
+                <th>Email</th>
+                <th>Address</th>
+                <th>Sample Qty</th>
+                <th>Price Indication</th>
+                <th>Last Follow-up Date</th>
+                <th>Approval By NMP</th>
+                <th>Approved Qty</th>
+                <th>Created</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="stblDetail"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="tab-followups" class="space-y-4 hidden">
+      <div class="card p-4">
+        <h2 class="text-xl font-semibold text-slate-800 mb-3">Customer Follow-ups</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">From Date</label>
+            <input type="date" id="fu_date_from"
+              class="block w-full rounded-md border-gray-300 px-2 py-1 text-sm focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">To Date</label>
+            <input type="date" id="fu_date_to"
+              class="block w-full rounded-md border-gray-300 px-2 py-1 text-sm focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Executive</label>
+            <input id="fu_executive" list="fu_executive_list"
+              class="block w-full rounded-md border-gray-300 px-2 py-1 text-sm focus:ring-indigo-500">
+            <datalist id="fu_executive_list">
+              {% for v in executive_options %}
+              <option value="{{ v }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-600 mb-1">Status</label>
+            <input id="fu_status" list="fu_status_list"
+              class="block w-full rounded-md border-gray-300 px-2 py-1 text-sm focus:ring-indigo-500">
+            <datalist id="fu_status_list">
+              {% for v in followup_status_options %}
+              <option value="{{ v.subcategory }}"></option>
+              {% endfor %}
+            </datalist>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-3">
+          <button id="fuResetBtn"
+            class="border border-slate-300 bg-white px-3 py-1.5 rounded-md text-xs font-medium text-slate-700 hover:bg-slate-50">Reset</button>
+          <button id="fuApplyBtn"
+            class="px-3 py-1.5 rounded-md text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700">Filter</button>
+        </div>
+      </div>
+
+      <!-- KPI -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Total Follow-ups</div>
+          <div id="fuTotal" class="text-2xl font-bold">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Executives</div>
+          <div id="fuExec" class="text-2xl font-bold">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Customers</div>
+          <div id="fuCust" class="text-2xl font-bold">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Statuses</div>
+          <div id="fuStat" class="text-2xl font-bold">0</div>
+        </div>
+      </div>
+
+      <!-- Summaries -->
+      <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div class="card">
+          <header class="p-3 border-b">
+            <h3 class="font-semibold text-slate-800">Executive-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Executive</th>
+                  <th class="num">Follow-ups</th>
+                </tr>
+              </thead>
+              <tbody id="fuTblExec"></tbody>
+            </table>
+          </div>
+        </div>
+        <!-- ✅ NEW: Customer-wise card -->
+        <div class="card">
+          <header class="p-3 border-b">
+            <h3 class="font-semibold text-slate-800">Customer-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th class="num">Count</th>
+                </tr>
+              </thead>
+              <tbody id="fuTblCustomer"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-3 border-b">
+            <h3 class="font-semibold text-slate-800">Mode-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Mode</th>
+                  <th class="num">Count</th>
+                </tr>
+              </thead>
+              <tbody id="fuTblMode"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-3 border-b">
+            <h3 class="font-semibold text-slate-800">Status-wise</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th class="num">Count</th>
+                </tr>
+              </thead>
+              <tbody id="fuTblStatus"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Detailed Table -->
+      <div class="card">
+        <header class="p-4 border-b">
+          <h3 class="font-semibold text-slate-800">Detailed View (Top 500)</h3>
+        </header>
+        <div class="data-wrap max-h-[32rem]">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Executive</th>
+                <th>Status</th>
+                <th>Mode</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id="fuTblDetail"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {# ---------------- TAB 4: CUSTOMER COVERAGE ---------------- #}
+    <div id="tab-coverage" class="space-y-4 hidden">
+      <div class="card p-4">
+        <h2 class="text-xl font-semibold text-slate-800">Customer Activity Coverage</h2>
+        <p class="text-xs text-slate-500 mt-1">
+          Customers present in Customer Master but missing in Sample Requests / Follow-ups.
+        </p>
+      </div>
+
+      <!-- ✅ CENTER CARD -->
+      <div class="flex justify-center">
+        <div class="card p-6 w-full max-w-sm text-center">
+          <div class="text-sm text-slate-500">Total Customers (Customer Master)</div>
+          <div id="covTotalCustomers" class="text-3xl font-bold text-slate-800">0</div>
+        </div>
+      </div>
+
+      <!-- ✅ THREE CARDS: Executive (small) + Missing Sample + Missing Followup -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- SMALL: Executive-wise -->
+        <div class="card lg:col-span-3">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Executives</h3>
+            <p class="text-xs text-slate-500 mt-1">Click to filter both lists</p>
+          </header>
+          <div class="data-wrap max-h-80">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Executive</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="covExecTbl"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- BIG: Not in Sample Requests -->
+        <div class="card lg:col-span-5">
+          <header class="p-4 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="font-semibold text-slate-800">Not in Sample Requests</h3>
+            <span class="text-sm text-slate-600">
+              Count: <b id="covMissingSampleCount">0</b>
+            </span>
+          </header>
+          <div class="data-wrap max-h-80">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th class="text-left">Customer</th>
+                </tr>
+              </thead>
+              <tbody id="covMissingSampleTbl"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- BIG: Not in Follow-ups -->
+        <div class="card lg:col-span-4">
+          <header class="p-4 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="font-semibold text-slate-800">Not in Follow-ups</h3>
+            <span class="text-sm text-slate-600">
+              Count: <b id="covMissingFollowupCount">0</b>
+            </span>
+          </header>
+          <div class="data-wrap max-h-80">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th class="text-left">Customer</th>
+                </tr>
+              </thead>
+              <tbody id="covMissingFollowupTbl"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {# ---------------- TAB 1B: OTHER CUSTOMERS ---------------- #}
+    <div id="tab-other-customers" class="space-y-4 hidden">
+
+      <!-- Filter bar -->
+      <div class="mb-4 card p-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Created date (From)</label>
+            <input type="date" id="o_created_from"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Created date (To)</label>
+            <input type="date" id="o_created_to"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Customer name</label>
+            <input type="text" id="o_f_customer_name" list="customer_name_filter_list"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Sub profile</label>
+            <input type="text" id="o_f_sub_profile" list="sub_profile_filter_list"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Contact person</label>
+            <input type="text" id="o_f_contact_person"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">City</label>
+            <input type="text" id="o_f_city" list="city_filter_list"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">State</label>
+            <input type="text" id="o_f_state" list="state_filter_list"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Zone</label>
+            <input type="text" id="o_f_zone" list="zone_filter_list"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Executive name</label>
+            <input type="text" id="o_f_executive" list="executive_filter_list"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Source</label>
+            <input type="text" id="o_f_source" list="source_filter_list"
+              class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <div class="mt-4 flex justify-end gap-2">
+          <button id="o_resetBtn" type="button"
+            class="inline-flex items-center px-3 py-1.5 rounded-md border border-gray-300 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+            Clear
+          </button>
+          <button id="o_applyBtn" type="button"
+            class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+            Filter
+          </button>
+        </div>
+
+        <div id="o_activePills" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
+      </div>
+
+      <!-- KPI cards -->
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-4">
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Total Customers</div>
+          <div id="okpiCustomers" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">States</div>
+          <div id="okpiStates" class="text-2xl font-bold text-amber-700">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Cities</div>
+          <div id="okpiCities" class="text-2xl font-bold text-emerald-700">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Executives</div>
+          <div id="okpiExecutives" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+      </div>
+
+      <!-- Summary tables -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Executives</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Executive</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="otblExecutive"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">States</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">State</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="otblState"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Cities</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">City</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="otblCity"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Sub Profile</h3>
+          </header>
+          <div class="data-wrap max-h-56">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Sub Profile</th>
+                  <th class="num">Customers</th>
+                </tr>
+              </thead>
+              <tbody id="otblSubProfile"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Customers</h3>
+          <p class="text-xs text-slate-500">Click a row to see only that customer in detail below.</p>
+        </header>
+        <div class="data-wrap max-h-64">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Customer</th>
+                <th class="num">Entries</th>
+              </tr>
+            </thead>
+            <tbody id="otblCustomer"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Detail table -->
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Detailed View (top 500)</h3>
+        </header>
+        <div class="data-wrap max-h-[32rem]">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Created</th>
+                <th class="text-left">Customer</th>
+                <th class="text-left">Sub Profile</th>
+                <th class="text-left">Contact Person</th>
+                <th class="text-left">Contact No</th>
+                <th class="text-left">Email</th>
+                <th class="text-left">Address</th>
+                <th class="text-left">City</th>
+                <th class="text-left">State</th>
+                <th class="text-left">Zone</th>
+                <th class="text-left">Executive</th>
+                <th class="text-left">Source</th>
+              </tr>
+            </thead>
+            <tbody id="otblDetail"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+
+
+  </div>
+
+  <script>
+    const PC_DATA = "{% url 'pc_customer_dashboard_data' %}";
+    const SAMPLE_DATA = "{% url 'pc_sample_dashboard_data' %}";
+    const COVERAGE_DATA = "{% url 'pc_missing_customers_dashboard_data' %}";
+    const OTHER_DATA = "{% url 'pc_other_customer_dashboard_data' %}";
+
+
+    // --------------------- TAB SWITCHING ---------------------
+    const tabBtnCustomers = document.getElementById("tabBtnCustomers");
+    const tabBtnSamples = document.getElementById("tabBtnSamples");
+    const tabCustomers = document.getElementById("tab-customers");
+    const tabSamples = document.getElementById("tab-samples");
+
+
+
+    function activateTab(tab) {
+      if (tab === "customers") {
+        tabCustomers.classList.remove("hidden");
+        tabSamples.classList.add("hidden");
+        tabBtnCustomers.classList.add("tab-btn-active");
+        tabBtnSamples.classList.remove("tab-btn-active");
+      } else {
+        tabCustomers.classList.add("hidden");
+        tabSamples.classList.remove("hidden");
+        tabBtnCustomers.classList.remove("tab-btn-active");
+        tabBtnSamples.classList.add("tab-btn-active");
+        loadSample();
+      }
+    }
+
+    tabBtnCustomers.addEventListener("click", () => activateTab("customers"));
+    tabBtnSamples.addEventListener("click", () => activateTab("samples"));
+
+
+    // --------------------- Helper for querystring ---------------------
+    function qs(base, params) {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "") sp.append(k, v);
+      });
+      const q = sp.toString();
+      return q ? `${base}?${q}` : base;
+    }
+
+    // --------------------- TAB 1: CUSTOMERS ---------------------
+    const state = {
+      executive: "",
+      state: "",
+      city: "",
+      sub_profile: "",
+      customer: "",
+      created_from: "",
+      created_to: "",
+      contact_person: "",
+      zone: "",
+      source: ""
+    };
+
+    function setFilter(k, v) {
+      state[k] = (state[k] === v ? "" : v);
+      renderPills();
+      load();
+    }
+
+    function clearFilter(k) {
+      state[k] = "";
+
+      if (k === "created_from") {
+        document.getElementById("created_from").value = "";
+      } else if (k === "created_to") {
+        document.getElementById("created_to").value = "";
+      } else if (k === "customer") {
+        document.getElementById("f_customer_name").value = "";
+      } else if (k === "sub_profile") {
+        document.getElementById("f_sub_profile").value = "";
+      } else if (k === "contact_person") {
+        document.getElementById("f_contact_person").value = "";
+      } else if (k === "city") {
+        document.getElementById("f_city").value = "";
+      } else if (k === "state") {
+        document.getElementById("f_state").value = "";
+      } else if (k === "zone") {
+        document.getElementById("f_zone").value = "";
+      } else if (k === "executive") {
+        document.getElementById("f_executive").value = "";
+      } else if (k === "source") {
+        document.getElementById("f_source").value = "";
+      }
+      renderPills();
+      load();
+    }
+
+    function renderPills() {
+      const wrap = document.getElementById("activePills");
+      wrap.innerHTML = "";
+      const labels = {
+        executive: "Executive",
+        state: "State",
+        city: "City",
+        sub_profile: "Sub Profile",
+        customer: "Customer",
+        created_from: "Created From",
+        created_to: "Created To",
+        contact_person: "Contact Person",
+        zone: "Zone",
+        source: "Source"
+      };
+      Object.entries(state).forEach(([k, v]) => {
+        if (!v) return;
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.innerHTML = `<span><b>${labels[k]}:</b> ${v}</span> <button type="button">✖</button>`;
+        pill.querySelector("button").addEventListener("click", () => clearFilter(k));
+        wrap.appendChild(pill);
+      });
+    }
+
+    function fillTable(tbodyId, rows, cols, clickMeta) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = "";
+      if (!rows || rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="${cols}" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        if (clickMeta) {
+          tr.className = "row-hover";
+          tr.addEventListener("click", () => setFilter(clickMeta.key, r[clickMeta.field] || "(blank)"));
+        }
+        tr.innerHTML = clickMeta.render(r);
+        tb.appendChild(tr);
+      });
+    }
+
+    function loadTotals(data) {
+      document.getElementById("kpiCustomers").textContent = data.totals.customers ?? 0;
+      document.getElementById("kpiStates").textContent = data.totals.states ?? 0;
+      document.getElementById("kpiCities").textContent = data.totals.cities ?? 0;
+      document.getElementById("kpiExecutives").textContent = data.totals.executives ?? 0;
+    }
+
+    function loadSummaries(data) {
+      const execRows = (data.by_executive || []).map(r => ({
+        executive: (r.executive ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillTable("tblExecutive", execRows, 2, {
+        key: "executive",
+        field: "executive",
+        render: r => `<td>${r.executive}</td><td class="num">${r.count}</td>`
+      });
+
+      const stateRows = (data.by_state || []).map(r => ({
+        state: (r.state ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillTable("tblState", stateRows, 2, {
+        key: "state",
+        field: "state",
+        render: r => `<td>${r.state}</td><td class="num">${r.count}</td>`
+      });
+
+      const cityRows = (data.by_city || []).map(r => ({
+        city: (r.city ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillTable("tblCity", cityRows, 2, {
+        key: "city",
+        field: "city",
+        render: r => `<td>${r.city}</td><td class="num">${r.count}</td>`
+      });
+
+      const spRows = (data.by_sub_profile || []).map(r => ({
+        sub_profile: (r.sub_profile ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillTable("tblSubProfile", spRows, 2, {
+        key: "sub_profile",
+        field: "sub_profile",
+        render: r => `<td>${r.sub_profile}</td><td class="num">${r.count}</td>`
+      });
+
+      const custRows = (data.by_customer || []).map(r => ({
+        customer: (r.customer ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillTable("tblCustomer", custRows, 2, {
+        key: "customer",
+        field: "customer",
+        render: r => `<td>${r.customer}</td><td class="num">${r.count}</td>`
+      });
+    }
+
+    function loadDetail(data) {
+      const tb = document.getElementById("tblDetail");
+      tb.innerHTML = "";
+      (data.table || []).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.created_at || ""}</td>
+          <td>${r.customer_name || ""}</td>
+          <td>${r.customer_profile || ""}</td>
+          <td>${r.sub_profile || ""}</td>
+          <td>${r.contact_person || ""}</td>
+          <td>${r.contact_no || ""}</td>
+          <td>${r.email_id || ""}</td>
+          <td>${r.address || ""}</td>
+          <td>${r.place || ""}</td>
+          <td>${r.city || ""}</td>
+          <td>${r.state || ""}</td>
+          <td>${r.zone || ""}</td>
+          <td>${r.executive || ""}</td>
+          <td>${r.source || ""}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    async function load() {
+      const params = {
+        executive: state.executive,
+        state: state.state,
+        city: state.city,
+        sub_profile: state.sub_profile,
+        customer: state.customer,
+        created_from: state.created_from,
+        created_to: state.created_to,
+        contact_person: state.contact_person,
+        zone: state.zone,
+        source: state.source
+      };
+      const res = await fetch(qs(PC_DATA, params));
+      if (!res.ok) return;
+      const data = await res.json();
+      loadTotals(data);
+      loadSummaries(data);
+      loadDetail(data);
+    }
+
+    document.getElementById("applyBtn").addEventListener("click", () => {
+      state.created_from = document.getElementById("created_from").value;
+      state.created_to = document.getElementById("created_to").value;
+      state.customer = document.getElementById("f_customer_name").value.trim();
+      state.sub_profile = document.getElementById("f_sub_profile").value.trim();
+      state.contact_person = document.getElementById("f_contact_person").value.trim();
+      state.city = document.getElementById("f_city").value.trim();
+      state.state = document.getElementById("f_state").value.trim();
+      state.zone = document.getElementById("f_zone").value.trim();
+      state.executive = document.getElementById("f_executive").value.trim();
+      state.source = document.getElementById("f_source").value.trim();
+
+      renderPills();
+      load();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      Object.keys(state).forEach(k => state[k] = "");
+
+      document.getElementById("created_from").value = "";
+      document.getElementById("created_to").value = "";
+      document.getElementById("f_customer_name").value = "";
+      document.getElementById("f_sub_profile").value = "";
+      document.getElementById("f_contact_person").value = "";
+      document.getElementById("f_city").value = "";
+      document.getElementById("f_state").value = "";
+      document.getElementById("f_zone").value = "";
+      document.getElementById("f_executive").value = "";
+      document.getElementById("f_source").value = "";
+
+      renderPills();
+      load();
+    });
+
+    renderPills();
+    load();  // initial load for customers
+
+    // --------------------- TAB 2: SAMPLE REQUESTS JS ---------------------
+    const sampleState = {
+      executive: "",
+      customer: "",
+      product: "",
+      project: "",
+      project_type: "",
+      supplier: "",
+      remarks: "",
+      stage: "",
+      approval: "",
+      sample_from: "",
+      sample_to: ""
+    };
+
+    function setSampleFilter(k, v) {
+      sampleState[k] = (sampleState[k] === v ? "" : v);
+      loadSample();
+    }
+
+    function fillSampleTable(tbodyId, rows, cols, clickMeta) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = "";
+      if (!rows || rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="${cols}" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        if (clickMeta) {
+          tr.className = "row-hover";
+          tr.addEventListener("click", () => setSampleFilter(clickMeta.key, r[clickMeta.field] || "(blank)"));
+        }
+        tr.innerHTML = clickMeta.render(r);
+        tb.appendChild(tr);
+      });
+    }
+
+    function loadSampleTotals(data) {
+      document.getElementById("skpiRequests").textContent = data.totals.requests ?? 0;
+      document.getElementById("skpiExecutives").textContent = data.totals.executives ?? 0;
+      document.getElementById("skpiCustomers").textContent = data.totals.customers ?? 0;
+      document.getElementById("skpiProducts").textContent = data.totals.products ?? 0;
+    }
+
+    function loadSampleSummaries(data) {
+      const exRows = (data.by_executive || []).map(r => ({
+        executive: r.executive || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblExecutive", exRows, 2, {
+        key: "executive",
+        field: "executive",
+        render: r => `<td>${r.executive}</td><td class="num">${r.count}</td>`
+      });
+
+      const custRows = (data.by_customer || []).map(r => ({
+        customer: r.customer || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblCustomer", custRows, 2, {
+        key: "customer",
+        field: "customer",
+        render: r => `<td>${r.customer}</td><td class="num">${r.count}</td>`
+      });
+
+      const prodRows = (data.by_product || []).map(r => ({
+        product: r.product || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblProduct", prodRows, 2, {
+        key: "product",
+        field: "product",
+        render: r => `<td>${r.product}</td><td class="num">${r.count}</td>`
+      });
+
+      const projRows = (data.by_project || []).map(r => ({
+        project: r.project || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblProject", projRows, 2, {
+        key: "project",
+        field: "project",
+        render: r => `<td>${r.project}</td><td class="num">${r.count}</td>`
+      });
+
+      const ptRows = (data.by_project_type || []).map(r => ({
+        project_type: r.project_type || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblProjectType", ptRows, 2, {
+        key: "project_type",
+        field: "project_type",
+        render: r => `<td>${r.project_type}</td><td class="num">${r.count}</td>`
+      });
+
+      const supRows = (data.by_supplier || []).map(r => ({
+        supplier: r.supplier || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblSupplier", supRows, 2, {
+        key: "supplier",
+        field: "supplier",
+        render: r => `<td>${r.supplier}</td><td class="num">${r.count}</td>`
+      });
+
+      const remRows = (data.by_remarks || []).map(r => ({
+        remarks: r.remarks || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblRemarks", remRows, 2, {
+        key: "remarks",
+        field: "remarks",
+        render: r => `<td>${r.remarks}</td><td class="num">${r.count}</td>`
+      });
+
+      const stageRows = (data.by_stage || []).map(r => ({
+        stage: r.stage || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblStage", stageRows, 2, {
+        key: "stage",
+        field: "stage",
+        render: r => `<td>${r.stage}</td><td class="num">${r.count}</td>`
+      });
+
+      const apprRows = (data.by_approval || []).map(r => ({
+        approval: r.approval || "(blank)", count: r.count || 0
+      }));
+      fillSampleTable("stblApproval", apprRows, 2, {
+        key: "approval",
+        field: "approval",
+        render: r => `<td>${r.approval}</td><td class="num">${r.count}</td>`
+      });
+    }
+
+    function loadSampleDetail(data) {
+      const tb = document.getElementById("stblDetail");
+      tb.innerHTML = "";
+      (data.table || []).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${r.inquiry_date || ""}</td>
+          <td>${r.sample_dispatch_date || ""}</td>
+          <td>${r.project_close_date || ""}</td>
+          <td>${r.customer_name || ""}</td>
+          <td>${r.product_name || ""}</td>
+          <td>${r.project_name || ""}</td>
+          <td>${r.project_type || ""}</td>
+          <td>${r.supplier_name || ""}</td>
+          <td>${r.remarks_master || ""}</td>
+          <td>${r.stage || ""}</td>
+          <td>${r.executive_name || ""}</td>
+          <td>${r.contact_person || ""}</td>
+          <td>${r.contact_no || ""}</td>
+          <td>${r.email || ""}</td>
+          <td>${r.address || ""}</td>
+          <td>${r.sample_quantity || ""}</td>
+          <td>${r.price_indication_given || ""}</td>
+          <td>${r.followup_date || ""}</td>
+          <td>${r.approval_by_nmp || ""}</td>
+          <td>${r.approved_quantity || ""}</td>
+          <td>${r.created_at || ""}</td>
+          <td>${r.updated_at || ""}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    async function loadSample() {
+      const params = {
+        executive: sampleState.executive,
+        customer: sampleState.customer,
+        product: sampleState.product,
+        project: sampleState.project,
+        project_type: sampleState.project_type,
+        supplier: sampleState.supplier,
+        remarks: sampleState.remarks,
+        stage: sampleState.stage,
+        approval: sampleState.approval,
+        sample_from: sampleState.sample_from,
+        sample_to: sampleState.sample_to
+      };
+
+      const res = await fetch(qs(SAMPLE_DATA, params));
+      if (!res.ok) return;
+      const data = await res.json();
+      loadSampleTotals(data);
+      loadSampleSummaries(data);
+      loadSampleDetail(data);
+    }
+
+    document.getElementById("sampleApplyBtn").addEventListener("click", () => {
+      sampleState.sample_from = document.getElementById("sample_from").value;
+      sampleState.sample_to = document.getElementById("sample_to").value;
+      sampleState.customer = document.getElementById("sf_customer").value.trim();
+      sampleState.product = document.getElementById("sf_product").value.trim();
+      sampleState.project = document.getElementById("sf_project").value.trim();
+      sampleState.supplier = document.getElementById("sf_supplier").value.trim();
+      sampleState.remarks = document.getElementById("sf_remarks").value.trim();
+      sampleState.stage = document.getElementById("sf_stage").value.trim();
+      sampleState.executive = document.getElementById("sf_executive").value.trim();
+      sampleState.approval = document.getElementById("sf_approval").value.trim();
+      loadSample();
+    });
+
+    document.getElementById("sampleResetBtn").addEventListener("click", () => {
+      Object.keys(sampleState).forEach(k => sampleState[k] = "");
+      document.getElementById("sample_from").value = "";
+      document.getElementById("sample_to").value = "";
+      document.getElementById("sf_customer").value = "";
+      document.getElementById("sf_product").value = "";
+      document.getElementById("sf_project").value = "";
+      document.getElementById("sf_supplier").value = "";
+      document.getElementById("sf_remarks").value = "";
+      document.getElementById("sf_stage").value = "";
+      document.getElementById("sf_executive").value = "";
+      document.getElementById("sf_approval").value = "";
+      loadSample();
+    });
+
+    const FOLLOWUP_DATA = "{% url 'pc_followup_dashboard_data' %}";
+    const tabBtnFollowups = document.getElementById("tabBtnFollowups");
+    const tabFollowups = document.getElementById("tab-followups");
+    const tabBtnCoverage = document.getElementById("tabBtnCoverage");
+    const tabCoverage = document.getElementById("tab-coverage");
+    const tabBtnOther = document.getElementById("tabBtnOtherCustomers");
+    const tabOther = document.getElementById("tab-other-customers");
+
+
+    function activateTab(tab) {
+      tabCustomers.classList.toggle("hidden", tab !== "customers");
+      tabSamples.classList.toggle("hidden", tab !== "samples");
+      tabFollowups.classList.toggle("hidden", tab !== "followups");
+      tabCoverage.classList.toggle("hidden", tab !== "coverage");
+      tabOther.classList.toggle("hidden", tab !== "other_customers");
+
+      tabBtnCustomers.classList.toggle("tab-btn-active", tab === "customers");
+      tabBtnSamples.classList.toggle("tab-btn-active", tab === "samples");
+      tabBtnFollowups.classList.toggle("tab-btn-active", tab === "followups");
+      tabBtnCoverage.classList.toggle("tab-btn-active", tab === "coverage");
+      tabBtnOther.classList.toggle("tab-btn-active", tab === "other_customers");
+
+      if (tab === "samples") loadSample();
+      if (tab === "followups") loadFollowups();
+      if (tab === "coverage") loadCoverage();
+      if (tab === "other_customers") loadOther();
+    }
+
+    tabBtnFollowups.addEventListener("click", () => activateTab("followups"));
+    tabBtnCoverage.addEventListener("click", () => activateTab("coverage"));
+    tabBtnOther.addEventListener("click", () => activateTab("other_customers"));
+
+    function toggleFollowupInput(inputId, value) {
+      const el = document.getElementById(inputId);
+      const v = (value || "").trim();
+      const cur = (el.value || "").trim();
+
+      // toggle: click same again -> clear
+      el.value = (cur.toLowerCase() === v.toLowerCase()) ? "" : v;
+
+      loadFollowups(); // reload followups data
+    }
+
+    function fillFollowupClickableTable(tbodyId, rows, cols, inputId) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = "";
+
+      if (!rows || rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="${cols}" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+
+      const selected = (document.getElementById(inputId).value || "").trim().toLowerCase();
+
+      rows.forEach(r => {
+        const label = (r.label || "(blank)").trim();
+        const count = r.count || 0;
+
+        const tr = document.createElement("tr");
+        tr.className = "row-hover";
+        tr.innerHTML = `<td>${escapeHtml(label)}</td><td class="num">${count}</td>`;
+
+        // highlight selected row
+        if (selected && selected === label.toLowerCase()) {
+          tr.style.background = "#f8fafc";
+          tr.style.fontWeight = "600";
+        }
+
+        // click -> set input and reload
+        tr.addEventListener("click", () => toggleFollowupInput(inputId, label === "(blank)" ? "" : label));
+
+        tb.appendChild(tr);
+      });
+    }
+
+
+    async function loadFollowups() {
+      const params = {
+        executive: document.getElementById("fu_executive").value,
+        status: document.getElementById("fu_status").value,
+        date_from: document.getElementById("fu_date_from").value,
+        date_to: document.getElementById("fu_date_to").value
+      };
+      const res = await fetch(qs(FOLLOWUP_DATA, params));
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById("fuTotal").textContent = data.totals.total_followups ?? 0;
+      document.getElementById("fuExec").textContent = data.totals.executives ?? 0;
+      document.getElementById("fuCust").textContent = data.totals.customers ?? 0;
+      document.getElementById("fuStat").textContent = data.totals.statuses ?? 0;
+
+      fillFollowupClickableTable("fuTblExec", data.by_executive, 2, "fu_executive");
+      fillTable("fuTblCustomer", data.by_customer, 2, {
+        key: "customer",
+        field: "label",
+        render: r => `<td>${r.label || "(blank)"}</td><td class="num">${r.count}</td>`
+      });
+      fillTable("fuTblMode", data.by_mode, 2, {
+        key: "mode", field: "label", render: r => `<td>${r.label || "(blank)"}</td><td class="num">${r.count}</td>`
+      });
+      fillFollowupClickableTable("fuTblStatus", data.by_status, 2, "fu_status");
+
+
+      const tb = document.getElementById("fuTblDetail");
+      tb.innerHTML = "";
+      (data.table || []).forEach(r => {
+        tb.innerHTML += `<tr><td>${r.date}</td><td>${r.customer}</td><td>${r.executive}</td><td>${r.status}</td><td>${r.mode}</td><td>${r.description}</td></tr>`;
+      });
+    }
+
+    document.getElementById("fuApplyBtn").addEventListener("click", loadFollowups);
+    document.getElementById("fuResetBtn").addEventListener("click", () => {
+      ["fu_date_from", "fu_date_to", "fu_executive", "fu_status"].forEach(id => document.getElementById(id).value = "");
+      loadFollowups();
+    });
+
+
+    function escapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
+
+    function fillNameList(tbodyId, items) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = "";
+      if (!items || items.length === 0) {
+        tb.innerHTML = `<tr><td colspan="2" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      items.forEach((name, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td class="num">${idx + 1}</td><td>${escapeHtml(name)}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    async function loadCoverage() {
+      const res = await fetch(COVERAGE_DATA);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById("covTotalCustomers").textContent =
+        data.totals?.total_customers ?? 0;
+
+      document.getElementById("covMissingSampleCount").textContent =
+        data.totals?.missing_sample ?? 0;
+
+      document.getElementById("covMissingFollowupCount").textContent =
+        data.totals?.missing_followup ?? 0;
+
+      fillNameList("covMissingSampleTbl", data.missing_sample_customers || []);
+      fillNameList("covMissingFollowupTbl", data.missing_followup_customers || []);
+    }
+
+    function escapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
+
+    function fillNameList(tbodyId, items) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = "";
+      if (!items || items.length === 0) {
+        tb.innerHTML = `<tr><td colspan="2" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      items.forEach((name, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td class="num">${idx + 1}</td><td>${escapeHtml(name)}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    async function loadCoverage() {
+      const res = await fetch(COVERAGE_DATA);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById("covTotalCustomers").textContent =
+        data.totals?.total_customers ?? 0;
+
+      document.getElementById("covMissingSampleCount").textContent =
+        data.totals?.missing_sample ?? 0;
+
+      document.getElementById("covMissingFollowupCount").textContent =
+        data.totals?.missing_followup ?? 0;
+
+      fillNameList("covMissingSampleTbl", data.missing_sample_customers || []);
+      fillNameList("covMissingFollowupTbl", data.missing_followup_customers || []);
+    }
+
+    // --------------------- TAB 4: COVERAGE ---------------------
+    const coverageState = { executive: "" };
+
+    function escapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
+
+    function fillNameList(tbodyId, items) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = "";
+      if (!items || items.length === 0) {
+        tb.innerHTML = `<tr><td colspan="2" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      items.forEach((name, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td class="num">${idx + 1}</td><td>${escapeHtml(name)}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    function fillExecTable(rows) {
+      const tb = document.getElementById("covExecTbl");
+      tb.innerHTML = "";
+
+      if (!rows || rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="2" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+
+      rows.forEach(r => {
+        const name = (r.label || "").trim() || "(blank)";
+        const count = r.count || 0;
+
+        const tr = document.createElement("tr");
+        tr.className = "row-hover";
+        tr.innerHTML = `<td>${escapeHtml(name)}</td><td class="num">${count}</td>`;
+
+        // highlight selected
+        if (coverageState.executive && name.toLowerCase() === coverageState.executive.toLowerCase()) {
+          tr.style.background = "#f8fafc";
+          tr.style.fontWeight = "600";
+        }
+
+        // click -> toggle filter
+        tr.addEventListener("click", () => {
+          coverageState.executive = (coverageState.executive === name ? "" : name);
+          loadCoverage();
+        });
+
+        tb.appendChild(tr);
+      });
+    }
+
+    async function loadCoverage() {
+      const url = qs(COVERAGE_DATA, { executive: coverageState.executive }); // ✅ send selected executive
+      const res = await fetch(url);
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      document.getElementById("covTotalCustomers").textContent =
+        data.totals?.total_customers ?? 0;
+
+      document.getElementById("covMissingSampleCount").textContent =
+        data.totals?.missing_sample ?? 0;
+
+      document.getElementById("covMissingFollowupCount").textContent =
+        data.totals?.missing_followup ?? 0;
+
+      // ✅ THIS was missing
+      fillExecTable(data.by_executive || []);
+
+      fillNameList("covMissingSampleTbl", data.missing_sample_customers || []);
+      fillNameList("covMissingFollowupTbl", data.missing_followup_customers || []);
+    }
+
+    // --------------------- TAB 1B: OTHER CUSTOMERS JS ---------------------
+    const otherState = {
+      executive: "",
+      state: "",
+      city: "",
+      sub_profile: "",
+      customer: "",
+      created_from: "",
+      created_to: "",
+      contact_person: "",
+      zone: "",
+      source: ""
+    };
+
+    function setOtherFilter(k, v) {
+      otherState[k] = (otherState[k] === v ? "" : v);
+      renderOtherPills();
+      loadOther();
+    }
+
+    function clearOtherFilter(k) {
+      otherState[k] = "";
+
+      const map = {
+        created_from: "o_created_from",
+        created_to: "o_created_to",
+        customer: "o_f_customer_name",
+        sub_profile: "o_f_sub_profile",
+        contact_person: "o_f_contact_person",
+        city: "o_f_city",
+        state: "o_f_state",
+        zone: "o_f_zone",
+        executive: "o_f_executive",
+        source: "o_f_source",
+      };
+      if (map[k]) document.getElementById(map[k]).value = "";
+
+      renderOtherPills();
+      loadOther();
+    }
+
+    function renderOtherPills() {
+      const wrap = document.getElementById("o_activePills");
+      wrap.innerHTML = "";
+      const labels = {
+        executive: "Executive",
+        state: "State",
+        city: "City",
+        sub_profile: "Sub Profile",
+        customer: "Customer",
+        created_from: "Created From",
+        created_to: "Created To",
+        contact_person: "Contact Person",
+        zone: "Zone",
+        source: "Source"
+      };
+
+      Object.entries(otherState).forEach(([k, v]) => {
+        if (!v) return;
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.innerHTML = `<span><b>${labels[k]}:</b> ${v}</span> <button type="button">✖</button>`;
+        pill.querySelector("button").addEventListener("click", () => clearOtherFilter(k));
+        wrap.appendChild(pill);
+      });
+    }
+
+    function fillOtherTable(tbodyId, rows, cols, clickMeta) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = "";
+      if (!rows || rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="${cols}" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      rows.forEach(r => {
+        const tr = document.createElement("tr");
+        if (clickMeta) {
+          tr.className = "row-hover";
+          tr.addEventListener("click", () =>
+            setOtherFilter(clickMeta.key, r[clickMeta.field] || "(blank)")
+          );
+        }
+        tr.innerHTML = clickMeta.render(r);
+        tb.appendChild(tr);
+      });
+    }
+
+    function loadOtherTotals(data) {
+      document.getElementById("okpiCustomers").textContent = data.totals.customers ?? 0;
+      document.getElementById("okpiStates").textContent = data.totals.states ?? 0;
+      document.getElementById("okpiCities").textContent = data.totals.cities ?? 0;
+      document.getElementById("okpiExecutives").textContent = data.totals.executives ?? 0;
+    }
+
+    function loadOtherSummaries(data) {
+      const execRows = (data.by_executive || []).map(r => ({
+        executive: (r.executive ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillOtherTable("otblExecutive", execRows, 2, {
+        key: "executive", field: "executive",
+        render: r => `<td>${r.executive}</td><td class="num">${r.count}</td>`
+      });
+
+      const stateRows = (data.by_state || []).map(r => ({
+        state: (r.state ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillOtherTable("otblState", stateRows, 2, {
+        key: "state", field: "state",
+        render: r => `<td>${r.state}</td><td class="num">${r.count}</td>`
+      });
+
+      const cityRows = (data.by_city || []).map(r => ({
+        city: (r.city ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillOtherTable("otblCity", cityRows, 2, {
+        key: "city", field: "city",
+        render: r => `<td>${r.city}</td><td class="num">${r.count}</td>`
+      });
+
+      const spRows = (data.by_sub_profile || []).map(r => ({
+        sub_profile: (r.sub_profile ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillOtherTable("otblSubProfile", spRows, 2, {
+        key: "sub_profile", field: "sub_profile",
+        render: r => `<td>${r.sub_profile}</td><td class="num">${r.count}</td>`
+      });
+
+      const custRows = (data.by_customer || []).map(r => ({
+        customer: (r.customer ?? r.label) || "(blank)",
+        count: r.count || 0
+      }));
+      fillOtherTable("otblCustomer", custRows, 2, {
+        key: "customer", field: "customer",
+        render: r => `<td>${r.customer}</td><td class="num">${r.count}</td>`
+      });
+    }
+
+    function loadOtherDetail(data) {
+      const tb = document.getElementById("otblDetail");
+      tb.innerHTML = "";
+      (data.table || []).forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+      <td>${r.created_at || ""}</td>
+      <td>${r.customer_name || ""}</td>
+      <td>${r.sub_profile || ""}</td>
+      <td>${r.contact_person || ""}</td>
+      <td>${r.contact_no || ""}</td>
+      <td>${r.email_id || ""}</td>
+      <td>${r.address || ""}</td>
+      <td>${r.city || ""}</td>
+      <td>${r.state || ""}</td>
+      <td>${r.zone || ""}</td>
+      <td>${r.executive || ""}</td>
+      <td>${r.source || ""}</td>
+    `;
+        tb.appendChild(tr);
+      });
+    }
+
+    async function loadOther() {
+      const params = {
+        executive: otherState.executive,
+        state: otherState.state,
+        city: otherState.city,
+        sub_profile: otherState.sub_profile,
+        customer: otherState.customer,
+        created_from: otherState.created_from,
+        created_to: otherState.created_to,
+        contact_person: otherState.contact_person,
+        zone: otherState.zone,
+        source: otherState.source
+      };
+
+      const res = await fetch(qs(OTHER_DATA, params));
+      if (!res.ok) return;
+      const data = await res.json();
+
+      loadOtherTotals(data);
+      loadOtherSummaries(data);
+      loadOtherDetail(data);
+    }
+
+    document.getElementById("o_applyBtn").addEventListener("click", () => {
+      otherState.created_from = document.getElementById("o_created_from").value;
+      otherState.created_to = document.getElementById("o_created_to").value;
+      otherState.customer = document.getElementById("o_f_customer_name").value.trim();
+      otherState.sub_profile = document.getElementById("o_f_sub_profile").value.trim();
+      otherState.contact_person = document.getElementById("o_f_contact_person").value.trim();
+      otherState.city = document.getElementById("o_f_city").value.trim();
+      otherState.state = document.getElementById("o_f_state").value.trim();
+      otherState.zone = document.getElementById("o_f_zone").value.trim();
+      otherState.executive = document.getElementById("o_f_executive").value.trim();
+      otherState.source = document.getElementById("o_f_source").value.trim();
+
+      renderOtherPills();
+      loadOther();
+    });
+
+    document.getElementById("o_resetBtn").addEventListener("click", () => {
+      Object.keys(otherState).forEach(k => otherState[k] = "");
+      ["o_created_from", "o_created_to", "o_f_customer_name", "o_f_sub_profile", "o_f_contact_person",
+        "o_f_city", "o_f_state", "o_f_zone", "o_f_executive", "o_f_source"].forEach(id => {
+          document.getElementById(id).value = "";
+        });
+      renderOtherPills();
+      loadOther();
+    });
+
+    renderOtherPills();
+
+
+
+  </script>
+</div>
+{% endblock %}

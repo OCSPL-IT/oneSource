@@ -1,0 +1,211 @@
+    {% extends "main/index.html" %}
+    {% load static %}
+
+    {% block maincontent %}
+    <div class="max-w-7xl mx-auto mt-10 bg-white shadow-2xl rounded-3xl p-10">
+
+    <div class="flex justify-between items-center mb-6">
+
+        <h2 class="text-2xl font-bold text-gray-800">
+            Customer Visit Form
+        </h2>
+
+        <a href="{% url 'sales_crm:customer_visit_list' %}" 
+        class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+            Visit List
+        </a>
+
+    </div>
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+
+            <!-- Customer -->
+            <div>
+                <label class="form-label">Customer</label>
+                {{ form.customer }}
+                <button type="button" onclick="toggleField('new_customer')" class="add-btn">
+                    + Add New
+                </button>
+                <div id="new_customer" class="hidden mt-2">
+                    {{ form.new_customer }}
+                </div>
+            </div>
+
+            <!-- Purchaser -->
+            <div>
+                <label class="form-label">Purchaser Name</label>
+                {{ form.purchaser_name }}
+            </div>
+
+            <!-- Cell -->
+            <div>
+                <label class="form-label">Cell No</label>
+                {{ form.cell_no }}
+            </div>
+
+            <!-- Direct LL -->
+            <div>
+                <label class="form-label">Direct LL No</label>
+                {{ form.direct_ll_no }}
+            </div>
+
+            <!-- Email -->
+            <div>
+                <label class="form-label">Email id</label>
+                {{ form.email }}
+            </div>
+            
+            <!-- Designation -->
+            <div>
+                <label class="form-label">Designation</label>
+                {{ form.designation }}
+            </div>
+
+            <!-- Product + Quantity -->
+     <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Product -->
+    <div>
+        <label class="form-label">Product</label>
+        {{ form.product }}
+
+        <button type="button" onclick="toggleField('new_product')" class="add-btn">
+            + Add New
+        </button>
+
+        <div id="new_product" class="hidden mt-2">
+            {{ form.new_product }}
+        </div>
+    </div>
+
+    <!-- Quantity -->
+    <div>
+        <label class="form-label">Quantity</label>
+        {{ form.quantity }}
+    </div>
+
+</div>
+
+            <!-- Industry -->
+            <div>
+                <label class="form-label">Industry</label>
+                {{ form.industry }}
+                <button type="button" onclick="toggleField('new_industry')" class="add-btn">
+                    + Add New
+                </button>
+                <div id="new_industry" class="hidden mt-2">
+                    {{ form.new_industry }}
+                </div>
+            </div>
+
+
+            <!-- Visit Date -->
+            <div>
+                <label class="form-label">Visit Date</label>
+                {{ form.visit_date }}
+            </div>
+
+            <!-- Sales Person -->
+            <div>
+                <label class="form-label">Sales Person</label>
+                {{ form.sales_person }}
+                <button type="button" onclick="toggleField('new_sales_person')" class="add-btn">
+                    + Add New
+                </button>
+                <div id="new_sales_person" class="hidden mt-2">
+                    {{ form.new_sales_person }}
+                </div>
+            </div>
+
+            <!-- Remark -->
+
+            <div>
+                <label class="form-label">Remark</label>
+                <textarea name="remark"
+                    class="remark-field w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows="1"
+                    style="resize:none;">{{ form.remark.value|default_if_none:'' }}</textarea>
+            </div>
+
+            <!-- Submit -->
+            <div class="md:col-span-2 text-right mt-4">
+                <button type="submit" class="submit-btn">
+                    Submit
+                </button>
+            </div>
+            
+        </div>
+
+    </form>
+    </div>
+
+    <style>
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #374151;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+            transition: all 0.2s ease;
+            background-color: #fff;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+        
+        .add-btn {
+            font-size: 12px;
+            color: #2563eb;
+            margin-top: 6px;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .add-btn:hover {
+            text-decoration: underline;
+        }
+
+        .submit-btn {
+            background: linear-gradient(to right, #2563eb, #4f46e5);
+            color: white;
+            padding: 10px 28px;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        textarea {
+            min-height: 46px;
+            resize: vertical;
+        }
+    </style>
+
+    <script>
+    function toggleField(id) {
+        var element = document.getElementById(id);
+        if (element.classList.contains("hidden")) {
+            element.classList.remove("hidden");
+        } else {
+            element.classList.add("hidden");
+        }
+    }
+    </script>
+
+    {% endblock %}

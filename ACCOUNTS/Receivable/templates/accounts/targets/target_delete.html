@@ -1,0 +1,31 @@
+{% extends "main/index.html" %}
+
+{% block title %}Delete Payment Target{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+    <h1 class="text-xl font-bold text-gray-900">Delete Target Week</h1>
+    <p class="text-sm text-gray-600 mt-2">
+      Are you sure you want to delete this target?
+    </p>
+
+    <div class="mt-4 rounded-lg border border-gray-200 p-4 bg-gray-50 text-sm text-gray-800">
+      <div><span class="font-semibold">Week:</span> {{ target.week_start }} to {{ target.week_end }}</div>
+      <div><span class="font-semibold">Company Group:</span> {{ target.company_group|default:"ALL" }}</div>
+    </div>
+
+    <form method="post" class="mt-6 flex justify-end gap-2">
+      {% csrf_token %}
+      <a href="{% url 'accounts:payment_target_list' %}"
+         class="px-4 py-2 rounded-lg border border-gray-300 text-sm">
+        Cancel
+      </a>
+      <button type="submit"
+              class="px-5 py-2 rounded-lg bg-rose-600 text-white text-sm font-semibold">
+        Delete
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+<!-- templates/QC/analytical_mistake_detail.html -->
+{% extends "main/index.html" %}
+{% block title %}Analytical Mistake – Details{% endblock %}
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--brand:#3b82f6;--brand-dark:#1e40af;--bg:#f5f7fb;--surface:#fff;--border:#e5e7eb;--text:#0f172a}
+  .wrap{max-width:900px;margin:30px auto;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.06);padding:24px 32px;font-family:Inter,sans-serif}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+  .field label{font-weight:600;color:var(--brand-dark)}
+  .field div{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#f9fafb}
+  .long{grid-column:1/-1}
+  .btn{display:inline-block;margin-top:18px;padding:8px 14px;background:var(--brand);color:#fff;border-radius:8px;text-decoration:none;font-weight:600}
+</style>
+<div class="wrap">
+  <h2>Analytical Mistake – Details</h2>
+  <div class="grid">
+    <div class="field"><label>Date</label><div>{{ entry.date|date:"d-m-Y" }}</div></div>
+    <div class="field"><label>Plant</label><div>{{ entry.plant }}</div></div>
+    <div class="field"><label>Product (Alfa)</label><div>{{ entry.product }}</div></div>
+    <div class="field"><label>Finished Product</label><div>{{ finished_display|default:"—" }}</div></div>
+    <div class="field"><label>Batch No</label><div>{{ entry.batch_no|default:"—" }}</div></div>
+
+    <div class="field long"><label>Description of Analytical Mistake</label><div>{{ entry.description|default:"—" }}</div></div>
+    <div class="field long"><label>Root Cause</label><div>{{ entry.root_cause|default:"—" }}</div></div>
+    <div class="field long"><label>Corrective Action</label><div>{{ entry.corrective_action|default:"—" }}</div></div>
+    <div class="field long"><label>Preventive Action</label><div>{{ entry.preventive_action|default:"—" }}</div></div>
+  </div>
+  <a href="{% url 'qc:analytical_mistake_list' %}" class="btn">← Back to Register</a>
+</div>
+{% endblock maincontent %}

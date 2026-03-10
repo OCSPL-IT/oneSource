@@ -1,0 +1,138 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Packing Material Master{% endblock %}
+
+{% block maincontent %}
+<div class="p-6 space-y-6">
+
+  <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold text-slate-900">Packing Material Master</h1>
+      <p class="text-slate-600 mt-1">
+        Maintain packing size &amp; rate; list can be synced from ERP BOM rows or uploaded via Excel (only missing will be added).
+      </p>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+
+      <!-- Upload Excel -->
+      <form method="post" enctype="multipart/form-data" class="flex items-center gap-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="upload">
+        {% if upload_form %}
+          {{ upload_form.file }}
+        {% else %}
+          <input type="file" name="file" accept=".xlsx"
+                 class="block w-full text-sm text-slate-700
+                        file:mr-3 file:py-2 file:px-3 file:rounded-lg
+                        file:border-0 file:bg-slate-900 file:text-white hover:file:bg-slate-800">
+        {% endif %}
+        <button type="submit"
+                class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold whitespace-nowrap">
+          Upload Excel
+        </button>
+      </form>
+
+      <!-- New -->
+      <a href="{% url 'accounts_budget:packing_master_create' %}"
+         class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold whitespace-nowrap">
+        + New Packing Material
+      </a>
+
+      <!-- Sync -->
+      <form method="post" class="inline">
+        {% csrf_token %}
+        <button type="submit" name="action" value="sync"
+                class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold whitespace-nowrap">
+          Sync from ERP
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-100">
+      <form method="get" class="flex flex-col md:flex-row gap-2 md:items-center">
+        <div class="flex-1">
+          <input type="text" name="q" value="{{ q|default:'' }}"
+                 placeholder="Search by code / name..."
+                 class="w-full rounded-xl border border-slate-300 px-4 py-2">
+        </div>
+        <div class="flex gap-2">
+          <button class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold">
+            Search
+          </button>
+          <a href="{% url 'accounts_budget:packing_master_list' %}"
+             class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold">
+            Reset
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-700">
+          <tr>
+            <th class="px-4 py-2 text-left">Item Code</th>
+            <th class="px-4 py-2 text-left">Item Name</th>
+            <th class="px-4 py-2 text-left">Unit</th>
+            <th class="px-4 py-2 text-right">Packing Size</th>
+            <th class="px-4 py-2 text-right">Rate (₹/Unit)</th> <!-- ✅ NEW -->
+            <th class="px-4 py-2 text-center">Active</th>
+            <th class="px-4 py-2 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr class="border-t border-slate-100">
+            <td class="px-4 py-2 font-semibold text-slate-900 whitespace-nowrap">{{ r.item_code }}</td>
+            <td class="px-4 py-2">{{ r.item_name }}</td>
+            <td class="px-4 py-2">{{ r.unit }}</td>
+
+            <td class="px-4 py-2 text-right">
+              {% if r.packing_size %}
+                {{ r.packing_size }}
+              {% else %}
+                <span class="text-slate-400">—</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-2 text-right"> <!-- ✅ NEW -->
+              {% if r.rate %}
+                {{ r.rate }}
+              {% else %}
+                <span class="text-slate-400">—</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-2 text-center">
+              {% if r.is_active %}
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Yes</span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">No</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-2 text-right">
+              <a href="{% url 'accounts_budget:packing_master_edit' r.id %}"
+                 class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold">
+                Edit
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="px-4 py-10 text-center text-slate-500"> <!-- ✅ 6→7 -->
+              No packing materials found.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

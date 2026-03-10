@@ -1,0 +1,165 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}{% if edit_mode %}Edit{% else %}New{% endif %} Customer Complaint – QC Project{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --brand: #3b82f6; --brand-hover: #2563eb;
+    --bg: #f5f7fb; --surface: #ffffff; --border: #e5e7eb; --text: #0f172a;
+  }
+  .cc-body { font-family: Inter, sans-serif; background: var(--bg); color: var(--text); }
+  header.cc-header { background: var(--surface); box-shadow: 0 2px 10px rgba(0,0,0,.05);
+    padding: 12px 24px; display:flex; justify-content:space-between; align-items:center;
+    border:1px solid var(--border); border-radius:12px; }
+  header.cc-header h1 { font-size:1.25rem; font-weight:600; margin:0; }
+  .btn { padding:8px 14px; font-weight:600; border-radius:8px; border:1px solid var(--brand);
+    background:var(--brand); color:#fff; text-decoration:none; transition:background .2s, transform .1s; }
+  .btn:hover { background:var(--brand-hover); transform:translateY(-1px); }
+  .btn.line { background:#fff; color:var(--brand); }
+  main.cc-main { max-width: 900px; margin:30px auto; background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; box-shadow:0 4px 20px rgba(0,0,0,.05); padding:24px 32px; }
+  main.cc-main h2 { text-align:center; margin:0 0 24px; font-weight:600; }
+  form.cc-form { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); }
+  form.cc-form label { font-weight:600; margin-bottom:6px; display:block; }
+  form.cc-form input, form.cc-form textarea, form.cc-form select {
+    width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:14px;
+  }
+  form.cc-form textarea { min-height:80px; resize:vertical; }
+  .form-actions { grid-column:1 / -1; text-align:right; margin-top:20px; }
+  .form-actions button { padding:10px 18px; font-weight:600; border-radius:8px; border:none;
+    background:var(--brand); color:#fff; cursor:pointer; transition:background .2s, transform .1s; }
+  .form-actions button:hover { background:var(--brand-hover); transform:translateY(-1px); }
+  .hint { font-size:12px; color:#6b7280; margin-top:4px; }
+  #id_product_name { color:#dc2626; font-weight:600; } /* red product text */
+  .errorlist { margin:6px 0 0; padding:0; list-style:none; color:#b91c1c; font-size:12px; }
+</style>
+
+<div class="cc-body">
+  <header class="cc-header">
+    <h1>Quality – Customer Complaint</h1>
+    <a href="{% url 'qc:qc_home' %}" class="btn line">← Back to Home</a>
+  </header>
+
+  <main class="cc-main">
+    <h2>{% if edit_mode %}Edit{% else %}New{% endif %} Customer Complaint</h2>
+
+    <form method="post" class="cc-form" novalidate>
+      {% csrf_token %}
+
+      <div>
+        <label for="{{ form.complaint_date.id_for_label }}">Complaint date:</label>
+        {{ form.complaint_date }} {{ form.complaint_date.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.complaint_no.id_for_label }}">Complaint no:</label>
+        {{ form.complaint_no }} {{ form.complaint_no.errors }}
+      </div>
+
+      <!-- Product (Alfa) with datalist -->
+      <div>
+        <label for="{{ form.product_name.id_for_label }}">Product name:</label>
+        {{ form.product_name }} {{ form.product_name.errors }}
+        <datalist id="alfa-options">
+          {% for name in alfa_options|default:form.alfa_options %}
+            <option value="{{ name }}"></option>
+          {% endfor %}
+        </datalist>
+        <div class="hint">Start typing to search Alfa product.</div>
+      </div>
+
+      <!-- Finished product (auto) -->
+      <div>
+        <label for="{{ form.finished_product_name.id_for_label }}">Finished product name:</label>
+        {{ form.finished_product_name }} {{ form.finished_product_name.errors }}
+        <div class="hint">Auto-filled from the Alfa Product Master.</div>
+      </div>
+
+      <div>
+        <label for="{{ form.customer_name.id_for_label }}">Customer name:</label>
+        {{ form.customer_name }} {{ form.customer_name.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.nature_of_complaint.id_for_label }}">Nature of complaint:</label>
+        {{ form.nature_of_complaint }} {{ form.nature_of_complaint.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.complaint_type.id_for_label }}">Complaint type:</label>
+        {{ form.complaint_type }} {{ form.complaint_type.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.investigation.id_for_label }}">Investigation / Root Cause Analysis:</label>
+        {{ form.investigation }} {{ form.investigation.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.corrective_action.id_for_label }}">Corrective action:</label>
+        {{ form.corrective_action }} {{ form.corrective_action.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.preventive_action.id_for_label }}">Preventive action:</label>
+        {{ form.preventive_action }} {{ form.preventive_action.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.status.id_for_label }}">Status:</label>
+        {{ form.status }} {{ form.status.errors }}
+      </div>
+
+      <div class="form-actions">
+        <button type="submit">{% if edit_mode %}Update{% else %}Save{% endif %}</button>
+      </div>
+    </form>
+  </main>
+</div>
+
+<!-- Alfa master map as JSON -->
+<script id="alfa-map" type="application/json">
+  {{ alfa_map_json|default:'{}'|safe }}
+</script>
+
+<script>
+(function(){
+  const script = document.getElementById('alfa-map');
+  const prod   = document.getElementById('{{ form.product_name.auto_id }}');
+  const fin    = document.getElementById('{{ form.finished_product_name.auto_id }}');
+
+  if (!prod) return;
+
+  // Ensure datalist hookup even if widget didn't set it
+  if (!prod.getAttribute('list')) prod.setAttribute('list','alfa-options');
+
+  let MAP = {};
+  try { MAP = script ? JSON.parse(script.textContent || '{}') : {}; } catch(e){ MAP = {}; }
+
+  function fillFinished(){
+    const key = (prod.value || '').trim();
+    if (!key) { if (fin) fin.value = ''; return; }
+
+    // exact, then case-insensitive prefix/contains
+    let hit = MAP[key] || '';
+    if (!hit) {
+      const lower = key.toLowerCase();
+      const keys  = Object.keys(MAP);
+      const k = keys.find(k => k.toLowerCase() === lower)
+             || keys.find(k => k.toLowerCase().startsWith(lower))
+             || keys.find(k => k.toLowerCase().includes(lower));
+      if (k) hit = MAP[k];
+    }
+    if (fin) fin.value = hit || '';
+  }
+
+  prod.addEventListener('input', fillFinished);
+  prod.addEventListener('change', fillFinished);
+  fillFinished(); // prefill on edit
+})();
+</script>
+{% endblock maincontent %}

@@ -1,0 +1,160 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto py-8">
+
+    <h2 class="text-2xl font-bold text-center mb-6 text-blue-700">Lagging Analysis Chart</h2>
+
+    <form method="get" class="flex flex-wrap gap-4 items-end mb-8 justify-center">
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">From Date</label>
+            <input type="date" name="from_date" value="{{ from_date }}" class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">To Date</label>
+            <input type="date" name="to_date" value="{{ to_date }}" class="rounded border border-gray-300 px-3 py-1"/>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Department</label>
+            <select name="department" class="rounded border border-gray-300 px-3 py-1">
+                <option value="">All</option>
+                {% for d in all_departments %}
+                    <option value="{{ d }}" {% if d == department_filter %}selected{% endif %}>{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Physical Location</label>
+            <select name="physical_location" class="rounded border border-gray-300 px-3 py-1">
+                <option value="">All</option>
+                {% for loc in all_locations %}
+                    <option value="{{ loc }}" {% if loc == physical_location_filter %}selected{% endif %}>{{ loc }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">HSE Lag Indicator</label>
+            <select name="hse_lag_indicator" class="rounded border border-gray-300 px-3 py-1">
+                <option value="">All</option>
+                {% for lag in all_hse_lag %}
+                    <option value="{{ lag }}" {% if lag == hse_lag_indicator_filter %}selected{% endif %}>{{ lag }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Risk Factor</label>
+            <select name="risk_factor" class="rounded border border-gray-300 px-3 py-1">
+                <option value="">All</option>
+                {% for rf in all_risk_factors %}
+                    <option value="{{ rf }}" {% if rf == risk_factor_filter %}selected{% endif %}>{{ rf }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mt-6 flex gap-2">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded shadow mr-2">
+                <i class="fa-solid fa-filter"></i>
+            </button>
+            <button type="submit" name="clear" value="1" class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded shadow">
+                <i class="fa-solid fa-eraser"></i>
+            </button>
+            
+        </div>
+    </form>
+
+    <!-- Compliance Status Cards -->
+    <div class="flex flex-wrap justify-center gap-6 mb-8">
+        {% for stat in status_counts %}
+        <div class="bg-white shadow rounded p-3 text-center min-w-[160px]">
+            <h3 class="text-lg font-semibold text-gray-700">{{ stat.complience_status|default:"Unknown" }}</h3>
+            <p class="text-3xl font-bold text-blue-700">{{ stat.count }}</p>
+        </div>
+        {% empty %}
+        <div>No compliance data found.</div>
+        {% endfor %}
+    </div>
+
+    <!-- Bar Chart: Department Wise -->
+    <div class="bg-white shadow rounded p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-center">Incidents by Department</h3>
+        <canvas id="departmentBarChart" height="80"></canvas>
+    </div>
+
+    <!-- Bar Chart: Physical Location Wise -->
+    <div class="bg-white shadow rounded p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-center">Incidents by Physical Location</h3>
+        <canvas id="locationBarChart" height="80"></canvas>
+    </div>
+
+    <!-- Pie Chart: Risk Factor -->
+     <!-- Two-column charts -->
+  <div class="flex gap-6 mt-2">
+    <div class="w-1/4">
+        <h3 class="text-lg font-semibold mb-4 text-center">Risk Factor Distribution</h3>
+      <canvas id="riskFactorPieChart" class="w-full"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Bar Chart for Department
+    new Chart(document.getElementById('departmentBarChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: {{ department_labels|safe }},
+            datasets: [{
+                label: 'Incidents',
+                data: {{ department_data|safe }},
+                backgroundColor: 'rgba(59,130,246,0.7)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    // Bar Chart for Physical Location
+    new Chart(document.getElementById('locationBarChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: {{ location_labels|safe }},
+            datasets: [{
+                label: 'Incidents',
+                data: {{ location_data|safe }},
+                backgroundColor: 'rgba(16,185,129,0.7)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    // Pie Chart for Risk Factor
+    new Chart(document.getElementById('riskFactorPieChart').getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: {{ risk_factor_labels|safe }},
+            datasets: [{
+                data: {{ risk_factor_data|safe }},
+                backgroundColor: [
+                    'rgba(16,185,129,0.7)',   // Low: green
+                    'rgba(234,179,8,0.7)',    // Medium: yellow
+                    'rgba(239,68,68,0.7)'     // High: red
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: true } }
+        }
+    });
+
+</script>
+{% endblock %}

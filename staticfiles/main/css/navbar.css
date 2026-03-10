@@ -1,0 +1,13 @@
+.group:hover .group-hover:visible {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(0, 0);
+    transition: visibility 0s linear 0s, opacity 300ms, transform 300ms;
+}
+
+.group .group-hover:visible {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate(0, -10px);
+    transition: visibility 0s linear 300ms, opacity 300ms, transform 300ms;
+}

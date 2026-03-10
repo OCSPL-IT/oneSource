@@ -1,0 +1,846 @@
+{% extends "main/index.html" %}
+{% load static inr_format %}
+
+{% block title %}Create Payment Target{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-[#f8fafc]">
+    <!-- Top Action Bar -->
+    <div class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 lg:px-8 py-3">
+        <div class="max-w-[90rem] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 p-2 rounded-lg">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 leading-none">New Weekly Target</h1>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Accounts</span>
+                        <svg class="w-2 h-2 text-slate-300" fill="currentColor" viewBox="0 0 20 20"><path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/></svg>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">Create Target</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button type="button" id="btnClearCacheTop" class="group flex items-center px-3 py-2 text-xs font-bold text-slate-500 hover:text-rose-600 transition-colors">
+                    <svg class="w-4 h-4 mr-1.5 opacity-60 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    Reset All
+                </button>
+                <div class="h-4 w-px bg-slate-200 mx-1"></div>
+                <a href="{% url 'accounts:payment_target_list' %}" class="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-all shadow-sm">
+                    Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <main class="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <form method="post" id="targetForm" class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            {% csrf_token %}
+            <input type="hidden" name="selected_cache" id="selected_cache" value="{{ selected_cache_json|default:'{}'|escape }}">
+
+            <!-- Left: Workflow -->
+            <div class="xl:col-span-8 space-y-8">
+
+                <!-- Step 1: Configuration -->
+                <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+                        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-bold">1</span>
+                        <h2 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Timeline & Scope</h2>
+                    </div>
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="md:col-span-1">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Company Group</label>
+                                {{ form.company_group }}
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Week Start</label>
+                                {{ form.week_start }}
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Week End</label>
+                                {{ form.week_end }}
+                            </div>
+                            <div class="md:col-span-3">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Internal Notes</label>
+                                {{ form.notes }}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Step 2: Bill Selection -->
+                <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-[10px] font-bold">2</span>
+                            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-tight">Select Invoices</h2>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100">
+                                {{ preview_rows|length }} Total Found
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Fetch Section -->
+                    <div class="p-6 border-b border-slate-100 bg-indigo-50/20">
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                            <div class="md:col-span-3">
+                                <label class="block text-[10px] font-bold text-indigo-900/60 uppercase mb-1.5 ml-1">Party Code</label>
+                                {{ party_form.party_code }}
+                            </div>
+                            <div class="md:col-span-6">
+                                <label class="block text-[10px] font-bold text-indigo-900/60 uppercase mb-1.5 ml-1">Party Name</label>
+                                {{ party_form.party_name }}
+                            </div>
+                            <div class="md:col-span-3">
+                                <button type="submit" name="action" value="fetch"
+                                        class="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 active:scale-95">
+                                    Fetch Bills
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search/Filter Bar -->
+                    <div class="px-6 py-3 bg-white border-b border-slate-100 flex flex-wrap gap-3 items-center">
+                        <div class="relative flex-1 min-w-[200px]">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                            </span>
+                            <input id="fltParty" type="text" placeholder="Filter by Party..."
+                                   class="pl-9 w-full bg-slate-50 border-transparent focus:bg-white text-xs py-2 rounded-lg">
+                        </div>
+                        <input id="fltInvoice" type="text" placeholder="Inv #" class="w-24 bg-slate-50 border-transparent focus:bg-white text-xs py-2 rounded-lg">
+
+                        <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase px-1">Terms:</span>
+                            <input id="fltTermsMin" type="text" inputmode="numeric" placeholder="Min" class="w-16 bg-transparent border-none text-xs p-1 focus:ring-0">
+                            <span class="text-slate-300">-</span>
+                            <input id="fltTermsMax" type="text" inputmode="numeric" placeholder="Max" class="w-16 bg-transparent border-none text-xs p-1 focus:ring-0">
+                        </div>
+
+                        <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase px-1">OD:</span>
+                            <input id="fltOdMin" type="text" inputmode="numeric" placeholder="Min" class="w-16 bg-transparent border-none text-xs p-1 focus:ring-0">
+                            <span class="text-slate-300">-</span>
+                            <input id="fltOdMax" type="text" inputmode="numeric" placeholder="Max" class="w-16 bg-transparent border-none text-xs p-1 focus:ring-0">
+                        </div>
+
+                        <div class="flex items-center gap-2 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase px-1">OS:</span>
+                            <input id="fltOsMin" type="text" placeholder="Min" class="w-16 bg-transparent border-none text-xs p-1 focus:ring-0">
+                            <span class="text-slate-300">-</span>
+                            <input id="fltOsMax" type="text" placeholder="Max" class="w-16 bg-transparent border-none text-xs p-1 focus:ring-0">
+                        </div>
+
+                        <select id="fltSelected" class="text-xs py-2 rounded-lg border-transparent bg-slate-50">
+                            <option value="">Status: All</option>
+                            <option value="selected">Selected</option>
+                            <option value="unselected">Unselected</option>
+                        </select>
+
+                        <button type="button" id="btnClearTableFilters" class="text-[10px] font-bold text-slate-400 hover:text-indigo-600 uppercase transition-colors">Clear</button>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-50/50 border-b border-slate-200">
+                                    <th class="pl-6 pr-3 py-3 w-10">
+                                        <div class="flex items-center justify-center">
+                                            <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        </div>
+                                    </th>
+                                    <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Party Information</th>
+                                    <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Pay Terms</th>
+                                    <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Overdue</th>
+                                    <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Outstanding</th>
+                                    <th class="px-3 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Target Amount</th>
+                                </tr>
+                            </thead>
+
+                            <tbody class="divide-y divide-slate-100">
+                                {% for r in preview_rows %}
+                                {% with key=r.party_code|upper|add:"||"|add:r.invoice_no|upper %}
+                                <tr class="hover:bg-indigo-50/30 transition-all cursor-pointer group"
+                                    data-key="{{ key }}"
+                                    data-outstanding="{{ r.outstanding_amount|default_if_none:'0' }}"
+                                    data-party="{{ r.party_name|default:'' }} {{ r.party_code|default:'' }} {{ r.company_name|default:'' }}"
+                                    data-invoice="{{ r.invoice_no|default:'' }}"
+                                    data-due="{{ r.due_date|default:'' }}"
+                                    data-trans="{{ r.invoice_date|default:'' }}"
+                                    data-terms="{{ r.pay_terms_days|default_if_none:'' }}"
+                                    data-overdue="{{ r.overdue_days|default_if_none:'' }}">
+
+                                    <td class="pl-6 pr-3 py-4 text-center">
+                                        <input type="checkbox" class="js-bill-check h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 transition-all cursor-pointer" data-key="{{ key }}">
+                                    </td>
+
+                                    <td class="px-3 py-4">
+                                        <div class="flex flex-col">
+                                            <span class="text-sm font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">{{ r.party_name }}</span>
+                                            <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                <span class="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono font-bold text-slate-500">{{ r.invoice_no }}</span>
+                                                <span class="text-[10px] text-slate-400">
+                                                    Due: <span class="font-bold text-slate-500">{{ r.due_date }}</span>
+                                                </span>
+
+                                                <span class="text-slate-300">|</span>
+                                                <span class="js-terms-chip inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-100">
+                                                    Terms: <span class="js-terms-chip-val tabular-nums">0</span>D
+                                                </span>
+                                                <span class="js-od-chip inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-100">
+                                                    OD: <span class="js-od-chip-val tabular-nums">0</span>D
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td class="px-3 py-4 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-black text-slate-700 tabular-nums">
+                                            <span class="js-terms-val">0</span> D
+                                        </span>
+                                    </td>
+
+                                    <td class="px-3 py-4 text-center">
+                                        <span class="inline-flex items-center px-2 py-1 rounded-lg border text-[11px] font-black tabular-nums js-od-pill bg-emerald-50 border-emerald-100 text-emerald-700">
+                                            <span class="js-od-val">0</span> D
+                                        </span>
+                                    </td>
+
+                                    <td class="px-3 py-4 text-right">
+                                        <span class="text-sm font-mono font-bold text-slate-900">{{ r.outstanding_amount|inr }}</span>
+                                    </td>
+
+                                    <td class="px-3 py-4 text-right">
+                                        <div class="inline-block relative">
+                                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">₹</span>
+                                            <input type="text"
+                                                   class="js-expected w-36 pl-7 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-right font-mono text-xs font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                                                   placeholder="0.00"
+                                                   data-key="{{ key }}"
+                                                   data-outstanding="{{ r.outstanding_amount|default_if_none:'0' }}">
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endwith %}
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="px-6 py-20 text-center">
+                                        <div class="flex flex-col items-center">
+                                            <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                                                <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                            </div>
+                                            <h3 class="text-slate-900 font-bold text-sm">No bills to display</h3>
+                                            <p class="text-slate-500 text-xs mt-1">Adjust your filters and click "Fetch Bills" to start.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right: Summary Sidebar -->
+            <div class="xl:col-span-4">
+                <div class="sticky top-24 space-y-4">
+
+                    <!-- ✅ FIXED HEIGHT CARD + INTERNAL SCROLL (button always visible) -->
+                    <div class="bg-[#0f172a] rounded-2xl shadow-2xl shadow-indigo-200/50 overflow-hidden border border-slate-800 flex flex-col"
+                         style="height: calc(100vh - 7.5rem);">
+                        <!-- Panel Header -->
+                        <div class="px-6 py-5 border-b border-slate-800 flex items-center justify-between shrink-0">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <h2 class="text-xs font-bold text-white uppercase tracking-widest">Final Selection</h2>
+                            </div>
+                            <button type="button" id="btnClearCache" class="text-[10px] font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase">Clear</button>
+                        </div>
+
+                        <!-- Stats Grid -->
+                        <div class="grid grid-cols-2 border-b border-slate-800 shrink-0">
+                            <div class="p-6 border-r border-slate-800 bg-slate-900/50">
+                                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-tight mb-1">Total Bills</span>
+                                <span id="kpiSelectedCount" class="text-3xl font-black text-white leading-none tracking-tighter">0</span>
+                            </div>
+                            <div class="p-6 bg-emerald-500/5">
+                                <span class="block text-[10px] font-bold text-emerald-500/80 uppercase tracking-tight mb-1">Expected Total</span>
+                                <span id="kpiExpectedTotal" class="text-xl font-black text-white leading-none truncate">₹0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- ✅ Scrollable List takes remaining height -->
+                        <div class="flex-1 overflow-y-auto custom-scrollbar">
+                            <table class="w-full">
+                                <tbody id="cacheTableBody" class="divide-y divide-slate-800/50">
+                                    <tr id="cacheEmptyRow">
+                                        <td class="px-6 py-12 text-center">
+                                            <svg class="w-8 h-8 text-slate-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                                            <p class="text-slate-500 text-xs italic font-medium">No items selected yet</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- ✅ Sticky Footer Button (always visible) -->
+                        <div class="shrink-0 p-6 bg-slate-900/95 backdrop-blur border-t border-slate-800">
+                            <button type="submit" name="action" value="create_save" id="btnCreateSave"
+                                    class="group relative w-full bg-emerald-500 hover:bg-emerald-400 text-white py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-[0.98]">
+                                <svg class="w-4 h-4 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                Confirm & Save Target
+                            </button>
+                            <p class="mt-3 text-[10px] text-slate-500 text-center leading-relaxed">
+                                Review your selections carefully. Once saved, these invoices will be locked for the specified week.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Context Tip -->
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3">
+                        <svg class="w-5 h-5 text-indigo-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+                        <p class="text-[11px] text-indigo-700 leading-relaxed font-medium">
+                            <strong>Smart Fetch:</strong> Your selections are cached even if you search for a different party or change filters.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+        </form>
+    </main>
+</div>
+
+<!-- Loader -->
+<div id="pageLoader"
+     class="fixed inset-0 z-[9999] hidden items-center justify-center bg-white/80 backdrop-blur-md transition-opacity duration-300">
+  <div class="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white px-10 py-8 shadow-2xl">
+    <div class="relative flex items-center justify-center">
+      <div class="h-20 w-20 rounded-full border-[6px] border-slate-100 border-t-indigo-600 animate-spin"></div>
+      <div class="absolute flex flex-col items-center justify-center">
+        <span id="pageLoadPct" class="text-lg font-black text-indigo-600 tabular-nums">0%</span>
+      </div>
+    </div>
+    <div class="text-center">
+      <div class="text-[11px] font-black uppercase tracking-widest text-slate-800">Processing Targets</div>
+      <div class="text-[10px] font-bold text-slate-400 mt-1">Preparing invoice selection...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+    input[type="text"], input[type="date"], select, textarea {
+        @apply w-full rounded-xl border-slate-200 text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all;
+    }
+    textarea { min-height: 80px; }
+    .row-selected { background-color: rgb(238 242 255 / 0.8) !important; }
+    #pageLoader.is-active { display: flex !important; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+</style>
+
+<script>
+(function() {
+  /**
+   * LOADER
+   */
+  const pageLoader = document.getElementById("pageLoader");
+  const pctDisplay = document.getElementById("pageLoadPct");
+  let progressInterval;
+
+  function showLoader() {
+    if (!pageLoader) return;
+    pageLoader.classList.add("is-active");
+
+    let progress = 0;
+    if (progressInterval) clearInterval(progressInterval);
+
+    progressInterval = setInterval(() => {
+      if (progress < 95) {
+        let increment = progress < 40 ? (Math.random() * 10) : (Math.random() * 2);
+        progress += increment;
+        if (progress > 95) progress = 95;
+        if (pctDisplay) pctDisplay.innerText = Math.floor(progress) + "%";
+      }
+    }, 350);
+  }
+
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href") || "";
+    if (href && !href.startsWith("#") && !href.startsWith("javascript:") && !a.target) showLoader();
+  });
+  window.addEventListener('beforeunload', () => showLoader());
+
+  /**
+   * ✅ DATE PARSE (ROBUST) + TERMS/OD
+   */
+  const MONTHS = {
+    jan: 0, january: 0,
+    feb: 1, february: 1,
+    mar: 2, march: 2,
+    apr: 3, april: 3,
+    may: 4,
+    jun: 5, june: 5,
+    jul: 6, july: 6,
+    aug: 7, august: 7,
+    sep: 8, sept: 8, september: 8,
+    oct: 9, october: 9,
+    nov: 10, november: 10,
+    dec: 11, december: 11,
+  };
+
+  function cleanDateText(s) {
+    if (!s) return "";
+    let x = String(s).trim();
+    x = x.replace(/^due\s*:\s*/i, "").trim();
+    x = x.replace(/\s+/g, " ");
+    x = x.replace(/\b([A-Za-z]{3})\./g, "$1");      // Jan. -> Jan
+    x = x.replace(/,\s*/g, ", ");                   // normalize comma spaces
+    return x.trim();
+  }
+
+  function tryIsoFromString(s) {
+    // Handles "2025-08-20 00:00:00", "2025-08-20T00:00:00", etc
+    const m = String(s).match(/(\d{4}-\d{2}-\d{2})/);
+    if (!m) return null;
+    const dt = new Date(m[1] + "T00:00:00");
+    return isFinite(dt.getTime()) ? dt : null;
+  }
+
+  function parseDateFlexible(raw) {
+    const s0 = cleanDateText(raw);
+    if (!s0) return null;
+
+    // First: extract ISO date from datetime strings
+    const iso = tryIsoFromString(s0);
+    if (iso) return iso;
+
+    // yyyy-mm-dd
+    let m = s0.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) {
+      const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+      const dt = new Date(y, mo, d);
+      return isFinite(dt.getTime()) ? dt : null;
+    }
+
+    // dd/mm/yyyy or dd/mm/yyyy HH:MM:SS
+    m = s0.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/);
+    if (m) {
+      const d = Number(m[1]), mo = Number(m[2]) - 1, y = Number(m[3]);
+      const dt = new Date(y, mo, d);
+      return isFinite(dt.getTime()) ? dt : null;
+    }
+
+    // dd-mm-yyyy or dd-mm-yyyy HH:MM:SS
+    m = s0.match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/);
+    if (m) {
+      const d = Number(m[1]), mo = Number(m[2]) - 1, y = Number(m[3]);
+      const dt = new Date(y, mo, d);
+      return isFinite(dt.getTime()) ? dt : null;
+    }
+
+    // dd-Mon-yyyy (optional time)
+    m = s0.match(/^(\d{1,2})-([A-Za-z]{3,9})-(\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/);
+    if (m) {
+      const d = Number(m[1]);
+      const monName = String(m[2]).toLowerCase();
+      const y = Number(m[3]);
+      const mo = MONTHS[monName] ?? MONTHS[monName.slice(0,3)];
+      if (mo === undefined) return null;
+      const dt = new Date(y, mo, d);
+      return isFinite(dt.getTime()) ? dt : null;
+    }
+
+    // "Mon d, yyyy" (optional time)
+    m = s0.match(/^([A-Za-z]{3,9})\s+(\d{1,2})(?:,)?\s+(\d{4})(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?$/);
+    if (m) {
+      const monName = String(m[1]).toLowerCase();
+      const d = Number(m[2]);
+      const y = Number(m[3]);
+      const mo = MONTHS[monName] ?? MONTHS[monName.slice(0,3)];
+      if (mo === undefined) return null;
+      const dt = new Date(y, mo, d);
+      return isFinite(dt.getTime()) ? dt : null;
+    }
+
+    // last attempt: browser parse
+    const dt2 = new Date(s0);
+    return isFinite(dt2.getTime()) ? dt2 : null;
+  }
+
+  function daysBetween(a, b) {
+    if (!a || !b) return 0;
+    const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+    const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    const ms = db.getTime() - da.getTime();
+    const d = Math.round(ms / 86400000);
+    return Number.isFinite(d) ? d : 0;
+  }
+
+  function computeTermsAndOverdue(row) {
+    const dueDt = parseDateFlexible(row.getAttribute("data-due"));
+    const transDt = parseDateFlexible(row.getAttribute("data-trans"));
+
+    let terms = 0;
+    if (transDt && dueDt) terms = Math.max(0, daysBetween(transDt, dueDt));
+
+    const today = new Date();
+    const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let overdue = 0;
+    if (dueDt) overdue = Math.max(0, daysBetween(dueDt, today0));
+
+    return {terms, overdue};
+  }
+
+  function applyTermsOverdueToRow(row, terms, overdue) {
+    row.setAttribute("data-terms", String(terms));
+    row.setAttribute("data-overdue", String(overdue));
+
+    const tCell = row.querySelector(".js-terms-val");
+    if (tCell) tCell.textContent = String(terms);
+
+    const odCell = row.querySelector(".js-od-val");
+    if (odCell) odCell.textContent = String(overdue);
+
+    const tChip = row.querySelector(".js-terms-chip-val");
+    if (tChip) tChip.textContent = String(terms);
+
+    const odChip = row.querySelector(".js-od-chip-val");
+    if (odChip) odChip.textContent = String(overdue);
+
+    const odPill = row.querySelector(".js-od-pill");
+    if (odPill) {
+      if (overdue > 0) {
+        odPill.classList.remove("bg-emerald-50", "border-emerald-100", "text-emerald-700");
+        odPill.classList.add("bg-rose-50", "border-rose-100", "text-rose-700");
+      } else {
+        odPill.classList.remove("bg-rose-50", "border-rose-100", "text-rose-700");
+        odPill.classList.add("bg-emerald-50", "border-emerald-100", "text-emerald-700");
+      }
+    }
+  }
+
+  function initTermsOverdueFallback() {
+    const rows = document.querySelectorAll("tbody tr[data-key]");
+    rows.forEach(row => {
+      const existingTerms = String(row.getAttribute("data-terms") || "").trim();
+      const existingOverdue = String(row.getAttribute("data-overdue") || "").trim();
+
+      const termsNum = existingTerms !== "" ? Number(existingTerms) : NaN;
+      const odNum = existingOverdue !== "" ? Number(existingOverdue) : NaN;
+
+      let terms = Number.isFinite(termsNum) ? Math.max(0, Math.trunc(termsNum)) : null;
+      let overdue = Number.isFinite(odNum) ? Math.max(0, Math.trunc(odNum)) : null;
+
+      const calc = computeTermsAndOverdue(row);
+
+      // If missing OR backend stuck at 0 but calc has >0 => use calc
+      if (terms === null || overdue === null) {
+        terms = calc.terms;
+        overdue = calc.overdue;
+      } else {
+        if (terms === 0 && calc.terms > 0) terms = calc.terms;
+        if (overdue === 0 && calc.overdue > 0) overdue = calc.overdue;
+      }
+
+      applyTermsOverdueToRow(row, terms, overdue);
+    });
+  }
+
+  /**
+   * CACHE + FILTERING
+   */
+  function normalizeNumber(val) {
+    if (val === null || val === undefined) return "";
+    return String(val).replace(/,/g, "").trim();
+  }
+  function toNumber(val) {
+    const s = normalizeNumber(val);
+    if (!s) return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+  function toInt(val) {
+    const n = toNumber(val);
+    return Number.isFinite(n) ? Math.trunc(n) : NaN;
+  }
+  function format2(val) {
+    const n = toNumber(val);
+    if (Number.isNaN(n)) return "";
+    return n.toFixed(2);
+  }
+  function upperKey(k) {
+    return String(k || "").trim().toUpperCase();
+  }
+
+  const cacheInput = document.getElementById("selected_cache");
+  const cacheBody = document.getElementById("cacheTableBody");
+  const cacheEmptyRow = document.getElementById("cacheEmptyRow");
+  const formEl = document.getElementById("targetForm");
+
+  const kpiSelectedCount = document.getElementById("kpiSelectedCount");
+  const kpiExpectedTotal = document.getElementById("kpiExpectedTotal");
+
+  let selectedCache = {};
+  try { selectedCache = JSON.parse(cacheInput.value || "{}") || {}; }
+  catch { selectedCache = {}; }
+
+  function saveCache() { cacheInput.value = JSON.stringify(selectedCache || {}); }
+  function cacheHas(key) { return Object.prototype.hasOwnProperty.call(selectedCache, key); }
+  function setCache(key, expectedVal) { selectedCache[key] = { expected: String(expectedVal || "").trim() }; saveCache(); }
+  function delCache(key) { delete selectedCache[key]; saveCache(); }
+
+  function computeExpectedTotal() {
+    let sum = 0;
+    Object.keys(selectedCache || {}).forEach(k => {
+      const v = toNumber((selectedCache[k] && selectedCache[k].expected) ? selectedCache[k].expected : "");
+      if (!Number.isNaN(v)) sum += v;
+    });
+    return sum;
+  }
+
+  function updateKPIs() {
+    const cnt = Object.keys(selectedCache || {}).length;
+    if (kpiSelectedCount) kpiSelectedCount.textContent = String(cnt);
+    if (kpiExpectedTotal) kpiExpectedTotal.textContent = "₹" + (computeExpectedTotal().toLocaleString('en-IN', {minimumFractionDigits: 2}));
+  }
+
+  function renderCacheTable() {
+    const rows = cacheBody.querySelectorAll("tr[data-cache-row='1']");
+    rows.forEach(r => r.remove());
+
+    const keys = Object.keys(selectedCache || {}).sort();
+    if (keys.length === 0) {
+      cacheEmptyRow.style.display = "";
+      updateKPIs();
+      return;
+    }
+    cacheEmptyRow.style.display = "none";
+
+    keys.forEach(k => {
+      const expected = (selectedCache[k] && selectedCache[k].expected) ? selectedCache[k].expected : "0.00";
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-cache-row", "1");
+      tr.className = "group hover:bg-slate-800/40 transition-colors";
+      tr.innerHTML = `
+        <td class="px-6 py-4">
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-[9px] font-mono text-slate-500 truncate max-w-[180px]">${k}</div>
+              <div class="text-xs font-bold text-emerald-400 mt-0.5">₹${Number(expected).toLocaleString('en-IN', {minimumFractionDigits: 2})}</div>
+            </div>
+            <button type="button"
+                    class="js-remove-cache text-slate-600 hover:text-rose-400 p-1.5 transition-colors"
+                    data-key="${k}">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
+        </td>
+      `;
+      cacheBody.appendChild(tr);
+    });
+
+    updateKPIs();
+  }
+
+  function syncPreviewFromCache() {
+    document.querySelectorAll("tr[data-key]").forEach(row => {
+      const key = upperKey(row.getAttribute("data-key"));
+      const chk = row.querySelector(".js-bill-check");
+      const exp = row.querySelector(".js-expected");
+      if (!chk || !exp) return;
+
+      if (cacheHas(key)) {
+        chk.checked = true;
+        row.classList.add('row-selected');
+        const cachedExpected = selectedCache[key].expected || "";
+        if (cachedExpected) exp.value = cachedExpected;
+      } else {
+        chk.checked = false;
+        row.classList.remove('row-selected');
+      }
+    });
+  }
+
+  document.addEventListener("change", function (e) {
+    if (!e.target.classList.contains("js-bill-check")) return;
+    const chk = e.target;
+    const key = upperKey(chk.dataset.key || chk.getAttribute("data-key") || "");
+    const row = chk.closest("tr");
+    if (!row || !key) return;
+    const expectedInput = row.querySelector(".js-expected");
+    const osRaw = expectedInput.getAttribute("data-outstanding") || row.getAttribute("data-outstanding") || "0";
+
+    if (chk.checked) {
+      if (!expectedInput.value || Number.isNaN(toNumber(expectedInput.value)) || toNumber(expectedInput.value) === 0) {
+        expectedInput.value = format2(osRaw);
+      }
+      setCache(key, expectedInput.value);
+      row.classList.add('row-selected');
+    } else {
+      delCache(key);
+      row.classList.remove('row-selected');
+    }
+    renderCacheTable();
+  });
+
+  document.addEventListener("input", function (e) {
+    if (!e.target.classList.contains("js-expected")) return;
+    const expectedInput = e.target;
+    const key = upperKey(expectedInput.dataset.key || "");
+    const row = expectedInput.closest("tr");
+    const chk = row ? row.querySelector(".js-bill-check") : null;
+    const v = toNumber(expectedInput.value);
+
+    if (!Number.isNaN(v) && v !== 0) {
+      if (chk) { chk.checked = true; row.classList.add('row-selected'); }
+      setCache(key, expectedInput.value);
+    } else {
+      if (cacheHas(key)) setCache(key, expectedInput.value);
+    }
+    renderCacheTable();
+  });
+
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".js-remove-cache");
+    if (!btn) return;
+    const key = upperKey(btn.dataset.key || "");
+    delCache(key);
+    renderCacheTable();
+    syncPreviewFromCache();
+  });
+
+  function clearAllSelections() {
+    if (confirm("Clear all selections?")) {
+      selectedCache = {};
+      saveCache();
+      renderCacheTable();
+      syncPreviewFromCache();
+    }
+  }
+
+  document.getElementById("btnClearCache")?.addEventListener("click", clearAllSelections);
+  document.getElementById("btnClearCacheTop")?.addEventListener("click", clearAllSelections);
+
+  formEl.addEventListener("submit", function (e) {
+    const submitter = e.submitter;
+    const action = (submitter && submitter.value) ? String(submitter.value) : "";
+
+    if (action === "fetch" || action === "create_save") showLoader();
+    if (action !== "create_save") return;
+
+    saveCache();
+    formEl.querySelectorAll("input[data-generated='1']").forEach(x => x.remove());
+    Object.keys(selectedCache || {}).forEach(k => {
+      const hk = document.createElement("input");
+      hk.type = "hidden"; hk.name = "bill_key"; hk.value = k;
+      hk.setAttribute("data-generated", "1");
+      formEl.appendChild(hk);
+
+      const he = document.createElement("input");
+      he.type = "hidden"; he.name = "expected__" + k;
+      he.value = (selectedCache[k] && selectedCache[k].expected) ? selectedCache[k].expected : "";
+      he.setAttribute("data-generated", "1");
+      formEl.appendChild(he);
+    });
+  });
+
+  // Filters
+  const fltParty = document.getElementById("fltParty");
+  const fltInvoice = document.getElementById("fltInvoice");
+  const fltTermsMin = document.getElementById("fltTermsMin");
+  const fltTermsMax = document.getElementById("fltTermsMax");
+  const fltOdMin = document.getElementById("fltOdMin");
+  const fltOdMax = document.getElementById("fltOdMax");
+  const fltOsMin = document.getElementById("fltOsMin");
+  const fltOsMax = document.getElementById("fltOsMax");
+  const fltSelected = document.getElementById("fltSelected");
+  const btnClearTableFilters = document.getElementById("btnClearTableFilters");
+
+  function normStr(v) { return String(v || "").toLowerCase().trim(); }
+  function rowIsSelected(row) { return cacheHas(upperKey(row.getAttribute("data-key"))); }
+  function rowIntAttr(row, name) {
+    const raw = row.getAttribute(name);
+    const n = toInt(raw);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function applyTableFilters() {
+    const rows = document.querySelectorAll("tbody tr[data-key]");
+    const qParty = normStr(fltParty?.value);
+    const qInv = normStr(fltInvoice?.value);
+
+    const minTerms = toInt(fltTermsMin?.value);
+    const maxTerms = toInt(fltTermsMax?.value);
+
+    const minOd = toInt(fltOdMin?.value);
+    const maxOd = toInt(fltOdMax?.value);
+
+    const minOs = toNumber(fltOsMin?.value);
+    const maxOs = toNumber(fltOsMax?.value);
+
+    const selMode = fltSelected?.value;
+
+    rows.forEach(row => {
+      const partyHay = normStr(row.getAttribute("data-party"));
+      const invHay = normStr(row.getAttribute("data-invoice"));
+      const osVal = toNumber(row.getAttribute("data-outstanding") || "0");
+
+      const termsVal = rowIntAttr(row, "data-terms");
+      const odVal = rowIntAttr(row, "data-overdue");
+
+      let show = true;
+
+      if (qParty && !partyHay.includes(qParty)) show = false;
+      if (qInv && !invHay.includes(qInv)) show = false;
+
+      if (!Number.isNaN(minOs) && osVal < minOs) show = false;
+      if (!Number.isNaN(maxOs) && osVal > maxOs) show = false;
+
+      if (Number.isFinite(minTerms) && (Number.isNaN(termsVal) || termsVal < minTerms)) show = false;
+      if (Number.isFinite(maxTerms) && (Number.isNaN(termsVal) || termsVal > maxTerms)) show = false;
+
+      if (Number.isFinite(minOd) && (Number.isNaN(odVal) || odVal < minOd)) show = false;
+      if (Number.isFinite(maxOd) && (Number.isNaN(odVal) || odVal > maxOd)) show = false;
+
+      if (selMode === "selected" && !rowIsSelected(row)) show = false;
+      if (selMode === "unselected" && rowIsSelected(row)) show = false;
+
+      row.style.display = show ? "" : "none";
+    });
+  }
+
+  [fltParty, fltInvoice, fltTermsMin, fltTermsMax, fltOdMin, fltOdMax, fltOsMin, fltOsMax].forEach(el => {
+    if (el) el.addEventListener("input", applyTableFilters);
+  });
+  if (fltSelected) fltSelected.addEventListener("change", applyTableFilters);
+
+  btnClearTableFilters?.addEventListener("click", () => {
+    [fltParty, fltInvoice, fltTermsMin, fltTermsMax, fltOdMin, fltOdMax, fltOsMin, fltOsMax, fltSelected].forEach(el => {
+      if (!el) return;
+      el.value = "";
+    });
+    applyTableFilters();
+  });
+
+  // ✅ Correct order
+  initTermsOverdueFallback();
+  renderCacheTable();
+  syncPreviewFromCache();
+  applyTableFilters();
+})();
+</script>
+{% endblock %}

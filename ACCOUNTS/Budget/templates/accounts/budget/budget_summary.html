@@ -1,0 +1,78 @@
+{% extends "main/index.html" %}
+{% load inr_format %}
+
+{% block title %}Budget Summary{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50 pb-10">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Budget Summary</h1>
+        <p class="text-sm text-slate-500 mt-1">Consolidated totals created from all department monthly entries.</p>
+      </div>
+
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-sm text-slate-600">Plan</label>
+        <select name="plan" class="border border-slate-300 rounded-lg px-3 py-2 bg-white text-sm">
+          {% for p in plans %}
+            <option value="{{ p.id }}" {% if p.id == plan.id %}selected{% endif %}>
+              FY {{ p.fy }}{% if p.company_group %} ({{ p.company_group }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+        <button class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm">Go</button>
+
+        <a href="{% url 'accounts_budget:budget_home' %}?plan={{ plan.id }}"
+           class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm">
+          Back
+        </a>
+      </form>
+    </div>
+
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div class="text-sm font-semibold text-slate-700">Summary</div>
+        <div class="text-sm text-slate-600">
+          Grand Total:
+          <span class="font-semibold text-slate-900">{{ grand_total|inr }}</span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left">
+              <th class="px-4 py-3 font-semibold text-slate-700">Head</th>
+              <th class="px-4 py-3 font-semibold text-slate-700 text-right">Amount</th>
+              <th class="px-4 py-3 font-semibold text-slate-700 text-right">%</th>
+              <th class="px-4 py-3 font-semibold text-slate-700">Open</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for r in rows %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 font-medium text-slate-900">{{ r.label }}</td>
+              <td class="px-4 py-3 text-right text-slate-900">{{ r.amount|inr }}</td>
+              <td class="px-4 py-3 text-right text-slate-700">{{ r.pct|floatformat:2 }}%</td>
+              <td class="px-4 py-3">
+                <a class="text-indigo-600 hover:underline"
+                   href="{{ r.url }}">
+                  Open Form
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="px-4 py-3 border-t border-slate-200 text-xs text-slate-500">
+        Note: % is calculated against the plan grand total.
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

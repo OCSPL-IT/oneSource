@@ -1,0 +1,236 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto py-2 px-4">
+
+    <!-- Messages Section -->
+    {% if messages %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+        <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+                        {% if message.tags == 'debug' %}bg-gray-500
+                        {% elif message.tags == 'info' %}bg-blue-500
+                        {% elif message.tags == 'success' %}bg-green-500
+                        {% elif message.tags == 'warning' %}bg-yellow-500
+                        {% elif message.tags == 'error' %}bg-red-500
+                        {% endif %}">
+            <span class="flex-1">{{ message }}</span>
+            <!-- Close Button -->
+            <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">
+                ✖
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- If there are any form-wide errors -->
+    {% if form and form.non_field_errors %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for error in form.non_field_errors %}
+        <div class="relative p-4 border-l-4 rounded-md bg-red-50 border-red-500">
+            <span class="text-red-700">{{ error }}</span>
+            <button type="button" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 p-1"
+                onclick="this.parentElement.remove()">
+                X
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="container mx-auto px-6 mt-2">
+        <div class="flex items-center justify-between mb-4">
+            <!-- Back to Main Page Button -->
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                Back to Main Page
+            </a>
+            <!-- Heading -->
+            <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Leading Records</h2>
+            <!-- Go to Create Button -->
+            <a href="{% url 'add_leading_record' %}"
+               class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-sm">
+               <i class="fa-solid fa-square-plus" aria-hidden="true"></i>
+            </a>
+            <a href="{% url 'leading_chart_summary' %}"
+               class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 mx-1 rounded shadow-md">
+               <i class="fa-solid fa-chart-simple fa-xl "></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="GET" class="mb-6 bg-white shadow-md rounded-lg p-4 flex flex-wrap items-end gap-4">
+        <!-- From Date Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">From Date</label>
+            <input type="date" name="from_date" value="{{ from_date }}"
+                class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+        </div>
+        <!-- To Date Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">To Date</label>
+            <input type="date" name="to_date" value="{{ to_date }}"
+                class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+        </div>
+
+        <!-- Department Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Department</label>
+            <input type="text" name="department_filter" value="{{ department_filter }}" placeholder="Enter Department"
+                class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+        </div>
+
+        <!-- Physical Location -->
+        <div class="flex-1 min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Physical Location</label>
+            <input type="text" name="physical_location_filter" value="{{ physical_location_filter }}"
+                class="w-full p-2 border border-gray-300 rounded-lg text-xs" placeholder="Enter Location">
+        </div>
+        
+        <!-- Risk Factor -->
+        <div class="flex-1 min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Risk Factor</label>
+            <input type="text" name="risk_factor_filter" value="{{ risk_factor_filter }}"
+                class="w-full p-2 border border-gray-300 rounded-lg text-xs" placeholder="Enter Risk">
+        </div>
+
+        <!-- Status Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Status</label>
+            <select name="status_filter" class="w-full p-2 border border-gray-300 rounded-lg text-xs">
+                <option value="">All Statuses</option>
+                {% for status, display in STATUS_CHOICES %}
+                <option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>
+                    {{ display }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex space-x-2">
+            <button type="submit"
+                class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300 text-xs">
+                <i class="fa-solid fa-filter"></i>
+            </button>
+            <a href="{% url 'view_leading' %}"
+               class="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition duration-300 text-xs">
+                <i class="fa-solid fa-eraser"></i>
+            </a>
+        </div>
+
+        <!-- Export -->
+        <div class="flex mt-4 space-x-1">
+            {% if querystring_no_page %}
+                <a href="{% url 'export_leading_excel' %}?{{ querystring_no_page }}"
+                   class="text-green-700 hover:text-green-900 font-semibold flex items-center">
+                    <i class="fa-solid fa-file-excel fa-xl py-1"></i>
+                </a>
+            {% else %}
+                <a href="{% url 'export_leading_excel' %}"
+                   class="text-green-700 hover:text-green-900 font-semibold flex items-center">
+                    <i class="fa-solid fa-file-excel fa-xl py-1"></i>
+                </a>
+            {% endif %}
+        </div>
+
+        <!-- Pagination Controls -->
+        <div class="mt-4 flex justify-center items-center space-x-2">
+            {% if leading_records.has_previous %}
+            <a href="?page={{ leading_records.previous_page_number }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}"
+               class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
+                Previous
+            </a>
+            {% endif %}
+
+            <span class="px-3 py-1 rounded bg-gray-100">
+                Page {{ leading_records.number }} of {{ leading_records.paginator.num_pages }}
+            </span>
+
+            {% if leading_records.has_next %}
+            <a href="?page={{ leading_records.next_page_number }}{% if querystring_no_page %}&{{ querystring_no_page }}{% endif %}"
+               class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">
+                Next
+            </a>
+            {% endif %}
+        </div>
+    </form>
+
+    <!-- Responsive Table Wrapper -->
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table class="min-w-full border border-gray-300 rounded-lg">
+            <thead class="bg-gray-100 border-b text-left text-center">
+                <tr>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">ID</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Observation Date</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Function</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Physical Location</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Leading Abnormality</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Risk Factor</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Target Date</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Status</th>
+                    {% if can_edit_leading_records or can_delete_leading_records or can_view_leading_records %}
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in leading_records %}
+                <tr class="border-b hover:bg-gray-100 transition duration-300 text-center">
+                    <td class="py-2 px-4 ">
+                        {{ forloop.counter0|add:leading_records.start_index }}
+                    </td>
+                    <td class="py-2 px-4 ">{{ record.observation_date|date:"d/m/Y" }}</td>
+                    <td class="py-2 px-4">{{ record.department }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.physical_location }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.leading_abnormality }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.risk_factor }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.target_date|date:"m/d/Y" }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.status }}</td>
+
+                    {% if can_edit_leading_records or can_delete_leading_records or can_view_leading_records %}
+                    <td class="py-2 px-4 flex space-x-2 whitespace-nowrap">
+                        {% if can_view_leading_records %}
+                        <!-- View button (preserves current page+filters) -->
+                        <a href="{% url 'leading_record_detail' record.id %}?next={{ list_url|urlencode }}"
+                           class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">
+                           <i class="fa fa-eye" aria-hidden="true"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if can_edit_leading_records %}
+                        <!-- Edit button (preserves current page+filters) -->
+                        <a href="{% url 'edit_leading_record' record.id %}?next={{ list_url|urlencode }}"
+                           class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600">
+                           <i class="fas fa-edit"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if can_delete_leading_records %}
+                        <!-- Delete button (with next URL forwarding) -->
+                        <form action="{% url 'delete_leading_record' record.id %}"
+                            method="POST"
+                            onsubmit="return confirm('Are you sure you want to delete this Leading record?');">
+                            {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">
+                            <i class="fa fa-trash" aria-hidden="true"></i>
+                        </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="py-4 text-center text-gray-500">No leading records found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock maincontent %}

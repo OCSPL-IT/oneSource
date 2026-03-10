@@ -1,0 +1,160 @@
+{# Topic: Utilities KPIs with charts — RANGE-AWARE (y-axis starts at 0) #}
+{% load static %}
+{% load indnum %}
+
+<style>
+  .util-card { border-radius: .75rem; border: 1px solid #e2e8f0; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); overflow: hidden; }
+  .util-card .head { padding: .9rem 1.25rem; border-bottom: 1px solid #e2e8f0; }
+  .util-card .body { padding: 1rem; }
+  .util-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+  @media (min-width: 640px){ .util-grid{ grid-template-columns: 1fr 1fr; } }
+  .util-canvas { height: 200px; }
+  .util-pill { font-size:.72rem; padding:.25rem .5rem; border:1px solid #e2e8f0; border-radius:.5rem; color:#334155; background:#fff; display:inline-block; }
+  .util-pill:hover{ background:#f8fafc; }
+</style>
+
+<!-- Utilities: Date Range Filter -->
+<form method="get" class="mb-3 flex flex-wrap items-end gap-2">
+  <div>
+    <label class="block text-xs text-slate-600 mb-1">From</label>
+    <input type="date" name="from" value="{{ range_from|date:'Y-m-d' }}"
+           class="border rounded-md text-sm px-3 py-1.5">
+  </div>
+  <div>
+    <label class="block text-xs text-slate-600 mb-1">To</label>
+    <input type="date" name="to" value="{{ range_to|date:'Y-m-d' }}"
+           class="border rounded-md text-sm px-3 py-1.5">
+  </div>
+
+  {# Preserve other query params #}
+  {% for k, v in request.GET.items %}
+    {% if k != 'from' and k != 'to' %}
+      <input type="hidden" name="{{ k }}" value="{{ v }}">
+    {% endif %}
+  {% endfor %}
+
+  <button class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-3 py-2 rounded-md">
+    Apply
+  </button>
+
+  {% if quick_links %}
+  <div class="ml-2 flex flex-wrap gap-1">
+    <a href="{{ quick_links.yesterday }}" class="util-pill">Yesterday</a>
+    <a href="{{ quick_links.last7 }}" class="util-pill">Last 7</a>
+    <a href="{{ quick_links.last30 }}" class="util-pill">Last 30</a>
+    <a href="{{ quick_links.mtd }}" class="util-pill">MTD</a>
+    <a href="{{ quick_links.fytd }}" class="util-pill">FY-to-date</a>
+    <a href="{{ quick_links.clear }}" class="util-pill">Clear</a>
+  </div>
+  {% endif %}
+</form>
+
+{% if not power_values and not briq_values and not water_values and not sfr_values %}
+  <div class="rounded-md border border-dashed border-slate-300 p-4 text-sm text-slate-600 bg-slate-50">
+    No utilities data available for {{ range_from|date:"d-M-Y" }} → {{ range_to|date:"d-M-Y" }}.
+  </div>
+{% endif %}
+
+<div class="util-grid">
+  {% if power_values %}
+  <div class="util-card">
+    <div class="head bg-gradient-to-r from-sky-50 to-sky-100">
+      <h3 class="text-sm font-semibold text-slate-900">Power Consumption (kWh)</h3>
+      <p class="text-xs text-slate-500">{{ range_from|date:"d-M" }} → {{ range_to|date:"d-M" }}</p>
+    </div>
+    <div class="body"><canvas id="powerChart" class="util-canvas"></canvas></div>
+  </div>
+  {% endif %}
+
+  {% if briq_values %}
+  <div class="util-card">
+    <div class="head bg-gradient-to-r from-amber-50 to-amber-100">
+      <h3 class="text-sm font-semibold text-slate-900">Briquette Consumption</h3>
+      <p class="text-xs text-slate-500">{{ range_from|date:"d-M" }} → {{ range_to|date:"d-M" }}</p>
+    </div>
+    <div class="body"><canvas id="briqChart" class="util-canvas"></canvas></div>
+  </div>
+  {% endif %}
+
+  {% if water_values %}
+  <div class="util-card">
+    <div class="head bg-gradient-to-r from-cyan-50 to-cyan-100">
+      <h3 class="text-sm font-semibold text-slate-900">Water Consumption (Total)</h3>
+      <p class="text-xs text-slate-500">{{ range_from|date:"d-M" }} → {{ range_to|date:"d-M" }}</p>
+    </div>
+    <div class="body"><canvas id="waterChart" class="util-canvas"></canvas></div>
+  </div>
+  {% endif %}
+
+  {% if sfr_values %}
+  <div class="util-card">
+    <div class="head bg-gradient-to-r from-emerald-50 to-emerald-100">
+      <h3 class="text-sm font-semibold text-slate-900">Steam-to-Fuel Ratio (SFR)</h3>
+      <p class="text-xs text-slate-500">{{ range_from|date:"d-M" }} → {{ range_to|date:"d-M" }}</p>
+    </div>
+    <div class="body"><canvas id="sfrChart" class="util-canvas"></canvas></div>
+  </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+/* Charts for Utilities — y-axis fixed from 0 with headroom */
+window.initUtilitiesCharts = (function(){
+  let done = false;
+
+  function makeArea(id, labels, data, stroke, fill){
+    const el = document.getElementById(id); if(!el) return;
+    const ctx = el.getContext('2d');
+
+    // compute headroom above the max (ignoring nulls)
+    const vals = (data || []).filter(v => v != null && !isNaN(v));
+    const maxv = vals.length ? Math.max.apply(null, vals) : 0;
+    const suggestedMax = maxv > 0 ? maxv * 1.1 : 1;
+
+    const grad = ctx.createLinearGradient(0,0,0,160);
+    grad.addColorStop(0, fill);
+    grad.addColorStop(1, fill.replace(/[\d.]+\)$/,'0)'));
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          borderColor: stroke,
+          backgroundColor: grad,
+          fill: 'origin',          // fill down to 0-line
+          tension: .25,
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHitRadius: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        spanGaps: true,            // handles nulls (e.g., first LAG row)
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false } },
+          y: {
+            min: 0,                // force start at 0
+            suggestedMax,          // a little headroom above max
+            grid: { color: '#f1f5f9' }
+          }
+        }
+      }
+    });
+  }
+
+  return function(){
+    if (done) return;
+    {% if power_values %}makeArea('powerChart', {{ power_labels|safe }}, {{ power_values|safe }}, '#0ea5e9', 'rgba(14,165,233,.45)');{% endif %}
+    {% if briq_values %}makeArea('briqChart', {{ briq_labels|safe }}, {{ briq_values|safe }}, '#ea580c', 'rgba(234,88,12,.45)');{% endif %}
+    {% if water_values %}makeArea('waterChart', {{ water_labels|safe }}, {{ water_values|safe }}, '#06b6d4', 'rgba(6,182,212,.35)');{% endif %}
+    {% if sfr_values %}makeArea('sfrChart', {{ sfr_labels|safe }}, {{ sfr_values|safe }}, '#10b981', 'rgba(16,185,129,.35)');{% endif %}
+    done = true;
+  };
+})();
+</script>

@@ -1,0 +1,439 @@
+{% extends "main/index.html" %}
+{% block title %}Rack Balances{% endblock %}
+
+{% block maincontent %}
+<style>
+  :root{
+    /* Theme */
+    --brand:#2563eb; --muted:#6b7280; --ok:#16a34a; --warn:#b91c1c; --chip:#0ea5e9;
+    --header-bg:#f9fafb; --surface:#ffffff; --border:#e5e7eb; --text:#1f2937; --sub:#4b5563;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  }
+  body{background:var(--bs-body-bg);font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif}
+
+  /* Page container */
+  .page-wrap{padding:16px;max-width:1400px;margin:0 auto}
+
+  /* Sticky header (Title + KPIs + global actions) */
+  .head{position:sticky;top:56px;z-index:1040;background:var(--surface);
+        border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;
+        box-shadow:var(--shadow-sm)}
+  .head-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .title{font-size:1.1rem;font-weight:800;color:var(--text);margin:0}
+  .head-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .btn-xs{--bs-btn-padding-y:.25rem;--bs-btn-padding-x:.55rem;--bs-btn-font-size:.8rem}
+
+  .kpis{display:grid;grid-template-columns:repeat( auto-fit, minmax(160px,1fr) );gap:8px;margin-top:8px}
+  .kpi{background:var(--header-bg);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+  .kpi .label{font-size:.72rem;color:var(--sub)}
+  .kpi .value{font-weight:800;font-size:1rem;color:var(--text)}
+  .kpi.ok .value{color:var(--ok)} .kpi.warn .value{color:var(--warn)}
+
+  /* Filter toolbar */
+  .toolbar{position:static; z-index:1030; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; box-shadow:var(--shadow-sm); margin-bottom:12px}
+  .chip{background:rgba(14,165,233,.12);color:var(--chip);border:1px solid rgba(14,165,233,.35);
+        padding:6px 10px;border-radius:999px;font-size:.8rem;font-weight:700;white-space:nowrap}
+  .form-select-sm,.form-control-sm{height:34px}
+  .search-input{min-width:260px}
+  .btn-icon{display:inline-flex;align-items:center;gap:6px}
+
+  /* Table wrapper */
+  .table-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px}
+  .table-responsive{position:relative; overflow-x:auto!important; overflow-y:visible; -webkit-overflow-scrolling:touch; max-width:100%; padding-bottom:6px}
+  .table-responsive::-webkit-scrollbar{height:8px}
+  .table-responsive::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+  .table-responsive::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+
+  /* Table */
+  table.table{border-collapse:separate!important;border-spacing:0 6px!important;width:max-content;min-width:100%}
+  thead th{
+    position:sticky; top:0;
+    background:var(--header-bg); border-bottom:2px solid var(--border);
+    font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; color:var(--sub);
+    z-index:2000; background-clip:padding-box;
+  }
+  .table td,.table th{white-space:nowrap;vertical-align:middle;border:none;padding:.65rem .9rem}
+  tbody tr{background:var(--bs-body-bg);box-shadow:var(--shadow-sm)}
+  .table-hover tbody tr:hover td{background:rgba(37,99,235,.03)}
+
+  /* Column sizing */
+  .col-rack{min-width:88px;font-weight:800}
+  .col-pallet{min-width:92px}
+  .col-code{min-width:120px}
+  .col-name{min-width:260px;max-width:420px;overflow:hidden;text-overflow:ellipsis}
+  .col-batch{min-width:150px}
+  .col-uom{min-width:70px}
+  .num{min-width:120px;text-align:right;font-variant-numeric:tabular-nums}
+  .th-blue{color:var(--brand)} .th-red{color:var(--warn)} .th-green{color:var(--ok)}
+
+  /* Sticky actions column (right) */
+  thead th:last-child, tbody td:last-child{position:sticky;right:0;background:var(--header-bg);z-index:1025}
+  tbody td:last-child{background:var(--surface)}
+  tbody td:last-child::before{content:"";position:absolute;left:-6px;top:0;bottom:0;width:6px;
+                              box-shadow:-6px 0 6px -6px rgba(0,0,0,.12) inset}
+
+  /* Actions */
+  .actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+  .actions .btn{padding:.25rem .5rem;font-size:.75rem}
+
+  /* Inline transfer drawer */
+  .transfer-wrap{display:none;margin-top:6px;border-top:1px dashed var(--border);padding-top:6px}
+  .transfer-grid{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:end}
+  .transfer-grid .form-control,.transfer-grid .form-select{height:30px;padding:.25rem .5rem;font-size:.8rem}
+
+  /* Density toggle */
+  .dense .table td, .dense .table th{padding:.45rem .6rem}
+
+  @media(max-width:1200px){thead th:last-child, tbody td:last-child{min-width:180px!important}}
+
+  /* Buttons */
+  .actions .btn { border:none; border-radius:6px; font-weight:600; color:#fff!important; transition:background .2s, transform .1s; }
+  .actions .btn-danger { background-color:#b91c1c; }
+  .actions .btn-danger:hover { background-color:#991b1b; transform:translateY(-1px); }
+  .actions .btn-primary { background-color:#1d4ed8; }
+  .actions .btn-primary:hover { background-color:#1e40af; transform:translateY(-1px); }
+  .actions .btn:active { transform:translateY(0); box-shadow:0 0 0 rgba(0,0,0,0); }
+
+  /* Pallet chips (not used in this snippet, left intact) */
+  .pallet-block { display:grid; grid-template-columns:repeat(auto-fill, minmax(72px,1fr)); gap:6px; margin-top:6px; }
+  .pallet-chip { background:rgba(37,99,235,.08); border:1px solid rgba(37,99,235,.28); color:#1d4ed8; font-weight:700; font-size:.78rem; padding:6px 8px; border-radius:8px; text-align:center; cursor:pointer; user-select:none; transition:transform .06s ease, box-shadow .12s ease; }
+  .pallet-chip:hover { transform:translateY(-1px); box-shadow:0 2px 6px rgba(0,0,0,.06); }
+  .pallet-chip:active { transform:translateY(0); }
+  .pallet-block .empty-hint{ grid-column:1 / -1; font-size:.78rem; color:var(--muted); background:var(--header-bg); border:1px dashed var(--border); border-radius:8px; padding:8px 10px; text-align:center; }
+</style>
+
+<div class="container-fluid page-wrap" id="page">
+
+  <!-- Proper JSON injection (no linter/runtime errors). 
+       Your view must pass `rack_data_json` (json.dumps(...), mark_safe). -->
+  <script id="rackDataJSON" type="application/json">{{ rack_data_json }}</script>
+
+  <!-- Sticky header -->
+  <div class="head" id="head">
+    <div class="head-row">
+      <h5 class="title m-0 d-flex align-items-center gap-2">
+        <i class="bi bi-grid-3x3-gap"></i> Rack Balances
+      </h5>
+      <div class="head-actions">
+        <button id="densityBtn" class="btn btn-outline-secondary btn-xs" type="button" title="Toggle density">
+          <i class="bi bi-arrows-vertical me-1"></i>Compact
+        </button>
+        <a class="btn btn-outline-secondary btn-xs" href="{% url 'rack_sync' %}">
+          <i class="bi bi-arrow-repeat me-1"></i>Sync ERP
+        </a>
+        <button id="exportBtn" class="btn btn-primary btn-xs">
+          <i class="bi bi-download me-1"></i>Export CSV
+        </button>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="label">Total Allocated</div><div class="value" id="kpiAllocated">0.000</div></div>
+      <div class="kpi"><div class="label">Total Consumed</div><div class="value" id="kpiConsumed">0.000</div></div>
+      <div class="kpi ok"><div class="label">Total Balance</div><div class="value" id="kpiBalance">0.000</div></div>
+      <div class="kpi"><div class="label">Visible Rows</div><div class="value"><span id="kpiRows">0</span></div></div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="toolbar" id="toolbar">
+    <div class="d-flex flex-wrap align-items-center gap-2 w-100">
+      <span class="chip"><i class="bi bi-box-seam me-1"></i>RM/PM Racks</span>
+      <div class="ms-auto d-flex flex-wrap gap-2">
+        <select id="rackFilter" class="form-select form-select-sm">
+          <option value="">All Racks</option>
+        </select>
+        <input id="searchInput" class="form-control form-control-sm search-input" placeholder="Search item, batch, UOM…">
+        <select id="balanceFilter" class="form-select form-select-sm">
+          <option value="">All Balances</option>
+          <option value="pos">Balance &gt; 0</option>
+          <option value="zero">Balance = 0</option>
+          <option value="neg">Balance &lt; 0</option>
+        </select>
+        <button id="clearFilters" class="btn btn-outline-secondary btn-xs"><i class="bi bi-x-circle me-1"></i>Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-responsive">
+      <table id="rackTable" class="table table-sm table-hover align-middle text-nowrap">
+        <thead class="table-light">
+          <tr>
+            <th>Rack</th>
+            <th>Pallet</th>
+            <th>Item Code</th>
+            <th>Item Name</th>
+            <th>Batch</th>
+            <th>UOM</th>
+            <th class="th-blue text-end">Allocated</th>
+            <th class="th-red text-end">Consumed</th>
+            <th class="th-green text-end">Balance</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr
+            data-rack="{{ r.rack__code|default_if_none:'' }}"
+            data-allocated="{{ r.allocated|default_if_none:0 }}"
+            data-consumed="{{ r.consumed|default_if_none:0 }}"
+            data-balance="{{ r.balance|default_if_none:0 }}"
+          >
+            <td class="col-rack">{{ r.rack__code }}</td>
+            <td class="col-pallet">{{ r.pallet__number|default:"—" }}</td>
+            <td class="col-code">{{ r.grn__item_code|default:"—" }}</td>
+            <td class="col-name" title="{{ r.grn__item_name|default:'' }}">{{ r.grn__item_name|default:"—" }}</td>
+            <td class="col-batch">{{ r.grn__batch_no|default:"—" }}</td>
+            <td class="col-uom">{{ r.grn__uom|default:"—" }}</td>
+            <td class="num">{{ r.allocated|floatformat:3 }}</td>
+            <td class="num text-danger">{{ r.consumed|floatformat:3 }}</td>
+            <td class="num fw-semibold text-success">{{ r.balance|floatformat:3 }}</td>
+
+            <!-- Actions (Consume + Transfer) -->
+            <td>
+              <div class="actions">
+                <form method="post" action="{% url 'rack_consume_group' %}" class="consume-form">
+                  {% csrf_token %}
+                  <input type="hidden" name="rack_code" value="{{ r.rack__code }}">
+                  <input type="hidden" name="pallet_number" value="{{ r.pallet__number|default_if_none:'' }}">
+                  <input type="hidden" name="item_code" value="{{ r.grn__item_code }}">
+                  <input type="hidden" name="batch_no" value="{{ r.grn__batch_no|default_if_none:'' }}">
+                  <input type="number" name="qty" step="0.001" min="0.001"
+                         class="form-control form-control-sm text-end" style="width:110px"
+                         value="{{ r.balance|floatformat:3 }}">
+                  <button type="submit" class="btn btn-danger btn-xs">Consume</button>
+                </form>
+
+                <button type="button" class="btn btn-primary btn-xs toggle-transfer">Transfer</button>
+              </div>
+
+              <!-- Inline transfer drawer -->
+              <div class="transfer-wrap">
+                <form method="post" action="{% url 'rack_transfer' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="from_rack_code" value="{{ r.rack__code }}">
+                  <input type="hidden" name="from_pallet_number" value="{{ r.pallet__number|default_if_none:'' }}">
+                  <input type="hidden" name="item_code" value="{{ r.grn__item_code }}">
+                  <input type="hidden" name="batch_no" value="{{ r.grn__batch_no|default_if_none:'' }}">
+
+                  <div class="transfer-grid mt-2">
+                    <div>
+                      <label class="form-label m-0" style="font-size:.72rem">To Rack</label>
+                      <select name="to_rack_code" class="form-select form-select-sm rack-dest"></select>
+                    </div>
+                    <div>
+                      <label class="form-label m-0" style="font-size:.72rem">To Pallet</label>
+                      <select name="to_pallet_number" class="form-select form-select-sm pallet-dest">
+                        <option value="">(No pallet)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="form-label m-0" style="font-size:.72rem">Qty</label>
+                      <input name="qty" type="number" step="0.001" min="0.001"
+                             class="form-control form-control-sm text-end qty-transfer"
+                             value="{{ r.balance|floatformat:3 }}">
+                    </div>
+                    <div class="d-flex align-items-end">
+                      <button class="btn btn-primary btn-xs" type="submit">
+                        <i class="bi bi-arrow-left-right me-1"></i>Go
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="10" class="text-center text-muted py-5">No data available</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Load racks+pallets from the JSON script tag (provided by view) */
+let RACKS = [];
+try { RACKS = JSON.parse(document.getElementById('rackDataJSON').textContent || '[]'); }
+catch(e){ console.error('Bad rackDataJSON:', e); RACKS = []; }
+
+(function(){
+  const LS_KEY = "rack_bal_filters_v3";
+  const page = document.getElementById('page');
+  const head = document.getElementById('head');
+  const table = document.getElementById('rackTable');
+  const tbody = table.tBodies[0];
+  const rackFilter = document.getElementById('rackFilter');
+  const searchInput = document.getElementById('searchInput');
+  const balanceFilter = document.getElementById('balanceFilter');
+  const clearBtn = document.getElementById('clearFilters');
+  const exportBtn = document.getElementById('exportBtn');
+  const densityBtn = document.getElementById('densityBtn');
+  const kpiAllocated = document.getElementById('kpiAllocated');
+  const kpiConsumed  = document.getElementById('kpiConsumed');
+  const kpiBalance   = document.getElementById('kpiBalance');
+  const kpiRows      = document.getElementById('kpiRows');
+
+  // header shadow
+  const io = new IntersectionObserver(([e])=>{
+    head.style.boxShadow = e.intersectionRatio < 1 ? '0 6px 10px -8px rgba(0,0,0,.15)' : 'var(--shadow-sm)';
+  }, {threshold:[1]});
+  io.observe(head);
+
+  // map pallets by rack code
+  const palletsByRackCode = {};
+  RACKS.forEach(r => { palletsByRackCode[r.code] = r.pallets || []; });
+
+  // filter dropdown
+  function populateRackFilter(){
+    rackFilter.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());
+    RACKS.forEach(r=>{
+      const o=document.createElement('option');
+      o.value=r.code; o.textContent=r.code;
+      rackFilter.appendChild(o);
+    });
+  }
+
+  // transfer: fill all rack selects
+  function populateTransferRackSelects(){
+    const options = ['<option value="">Choose…</option>']
+      .concat(RACKS.map(r=>`<option value="${r.code}">${r.code}</option>`))
+      .join('');
+    document.querySelectorAll('.rack-dest').forEach(sel=>{
+      sel.innerHTML = options;
+    });
+  }
+
+  // rack -> pallet cascade
+  function wireRackToPalletCascade(){
+    document.querySelectorAll('.transfer-wrap').forEach(wrap=>{
+      const rackSel = wrap.querySelector('.rack-dest');
+      const palSel  = wrap.querySelector('.pallet-dest');
+      if(!rackSel || !palSel) return;
+
+      rackSel.addEventListener('change', ()=>{
+        const code = rackSel.value || '';
+        const pallets = palletsByRackCode[code] || [];
+        const opts = ['<option value="">(No pallet)</option>'].concat(
+          pallets.map(p=>{
+            const disabled = p.blocked ? ' disabled' : '';
+            const label = p.blocked ? `${p.number} (blocked)` : p.number;
+            return `<option value="${p.number}"${disabled}>${label}</option>`;
+          })
+        );
+        palSel.innerHTML = opts.join('');
+        const firstFree = pallets.find(p=>!p.blocked);
+        if(firstFree) palSel.value = firstFree.number;
+      });
+    });
+  }
+
+  const num = s => { const n=parseFloat(String(s).replace(/,/g,'')); return isNaN(n)?0:n; };
+
+  function applyFilters(){
+    const term=(searchInput.value||'').toLowerCase();
+    const rackSel=rackFilter.value||'';
+    const balSel=balanceFilter.value||'';
+    let sumA=0, sumC=0, sumB=0, visible=0;
+
+    [...tbody.rows].forEach(row=>{
+      const txt=row.textContent.toLowerCase();
+      const rack=row.dataset.rack||'';
+      const bal=num(row.dataset.balance);
+      const okText=!term||txt.includes(term);
+      const okRack=!rackSel||rack===rackSel;
+      const okBal = !balSel ||
+        (balSel==='pos' && bal>1e-9) ||
+        (balSel==='zero' && Math.abs(bal)<1e-9) ||
+        (balSel==='neg' && bal<-1e-9);
+
+      const show = okText && okRack && okBal;
+      row.style.display = show ? '' : 'none';
+      if(show){
+        sumA += num(row.dataset.allocated);
+        sumC += num(row.dataset.consumed);
+        sumB += num(row.dataset.balance);
+        visible++;
+      }
+    });
+
+    kpiAllocated.textContent=sumA.toFixed(3);
+    kpiConsumed.textContent=sumC.toFixed(3);
+    kpiBalance.textContent=sumB.toFixed(3);
+    kpiRows.textContent=visible;
+
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      q:searchInput.value, rack:rackFilter.value, bal:balanceFilter.value,
+      dense: page.classList.contains('dense')
+    }));
+  }
+
+  // CSV
+  function exportCSV(){
+    const headers=[...table.tHead.rows[0].cells].slice(0,9).map(th=>th.textContent.trim());
+    const rows=[...tbody.rows].filter(r=>r.style.display!=="none").map(r=>{
+      return [...r.cells].slice(0,9).map(td=>{
+        const t=td.textContent.replace(/\s+/g,' ').trim();
+        return /[",\n]/.test(t) ? `"${t.replace(/"/g,'""')}"` : t;
+      });
+    });
+    const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=`rack_balances_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  // guards
+  document.querySelectorAll('.consume-form').forEach(f=>{
+    f.addEventListener('submit',e=>{
+      const row=f.closest('tr'); const bal=num(row.dataset.balance);
+      const q=num(f.querySelector('input[name="qty"]').value);
+      if(!(q>0) || q-bal>1e-9){ e.preventDefault(); alert(`Enter a quantity between 0 and ${bal.toFixed(3)}`); }
+    });
+  });
+
+  document.querySelectorAll('.toggle-transfer').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const wrap=btn.closest('td').querySelector('.transfer-wrap');
+      if(!wrap) return;
+      wrap.style.display = wrap.style.display==='block' ? 'none' : 'block';
+    });
+  });
+
+  document.querySelectorAll('.transfer-wrap form').forEach(f=>{
+    f.addEventListener('submit',e=>{
+      const row=f.closest('tr'); const bal=num(row.dataset.balance);
+      const q=num(f.querySelector('.qty-transfer').value);
+      const dest=f.querySelector('[name="to_rack_code"]').value.trim();
+      if(!dest){ e.preventDefault(); alert('Choose destination rack'); return; }
+      if(!(q>0) || q-bal>1e-9){ e.preventDefault(); alert(`Transfer qty must be between 0 and ${bal.toFixed(3)}`); }
+    });
+  });
+
+  // density + events
+  densityBtn.addEventListener('click',()=>{ page.classList.toggle('dense'); applyFilters(); });
+  [searchInput,rackFilter,balanceFilter].forEach(el=>{
+    el.addEventListener('input',applyFilters); el.addEventListener('change',applyFilters);
+  });
+  clearBtn.addEventListener('click',()=>{ searchInput.value=''; rackFilter.value=''; balanceFilter.value=''; applyFilters(); });
+  exportBtn.addEventListener('click',exportCSV);
+
+  // init
+  populateRackFilter();
+  populateTransferRackSelects();
+  wireRackToPalletCascade();
+
+  try{
+    const s=JSON.parse(localStorage.getItem(LS_KEY)||'{}');
+    if(s.q!==undefined) searchInput.value=s.q;
+    if(s.rack!==undefined) rackFilter.value=s.rack;
+    if(s.bal!==undefined) balanceFilter.value=s.bal;
+    if(s.dense) page.classList.add('dense');
+  }catch{}
+  applyFilters();
+})();
+</script>
+{% endblock %}

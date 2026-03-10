@@ -1,0 +1,155 @@
+{% extends "main/index.html" %}
+
+{% block maincontent %}
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="bg-white shadow-sm rounded-xl border border-slate-200 p-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <h1 class="text-lg font-semibold text-slate-800">
+          Audit Log
+        </h1>
+
+         <!-- Filter + Export -->
+<form method="get" class="flex flex-wrap items-end gap-3">
+
+  <!-- Created At (New) -->
+  <div class="flex flex-col">
+    <label class="block text-xs font-medium text-slate-600 mb-1">
+      Created At
+    </label>
+    <div class="flex gap-1">
+      <input type="date" name="created_from" value="{{ created_from|default_if_none:'' }}"
+             class="border border-slate-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+             placeholder="From" />
+      <input type="date" name="created_to" value="{{ created_to|default_if_none:'' }}"
+             class="border border-slate-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+             placeholder="To" />
+    </div>
+  </div>
+
+  <!-- User name -->
+  <div>
+    <label class="block text-xs font-medium text-slate-600 mb-1">
+      User name
+    </label>
+    <input type="text" name="username" value="{{ username|default_if_none:'' }}"
+           class="border border-slate-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+           placeholder="e.g. Abc" />
+  </div>
+
+  <!-- App label -->
+  <div>
+    <label class="block text-xs font-medium text-slate-600 mb-1">
+      App label
+    </label>
+    <input type="text" name="app_label" value="{{ app_label|default_if_none:'' }}"
+           class="border border-slate-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
+           placeholder="e.g. HR, CANTEEN" />
+  </div>
+
+  <!-- Buttons -->
+<div class="flex items-center gap-2">
+    <!-- Apply -->
+    <button type="submit"
+        class="mt-5 w-8 h-8 flex items-center justify-center rounded-md bg-emerald-600 text-white hover:bg-emerald-700">
+        <i class="fas fa-check"></i>
+    </button>
+
+    <!-- Reset -->
+    <a href="{% url 'audit_log_list' %}"
+        class="mt-5 w-8 h-8 flex items-center justify-center rounded-md bg-slate-200 text-slate-700 hover:bg-slate-300">
+        <i class="fas fa-rotate-left"></i>
+    </a>
+
+    <!-- Export Excel -->
+    <a href="{% url 'audit_log_export_excel' %}?{{ request.GET.urlencode }}"
+        class="mt-5 w-8 h-8 flex items-center justify-center rounded-md bg-sky-600 text-white hover:bg-sky-700">
+        <i class="fas fa-file-excel"></i>
+    </a>
+</div>
+
+</form>
+
+      </div>
+
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm border border-slate-200">
+          <thead class="bg-slate-100 text-xs uppercase text-slate-600">
+          <tr>
+            <th class="px-2 py-2 border-b border-slate-200 text-left">Created At</th>
+            <th class="px-2 py-2 border-b border-slate-200 text-left">User</th>
+            <th class="px-2 py-2 border-b border-slate-200 text-left">Action</th>
+            <th class="px-2 py-2 border-b border-slate-200 text-left">App</th>
+            <th class="px-2 py-2 border-b border-slate-200 text-left">Model</th>
+            <th class="px-2 py-2 border-b border-slate-200 text-left">Object ID</th>
+          </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+          {% for log in page_obj.object_list %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-2 py-1 whitespace-nowrap text-slate-700">
+                {{ log.created_at|date:"Y-m-d H:i:s" }}
+              </td>
+              <td class="px-2 py-1 whitespace-nowrap">
+                {{ log.user.username|default:"(anonymous)" }}
+              </td>
+              <td class="px-2 py-1 whitespace-nowrap">
+                <span class="px-1.5 py-0.5 rounded text-xs font-semibold
+                  {% if log.action == 'CREATE' %}bg-emerald-100 text-emerald-700
+                  {% elif log.action == 'UPDATE' %}bg-amber-100 text-amber-700
+                  {% elif log.action == 'DELETE' %}bg-rose-100 text-rose-700
+                  {% else %}bg-slate-100 text-slate-700{% endif %}">
+                  {{ log.get_action_display }}
+                </span>
+              </td>
+              <td class="px-2 py-1 whitespace-nowrap text-slate-700">
+                {{ log.app_label }}
+              </td>
+              <td class="px-2 py-1 whitespace-nowrap text-slate-700">
+                {{ log.model_name }}
+              </td>
+              <td class="px-2 py-1 whitespace-nowrap text-slate-700">
+                {{ log.object_id }}
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="8" class="px-2 py-4 text-center text-sm text-slate-500">
+                No audit records found for the selected filters.
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if page_obj.paginator.num_pages > 1 %}
+      <div class="mt-4 flex items-center justify-between text-xs text-slate-600">
+        <div>
+          Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+          (total {{ page_obj.paginator.count }} records)
+        </div>
+
+        <div class="flex gap-1">
+          {% if page_obj.has_previous %}
+            <a href="?page=1&username={{ username }}&app_label={{ app_label }}"
+               class="px-2 py-1 border rounded hover:bg-slate-100">« First</a>
+            <a href="?page={{ page_obj.previous_page_number }}&username={{ username }}&app_label={{ app_label }}"
+               class="px-2 py-1 border rounded hover:bg-slate-100">‹ Prev</a>
+          {% endif %}
+
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&username={{ username }}&app_label={{ app_label }}"
+               class="px-2 py-1 border rounded hover:bg-slate-100">Next ›</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}&username={{ username }}&app_label={{ app_label }}"
+               class="px-2 py-1 border rounded hover:bg-slate-100">Last »</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

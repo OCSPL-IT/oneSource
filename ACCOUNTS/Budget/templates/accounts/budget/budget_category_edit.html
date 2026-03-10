@@ -1,0 +1,818 @@
+{% extends "main/index.html" %}
+{% load static inr_format %}
+{% load budget_extras %}
+
+{% block title %}Budget - {{ title }}{% endblock %}
+
+{% block maincontent %}
+
+<!-- Tailwind (CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Tom Select (NO bootstrap theme) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.default.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+  :root{
+    --w-sr: 72px;
+    --w-ledger: 520px;
+    --w-total: 220px;
+
+    --border: #e5e7eb;
+    --border-2: #dbe3ee;
+    --head: rgba(250,250,250,.92);
+    --ink: #0f172a;
+    --muted: #64748b;
+    --bg: #f7f7f8;
+    --card: #ffffff;
+
+    --shadow: 10px 0 18px -10px rgba(2,6,23,.14);
+    --shadow-soft: 0 1px 0 rgba(2,6,23,.04), 0 10px 25px rgba(2,6,23,.06);
+    --radius: 18px;
+  }
+
+  .ts-dropdown{ z-index: 100000 !important; }
+  .ts-wrapper{ width:100% !important; }
+
+  .ts-control{
+    min-height: 44px;
+    border-radius: 0.95rem !important;
+    border: 1px solid var(--border) !important;
+    padding: .5rem .7rem !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+  .ts-control.focus{
+    border-color:#4f46e5 !important;
+    box-shadow:0 0 0 3px rgba(79,70,229,.14) !important;
+  }
+  .ts-control .item{ font-weight: 800; color: var(--ink); }
+  .ts-control input{ font-weight: 650; color: var(--ink); }
+
+  .ts-dropdown{
+    border: 1px solid var(--border) !important;
+    border-radius: 0.95rem !important;
+    overflow: hidden !important;
+    box-shadow: 0 18px 40px rgba(2,6,23,.12) !important;
+  }
+  .ts-dropdown .option{ padding: .60rem .80rem !important; font-weight: 750 !important; }
+  .ts-dropdown .active{ background: rgba(79,70,229,.10) !important; color:#1e1b4b !important; }
+
+  /* Month inputs */
+  .cell-input input{
+    width:100%;
+    text-align:right;
+    border: 1px solid var(--border);
+    padding: .60rem .75rem;
+    border-radius: .95rem;
+    background:#fff;
+    transition: box-shadow .15s ease, border-color .15s ease, background .15s ease;
+  }
+  .cell-input input:focus{
+    outline:none;
+    border-color:#4f46e5;
+    box-shadow:0 0 0 3px rgba(79,70,229,.14);
+  }
+
+  /* ── Total cell: visible display div + hidden input ── */
+  .total-cell .total-display {
+    width: 100%;
+    text-align: right;
+    font-weight: 900;
+    font-size: 0.97rem;
+    color: #1e1b4b;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    padding: .60rem .75rem;
+    border-radius: .95rem;
+    display: block;
+    min-height: 44px;
+    line-height: 1.4;
+  }
+  /* For editable (blank/new) rows: total is a real input */
+  .total-cell input[name$="-total"] {
+    width:100%;
+    text-align:right;
+    font-weight:900;
+    font-size:0.97rem;
+    color:#1e1b4b;
+    background:#eef2ff !important;
+    border:1px solid #c7d2fe !important;
+    padding:.60rem .75rem;
+    border-radius:.95rem;
+    display:block;
+  }
+  .total-cell input[name$="-total"]:focus{
+    outline:none;
+    border-color:#4f46e5 !important;
+    box-shadow:0 0 0 3px rgba(79,70,229,.14) !important;
+  }
+
+  /* Sticky columns */
+  th.sticky-sr, td.sticky-sr{
+    position:sticky; left:0; z-index:40;
+    background:#fff;
+    width:var(--w-sr); min-width:var(--w-sr); max-width:var(--w-sr);
+  }
+  th.sticky-ledger, td.sticky-ledger{
+    position:sticky; left:var(--w-sr); z-index:40;
+    background:#fff;
+    width:var(--w-ledger); min-width:var(--w-ledger);
+    border-right:1px solid var(--border-2);
+    box-shadow:var(--shadow);
+  }
+  th.sticky-total, td.sticky-total{
+    position:sticky; left:calc(var(--w-sr) + var(--w-ledger)); z-index:40;
+    background:#fff;
+    width:var(--w-total); min-width:var(--w-total);
+    border-right:1px solid var(--border-2);
+  }
+
+  .budget-table thead th{
+    position:sticky; top:0; z-index:30;
+    background:var(--head);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+  }
+  .budget-table thead th.sticky-sr,
+  .budget-table thead th.sticky-ledger,
+  .budget-table thead th.sticky-total{ z-index:60; background:var(--head); }
+
+  .sr-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:30px; height:30px; border-radius:999px;
+    background:#f3f4f6; color:#334155;
+    font-weight:900; font-size:.75rem;
+    border:1px solid #e5e7eb;
+  }
+
+  .field-error input, .field-error .ts-control{ border-color:#ef4444 !important; background:#fef2f2 !important; }
+  .err-text{ color:#ef4444; font-size:.75rem; font-weight:800; margin-top:6px; }
+
+  .attach-col{ min-width:170px; }
+  .attach-btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:44px; height:44px; border-radius:0.95rem;
+    border:1px solid var(--border); background:#fff; color:#334155;
+    transition:all .15s ease;
+  }
+  .attach-btn:hover{ background:#f8fafc; color:#0f172a; }
+  .attach-btn.disabled{ pointer-events:none; opacity:.55; }
+
+  tr.budget-row:hover td{ background:rgba(2,6,23,.02); }
+  tr.budget-row:hover td.sticky-sr,
+  tr.budget-row:hover td.sticky-ledger,
+  tr.budget-row:hover td.sticky-total{ background:#fff; }
+
+  .page-shell{
+    background:
+      radial-gradient(1200px 600px at 20% -10%, rgba(99,102,241,.10), transparent 55%),
+      radial-gradient(900px 500px at 95% 0%, rgba(16,185,129,.08), transparent 55%),
+      var(--bg);
+  }
+</style>
+
+<div class="page-shell min-h-screen pb-10">
+  <div class="max-w-[100rem] mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+    <!-- Top bar -->
+    <div class="mb-6">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-start gap-4">
+          <div class="h-11 w-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+            <i class="fa-solid
+              {% if category == 'safety' %}fa-shield-heart
+              {% elif category == 'environment' %}fa-leaf
+              {% elif category == 'qaqc' %}fa-flask
+              {% elif category == 'engineering' %}fa-screwdriver-wrench
+              {% elif category == 'utility' %}fa-bolt
+              {% elif category == 'admin' %}fa-building
+              {% elif category == 'hr' %}fa-users
+              {% elif category == 'rd' %}fa-flask-vial
+              {% elif category == 'logistic' %}fa-truck
+              {% elif category == 'fin_accts' %}fa-coins
+              {% else %}fa-layer-group
+              {% endif %}
+              text-slate-600"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 class="text-[22px] sm:text-2xl font-black text-slate-900 tracking-tight truncate">{{ title }}</h1>
+              <span class="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-extrabold text-slate-700 shadow-sm">FY {{ plan.fy }}</span>
+              <span class="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-extrabold text-slate-700 shadow-sm">{{ plan.company_group|default:"General Budget" }}</span>
+              {% if category %}
+                <span class="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-[11px] font-black tracking-widest text-white/90">{{ category|upper }}</span>
+              {% endif %}
+            </div>
+            <p class="mt-1 text-sm font-semibold text-slate-500">
+              Enter monthly values; <strong>Row Total</strong> is auto-calculated from months. Type an expression in <strong>Annual</strong> (e.g. <span class="font-black">120000/12</span>) and press Enter to distribute.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="{% url 'accounts_budget:budget_home' %}" class="px-4 py-2 text-sm font-extrabold text-slate-700 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 shadow-sm">Cancel</a>
+          {% if not is_locked %}
+            <button form="budget-form" type="submit" class="px-6 py-2 text-sm font-extrabold text-white bg-slate-900 rounded-2xl hover:bg-slate-800 shadow-[0_10px_25px_rgba(2,6,23,.18)]">Save Changes</button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-[var(--radius)] border border-slate-200 p-4 shadow-[var(--shadow-soft)]">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Grand Total</div>
+          <i class="fa-solid fa-indian-rupee-sign text-slate-300"></i>
+        </div>
+        <div class="text-2xl font-black text-slate-900 mt-2" id="stat-grand-total">₹{{ agg.total|default:"0"|inr }}</div>
+        <div class="text-xs font-bold text-slate-500 mt-1">Sum of filled rows</div>
+      </div>
+      <div class="bg-white rounded-[var(--radius)] border border-slate-200 p-4 shadow-[var(--shadow-soft)]">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Active Rows</div>
+          <i class="fa-solid fa-list-check text-slate-300"></i>
+        </div>
+        <div class="text-2xl font-black text-slate-900 mt-2" id="stat-row-count">0</div>
+        <div class="text-xs font-bold text-slate-500 mt-1">Rows with any data</div>
+      </div>
+      <div class="bg-white rounded-[var(--radius)] border border-slate-200 p-4 shadow-[var(--shadow-soft)]">
+        <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Status</div>
+        <div class="mt-2">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black
+            {% if mc.status == 'APPROVED' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+            {% elif mc.status == 'SUBMITTED' %}bg-amber-50 text-amber-800 border border-amber-200
+            {% else %}bg-slate-50 text-slate-700 border border-slate-200{% endif %}">
+            {{ mc.status|default:"DRAFT" }}
+          </span>
+        </div>
+        <div class="text-xs font-bold text-slate-500 mt-2">Maker-Checker flow</div>
+      </div>
+      {% if is_locked %}
+        <div class="rounded-[var(--radius)] border border-rose-200 bg-rose-50 p-4 flex items-start gap-3 shadow-[var(--shadow-soft)]">
+          <i class="fa-solid fa-lock text-rose-600 mt-0.5"></i>
+          <div>
+            <div class="text-sm font-black text-rose-800">Editing disabled</div>
+            <div class="text-xs font-bold text-rose-700/80 mt-1">Budget is Submitted/Approved.</div>
+          </div>
+        </div>
+      {% else %}
+        <div class="rounded-[var(--radius)] border border-slate-200 bg-white p-4 shadow-[var(--shadow-soft)]">
+          <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Tips</div>
+          <ul class="mt-2 space-y-1 text-xs font-semibold text-slate-600">
+            <li>• Search BH using name/keywords</li>
+            <li>• Attach file per row (optional)</li>
+            <li>• Annual supports expressions</li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+
+    <form id="budget-form" method="post" enctype="multipart/form-data" autocomplete="off">
+      {% csrf_token %}
+      {{ formset.management_form }}
+
+      <div class="bg-white border border-slate-200 rounded-[var(--radius)] shadow-[var(--shadow-soft)] overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="budget-table w-full border-separate border-spacing-0">
+            <thead>
+              <tr>
+                <th class="sticky-sr px-4 py-3 text-left font-black text-slate-800">#</th>
+                <th class="sticky-ledger px-4 py-3 text-left font-black text-slate-800">
+                  Budget Head (BH)
+                  <div class="text-[11px] font-extrabold text-slate-400 mt-0.5">Search & select</div>
+                </th>
+                <th class="sticky-total px-4 py-3 text-right font-black text-slate-800">
+                  <div class="text-[11px] uppercase tracking-tight text-slate-400">Annual</div>
+                  <div class="text-slate-800">Row Total</div>
+                </th>
+                {% for key, lbl in months %}
+                  <th class="px-3 py-3 text-right font-black text-slate-800 min-w-[140px]">
+                    <div class="text-[11px] uppercase tracking-tight text-slate-400">{{ lbl }}</div>
+                    <div class="text-slate-800">Amount</div>
+                  </th>
+                {% endfor %}
+                <th class="px-3 py-3 text-center font-black text-slate-800 min-w-[170px]">Attach</th>
+                {% if not is_locked %}<th class="px-3 py-3 w-16"></th>{% endif %}
+              </tr>
+            </thead>
+
+            <tbody id="budget-rows">
+              {% for form in formset %}
+                {% if form.instance.pk %}
+                  <tr class="budget-row" data-row-kind="saved">
+                    <td class="sticky-sr px-4 py-4 align-middle">
+                      <span class="sr-badge sr-display"></span>
+                      <div class="hidden">{{ form.sr_no }}</div>
+                    </td>
+
+                    <td class="sticky-ledger px-4 py-4 align-middle">
+                      <div class="hidden">
+                        {{ form.particulars }} {{ form.gl_account }} {{ form.id }}
+                        {% if form.DELETE %}{{ form.DELETE }}{% endif %}
+                      </div>
+                      <div class="{% if form.gl_account.errors %}field-error{% endif %}">
+                        <select class="ledger-ts w-full"
+                                data-search-url="{% url 'accounts_budget:gl_search' %}"
+                                data-category="{{ category|default:'' }}"
+                                data-department="{{ title|default:'' }}"
+                                data-target-gl-id="{{ form.gl_account.id_for_label }}"
+                                data-target-text-id="{{ form.particulars.id_for_label }}"
+                                {% if is_locked %}disabled{% endif %}>
+                          <option value=""></option>
+                          {% if form.instance.gl_account %}
+                            <option value="{{ form.instance.gl_account.pk }}" selected>
+                              {{ form.instance.gl_account.budget_head|default:form.instance.gl_account.name }}
+                            </option>
+                          {% endif %}
+                        </select>
+                      </div>
+                      {% if form.gl_account.errors %}
+                        <div class="err-text">{{ form.gl_account.errors|striptags }}</div>
+                      {% endif %}
+                    </td>
+
+                    <td class="sticky-total px-4 py-4 align-middle cell-input total-cell">
+                      <!-- Hidden input: form submission only -->
+                      <div class="hidden">{{ form.total }}</div>
+                      <!-- Visible display: JS writes computed total here -->
+                      <div class="total-display" data-row-total="true">—</div>
+                    </td>
+
+                    {% for key, lbl in months %}
+                      {% with f=form|get_item:key %}
+                        <td class="px-3 py-4 align-middle cell-input {% if f.errors %}field-error{% endif %}">
+                          {{ f }}
+                          {% if f.errors %}<div class="err-text">{{ f.errors|striptags }}</div>{% endif %}
+                        </td>
+                      {% endwith %}
+                    {% endfor %}
+
+                    <td class="px-3 py-4 text-center align-middle attach-col">
+                      <div class="hidden">{{ form.attachment }}</div>
+                      <label for="{{ form.attachment.id_for_label }}"
+                             class="attach-btn {% if is_locked %}disabled{% endif %}"
+                             title="{% if form.instance.attachment %}{{ form.instance.attachment.name }}{% else %}Attach file{% endif %}">
+                        <i class="fa-solid fa-paperclip"></i>
+                      </label>
+                      <div class="mt-1 text-[11px] font-bold text-slate-600">
+                        {% if form.instance.attachment %}
+                          <span class="inline-block max-w-[160px] truncate align-middle" title="{{ form.instance.attachment.name }}">{{ form.instance.attachment.name }}</span>
+                          <div class="mt-0.5 flex items-center justify-center gap-3">
+                            <a class="text-indigo-700 hover:underline font-extrabold" href="{{ form.instance.attachment.url }}" target="_blank">View</a>
+                            <a class="text-slate-500 hover:underline font-extrabold" href="{{ form.instance.attachment.url }}" download>Download</a>
+                          </div>
+                        {% else %}
+                          <span class="attach-name text-slate-400">No file</span>
+                        {% endif %}
+                      </div>
+                      {% if form.attachment.errors %}<div class="err-text">{{ form.attachment.errors|striptags }}</div>{% endif %}
+                    </td>
+
+                    {% if not is_locked %}
+                      <td class="px-3 py-4 text-center align-middle">
+                        <button type="button" class="btn-remove-row p-2 text-slate-300 hover:text-rose-600">
+                          <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                      </td>
+                    {% endif %}
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+
+            <tfoot class="bg-slate-900 text-white font-extrabold">
+              <tr>
+                <td class="sticky-sr px-4 py-4 bg-slate-900"></td>
+                <td class="sticky-ledger px-4 py-4 bg-slate-900">GRAND TOTAL</td>
+                <td class="sticky-total px-4 py-4 bg-slate-800 text-indigo-300 font-black text-right" id="footer-grand-total">{{ agg.total|default:0|inr }}</td>
+                {% for key, lbl in months %}
+                  <td class="px-3 py-4 text-right month-footer-total" data-month="{{ key }}">{{ agg|get_item:key|default:0|inr }}</td>
+                {% endfor %}
+                <td class="px-3 py-4 text-center bg-slate-900"></td>
+                {% if not is_locked %}<td class="bg-slate-900"></td>{% endif %}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {% if not is_locked %}
+        <div class="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <button type="button" id="btn-add-row-manual"
+                  class="inline-flex items-center justify-center px-4 py-2.5 text-sm font-black text-slate-900 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 shadow-sm">
+            <i class="fa-solid fa-plus mr-2 text-slate-600"></i> Add Row
+          </button>
+          <p class="text-[11px] text-slate-500 font-semibold italic">* A new row is added automatically when you select a Budget Head in the blank row.</p>
+        </div>
+
+        <template id="empty-form-template">
+          <tr class="budget-row" data-row-kind="blank">
+            <td class="sticky-sr px-4 py-4 align-middle">
+              <span class="sr-badge sr-display"></span>
+              <div class="hidden">{{ formset.empty_form.sr_no }}</div>
+            </td>
+            <td class="sticky-ledger px-4 py-4 align-middle">
+              <div class="hidden">
+                {{ formset.empty_form.particulars }} {{ formset.empty_form.gl_account }} {{ formset.empty_form.id }}
+                {% if formset.empty_form.DELETE %}{{ formset.empty_form.DELETE }}{% endif %}
+              </div>
+              <select class="ledger-ts w-full"
+                      data-search-url="{% url 'accounts_budget:gl_search' %}"
+                      data-category="{{ category|default:'' }}"
+                      data-department="{{ title|default:'' }}"
+                      data-target-gl-id="id_{{ formset.prefix }}-__prefix__-gl_account"
+                      data-target-text-id="id_{{ formset.prefix }}-__prefix__-particulars">
+                <option value=""></option>
+              </select>
+            </td>
+            <td class="sticky-total px-4 py-4 align-middle cell-input total-cell">
+              <input type="text"
+                     name="{{ formset.prefix }}-__prefix__-total"
+                     id="id_{{ formset.prefix }}-__prefix__-total"
+                     inputmode="decimal"
+                     placeholder="e.g. 120000/12">
+            </td>
+            {% for key, lbl in months %}
+              <td class="px-3 py-4 align-middle cell-input">
+                <input type="number"
+                       name="{{ formset.prefix }}-__prefix__-{{ key }}"
+                       id="id_{{ formset.prefix }}-__prefix__-{{ key }}"
+                       step="0.01" inputmode="decimal" autocomplete="off" placeholder="0.00">
+              </td>
+            {% endfor %}
+            <td class="px-3 py-4 text-center align-middle attach-col">
+              <input type="file"
+                     name="{{ formset.prefix }}-__prefix__-attachment"
+                     id="id_{{ formset.prefix }}-__prefix__-attachment"
+                     class="hidden attachment-input">
+              <label for="id_{{ formset.prefix }}-__prefix__-attachment" class="attach-btn" title="Attach file">
+                <i class="fa-solid fa-paperclip"></i>
+              </label>
+              <div class="mt-1 text-[11px] font-bold text-slate-600">
+                <span class="attach-name text-slate-400">No file</span>
+              </div>
+            </td>
+            <td class="px-3 py-4 text-center align-middle">
+              <button type="button" class="btn-remove-row p-2 text-slate-300 hover:text-rose-600">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </td>
+          </tr>
+        </template>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const isLocked = {{ is_locked|yesno:"true,false" }};
+  const tbody    = document.getElementById("budget-rows");
+  const template = document.getElementById("empty-form-template");
+
+  // Matches month field name suffixes
+  const MONTH_RE = /-(apr|may|jun|jul|aug|sep|oct|nov|dec|jan|feb|mar)$/i;
+
+  /* ── Utilities ─────────────────────────────────────────────── */
+  function parseNum(v) {
+    const n = parseFloat(String(v || "").replace(/,/g, ""));
+    return isNaN(n) ? 0 : n;
+  }
+  function fmtINR(n) {
+    return new Intl.NumberFormat("en-IN", {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2
+    }).format(n);
+  }
+  function safeEval(expr) {
+    const s = String(expr || "").trim().replace(/,/g, "");
+    if (!s || !/^[0-9+\-*/().\s]+$/.test(s)) return null;
+    try {
+      const v = Function("return (" + s + ")")();
+      return (typeof v === "number" && isFinite(v)) ? v : null;
+    } catch { return null; }
+  }
+  function isMeaningful(raw) {
+    const s = String(raw || "").trim();
+    if (!s) return false;
+    const m = s.replace(/,/g, "").match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+    if (m) return isFinite(+m[1]) && +m[2] > 0;
+    return safeEval(s) !== null;
+  }
+
+  /* ── Row accessors ──────────────────────────────────────────── */
+  function monthInputs(tr) {
+    return Array.from(tr.querySelectorAll("input[name]")).filter(i => MONTH_RE.test(i.name));
+  }
+  function glHidden(tr) { return tr.querySelector('input[name$="-gl_account"]'); }
+
+  // The visible display element inside the total cell
+  // Saved rows → <div data-row-total>; Blank rows → plain <input>
+  function totalDisplay(tr) {
+    return tr.querySelector('[data-row-total="true"]')
+        || tr.querySelector('input[name$="-total"]');
+  }
+  // The hidden input (exists only on saved rows, inside .hidden wrapper)
+  function totalHiddenInput(tr) {
+    const wrapper = tr.querySelector('.total-cell .hidden');
+    return wrapper ? wrapper.querySelector('input[name$="-total"]') : null;
+  }
+
+  function rowHasData(tr) {
+    const gl = glHidden(tr);
+    if (gl && gl.value.trim()) return true;
+    if (monthInputs(tr).some(i => i.value.trim())) return true;
+    const disp = totalDisplay(tr);
+    if (disp) {
+      const v = disp.tagName === "INPUT" ? disp.value : disp.textContent;
+      if (isMeaningful(v)) return true;
+    }
+    const fi = tr.querySelector('input[type="file"][name$="-attachment"]');
+    if (fi && fi.files && fi.files.length) return true;
+    return false;
+  }
+
+  /* ── Write computed total (NO input.value issues) ─────────── */
+  // For saved rows we write to the <div data-row-total> AND the hidden input.
+  // For blank rows we write to the plain <input>.
+  function writeTotal(tr, value) {
+    const disp       = tr.querySelector('[data-row-total="true"]');
+    const hiddenInp  = totalHiddenInput(tr);
+    const plainInp   = tr.querySelector('input[name$="-total"]');   // blank rows
+
+    if (disp) {
+      // Saved row: update the visible div
+      disp.textContent = fmtINR(value);
+    }
+    if (hiddenInp) {
+      // Keep hidden input in sync for form submission
+      hiddenInp.value = value.toFixed(2);
+    }
+    if (!disp && plainInp) {
+      // Blank row: write to the real input
+      plainInp.value = value.toFixed(2);
+    }
+  }
+
+  /* ── Attachment label ───────────────────────────────────────── */
+  function syncAttachLabel(tr) {
+    const fi     = tr.querySelector('input[type="file"][name$="-attachment"]');
+    const nameEl = tr.querySelector(".attach-name");
+    const lbl    = tr.querySelector("label.attach-btn");
+    if (!fi || !nameEl) return;
+    const f = fi.files && fi.files[0];
+    nameEl.textContent = f ? f.name : "No file";
+    nameEl.classList.toggle("text-slate-400", !f);
+    nameEl.classList.toggle("text-slate-600",  !!f);
+    if (lbl) lbl.title = f ? f.name : "Attach file";
+  }
+
+  /* ── Blank-row housekeeping ─────────────────────────────────── */
+  function ensureOneBlank() {
+    if (isLocked) return;
+    tbody.querySelectorAll('tr.budget-row[data-row-kind="blank"]:not(.hidden)')
+         .forEach(tr => { if (rowHasData(tr)) tr.dataset.rowKind = "saved"; });
+    const blanks = Array.from(tbody.querySelectorAll('tr.budget-row[data-row-kind="blank"]:not(.hidden)'));
+    if (blanks.length > 1) blanks.slice(0, -1).forEach(tr => tr.remove());
+    if (blanks.length === 0) addBlankRow();
+  }
+
+  function addBlankRow() {
+    const tf = document.querySelector('input[id$="-TOTAL_FORMS"]');
+    if (!tf || !template) return null;
+    const idx  = parseInt(tf.value || "0", 10);
+    const html = template.innerHTML.replace(/__prefix__/g, idx);
+    const tmp  = document.createElement("tbody");
+    tmp.innerHTML = html.trim();
+    const row = tmp.firstElementChild;
+    tbody.appendChild(row);
+    tf.value = String(idx + 1);
+    const sel = row.querySelector("select.ledger-ts");
+    if (sel) initTS(sel);
+    syncAttachLabel(row);
+    renumber();
+    return row;
+  }
+
+  /* ── Renumber SR + recalculate ─────────────────────────────── */
+  function renumber() {
+    Array.from(tbody.querySelectorAll("tr.budget-row:not(.hidden)")).forEach((tr, i) => {
+      const span = tr.querySelector(".sr-display");
+      const inp  = tr.querySelector('input[name$="-sr_no"]');
+      if (span) span.textContent = i + 1;
+      if (inp)  inp.value = i + 1;
+    });
+    recalc();
+  }
+
+  /* ── MAIN CALCULATION ──────────────────────────────────────── */
+  function recalc() {
+    const rows       = Array.from(tbody.querySelectorAll("tr.budget-row:not(.hidden)"));
+    const mTotals    = {};
+    let   grandTotal = 0;
+
+    rows.forEach(tr => {
+      const mins    = monthInputs(tr);
+      const isBlank = tr.dataset.rowKind === "blank";
+      let rowSum    = 0;
+      let anyFilled = false;
+
+      mins.forEach(inp => {
+        const raw = inp.value.trim();
+        if (raw) anyFilled = true;
+        const m = (inp.name || "").match(MONTH_RE);
+        if (!m) return;
+        const key = m[1].toLowerCase();
+        const val = parseNum(inp.value);
+        rowSum += val;
+        mTotals[key] = (mTotals[key] || 0) + val;
+      });
+
+      if (anyFilled) {
+        // Always compute from months when months have values
+        writeTotal(tr, rowSum);
+        grandTotal += rowSum;
+      } else if (!isBlank) {
+        // Saved row, no months entered yet → show 0.00
+        writeTotal(tr, 0);
+      }
+      // Blank row with empty months: leave total input untouched (user types expression)
+    });
+
+    // Footer
+    document.querySelectorAll(".month-footer-total").forEach(td => {
+      td.textContent = fmtINR(mTotals[td.dataset.month] || 0);
+    });
+    const ft = document.getElementById("footer-grand-total");
+    const st = document.getElementById("stat-grand-total");
+    if (ft) ft.textContent = fmtINR(grandTotal);
+    if (st) st.textContent = "₹" + fmtINR(grandTotal);
+
+    const rc = document.getElementById("stat-row-count");
+    if (rc) rc.textContent = rows.filter(rowHasData).length;
+  }
+
+  /* ── TomSelect ─────────────────────────────────────────────── */
+  function initTS(el) {
+    if (!el || el.tomselect) return;
+    const searchUrl = el.dataset.searchUrl;
+    let booting = true;
+
+    new TomSelect(el, {
+      valueField: "id", labelField: "text",
+      searchField: ["text", "bh", "budget_head"],
+      dropdownParent: "body", create: false, allowEmptyOption: true,
+      placeholder: "Search Budget Head...",
+      render: {
+        item:   (d, e) => `<div>${e(d.budget_head || d.bh || d.text || "")}</div>`,
+        option: (d, e) => `<div class="py-1">${e(d.budget_head || d.bh || d.text || "")}</div>`
+      },
+      load(q, cb) {
+        const url = new URL(searchUrl, location.origin);
+        url.searchParams.set("q", q || "");
+        ["department:dept", "category:budget_category:cat"].forEach(keys => {
+          const [attr, ...params] = keys.split(":");
+          const val = el.dataset[attr] || "";
+          if (val) params.forEach(p => url.searchParams.set(p, val));
+        });
+        // Simpler version:
+        if (el.dataset.department) { url.searchParams.set("department", el.dataset.department); url.searchParams.set("dept", el.dataset.department); }
+        if (el.dataset.category)   { url.searchParams.set("category", el.dataset.category);   url.searchParams.set("budget_category", el.dataset.category); url.searchParams.set("cat", el.dataset.category); }
+        fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+          .then(r => r.json()).then(d => cb(d.results || [])).catch(() => cb());
+      },
+      onInitialize() { setTimeout(() => { booting = false; }, 0); },
+      onChange(val) {
+        if (booting) return;
+        const tr     = el.closest("tr");
+        const glInp  = document.getElementById(el.dataset.targetGlId);
+        const txtInp = document.getElementById(el.dataset.targetTextId);
+        const opt    = val ? (this.options[val] || {}) : {};
+        const lbl    = opt.budget_head || opt.bh || opt.text || "";
+        if (glInp)  glInp.value  = val  || "";
+        if (txtInp) txtInp.value = val ? lbl : "";
+        if (val && tr && tr.dataset.rowKind === "blank") {
+          tr.dataset.rowKind = "saved";
+          ensureOneBlank();
+        }
+        recalc();
+      }
+    });
+  }
+
+  /* ── Annual distribution on Enter / blur ──────────────────── */
+  function distribute(tr, raw) {
+    const s = String(raw || "").trim().replace(/,/g, "");
+    if (!s) { recalc(); return; }
+    let val = null;
+    const m = s.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+    if (m && +m[2] > 0) val = +m[1];
+    else val = safeEval(s);
+    if (val === null) { recalc(); return; }
+
+    const mins = monthInputs(tr);
+    if (mins.length) {
+      const A   = Math.round(val * 100) / 100;
+      const per = Math.round((A / mins.length) * 100) / 100;
+      const lst = Math.round((A - per * (mins.length - 1)) * 100) / 100;
+      mins.forEach((inp, i) => { inp.value = (i === mins.length - 1 ? lst : per).toFixed(2); });
+    }
+    tr.dataset.rowKind = "saved";
+    ensureOneBlank();
+    writeTotal(tr, val);
+    recalc();
+  }
+
+  /* ── Event delegation ──────────────────────────────────────── */
+  tbody.addEventListener("input", e => {
+    if (!MONTH_RE.test(e.target.name || "")) return;
+    const tr = e.target.closest("tr");
+    if (tr && tr.dataset.rowKind === "blank" && e.target.value.trim()) {
+      tr.dataset.rowKind = "saved";
+      ensureOneBlank();
+    }
+    recalc();
+  });
+
+  tbody.addEventListener("keydown", e => {
+    if (e.target.matches('input[name$="-total"]') && e.key === "Enter") {
+      e.preventDefault();
+      distribute(e.target.closest("tr"), e.target.value);
+      e.target.blur();
+    }
+  });
+
+  tbody.addEventListener("blur", e => {
+    if (e.target.matches('input[name$="-total"]'))
+      distribute(e.target.closest("tr"), e.target.value);
+  }, true);
+
+  tbody.addEventListener("change", e => {
+    if (!e.target.matches('input[type="file"][name$="-attachment"]')) return;
+    const tr = e.target.closest("tr");
+    if (!tr) return;
+    syncAttachLabel(tr);
+    if (tr.dataset.rowKind === "blank" && e.target.files && e.target.files.length) {
+      tr.dataset.rowKind = "saved";
+      ensureOneBlank();
+    }
+    recalc();
+  });
+
+  tbody.addEventListener("click", e => {
+    const btn = e.target.closest(".btn-remove-row");
+    if (!btn) return;
+    const tr = btn.closest("tr");
+    if (!tr) return;
+    if (tr.dataset.rowKind === "blank") {
+      tr.querySelectorAll("input").forEach(i => { i.value = ""; });
+      const gl = glHidden(tr), tx = tr.querySelector('input[name$="-particulars"]');
+      if (gl) gl.value = ""; if (tx) tx.value = "";
+      const sel = tr.querySelector("select.ledger-ts");
+      if (sel && sel.tomselect) sel.tomselect.clear(true);
+      syncAttachLabel(tr); recalc(); return;
+    }
+    const del = tr.querySelector('input[name$="-DELETE"]');
+    if (del) { del.checked = true; tr.classList.add("hidden"); } else { tr.remove(); }
+    ensureOneBlank(); renumber();
+  });
+
+  const addBtn = document.getElementById("btn-add-row-manual");
+  if (addBtn) {
+    addBtn.addEventListener("click", () => {
+      const b = Array.from(tbody.querySelectorAll('tr.budget-row[data-row-kind="blank"]:not(.hidden)'));
+      const last = b[b.length - 1];
+      if (last && !rowHasData(last)) {
+        last.scrollIntoView({ behavior: "smooth", block: "center" });
+        const sel = last.querySelector("select.ledger-ts");
+        if (sel && sel.tomselect) sel.tomselect.open();
+        return;
+      }
+      const r = addBlankRow();
+      if (r) setTimeout(() => r.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+    });
+  }
+
+  /* ── BOOT ──────────────────────────────────────────────────── */
+  if (!isLocked) {
+    tbody.querySelectorAll("select.ledger-ts").forEach(initTS);
+    tbody.querySelectorAll("tr.budget-row").forEach(syncAttachLabel);
+    ensureOneBlank();
+    renumber();
+  }
+
+  // Run recalc immediately + after next paint for BOTH locked and unlocked.
+  // This guarantees the <div data-row-total> elements are populated as soon
+  // as the page renders, even when the budget is in SUBMITTED/APPROVED state.
+  recalc();
+  requestAnimationFrame(recalc);
+
+})();
+</script>
+
+{% endblock %}

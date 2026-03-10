@@ -1,0 +1,492 @@
+{# qc/templates/qc/report.html #}
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}QC Entries – QC Project{% endblock %}
+
+{% block maincontent %}
+{# All page content, including styles and HTML, must go inside this single block #}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* ───────────────────────────────────
+      THEME & LAYOUT (ALIGNED)
+  ─────────────────────────────────── */
+  :root {
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --color-surface: #ffffff;
+    --color-border: #e5e7eb; /* slate-200 */
+    --color-bg-subtle: #f8fafc; /* slate-50 */
+    --text-heading: #111827; /* slate-900 */
+    --text-body: #374151; /* slate-700 */
+    --text-muted: #6b7280; /* slate-500 */
+
+    /* Primary action (New QC Entry) */
+    --color-primary: #2563eb; /* blue-600 */
+    --color-primary-hover: #1d4ed8; /* blue-700 */
+
+    /* Distinct style for Sync ERP button */
+    --color-sync: #7c3aed;        /* violet-600 */
+    --color-sync-hover: #6d28d9;  /* violet-700 */
+    --color-sync-ring: rgba(124, 58, 237, .25);
+
+    --radius-md: 0.375rem; /* rounded-md */
+    --radius-lg: 0.5rem; /* rounded-lg */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+
+  /* Using a wrapper to avoid interfering with base template styles */
+  .qc-list-page {
+    font-family: var(--font-sans);
+    padding: 1.5rem; /* p-6 */
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem; /* space-y-6 */
+  }
+  .content-panel {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden; /* Contains child borders */
+  }
+
+  /* --- MESSAGES STYLES (ALIGNED) --- */
+  .messages-container { display: flex; flex-direction: column; gap: 0.75rem; }
+  .message-box {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.75rem 1rem; border-radius: var(--radius-md);
+    font-size: 0.875rem; font-weight: 500; border: 1px solid transparent;
+  }
+  .message-box.success { color: #166534; background-color: #dcfce7; border-color: #bbf7d0; }
+  .message-box.error { color: #991b1b; background-color: #fee2e2; border-color: #fecaca; }
+  .message-box.warning { color: #92400e; background-color: #fef3c7; border-color: #fde68a; }
+  .message-box.info { color: #1e40af; background-color: #dbeafe; border-color: #bfdbfe; }
+  .message-box span { display: flex; align-items: center; gap: 0.5rem; }
+  .message-box .close-btn { background: none; border: none; color: inherit; opacity: 0.7; font-size: 1.2rem; cursor: pointer; }
+
+  /* ───────────────────────────────────
+      HEADER & TOOLBAR (ALIGNED)
+  ─────────────────────────────────── */
+  .page-header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;
+  }
+  .page-header h1 { font-size: 1.875rem; font-weight: 700; color: var(--text-heading); margin: 0; }
+  .page-header p { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem; }
+  
+  .btn-primary-action {
+    background-color: var(--color-primary); color: white; text-decoration: none; padding: 0.5rem 1rem;
+    border-radius: var(--radius-md); font-weight: 500; font-size: 0.875rem;
+    display: inline-flex; align-items: center; gap: 0.5rem; transition: background-color 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary-action:hover { background-color: var(--color-primary-hover); }
+
+  /* DISTINCT button for Sync ERP */
+  .btn-sync {
+    background-color: var(--color-sync);
+    color: #fff;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color .2s ease, transform .05s ease;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid transparent;
+  }
+  .btn-sync:hover { background-color: var(--color-sync-hover); }
+  .btn-sync:active { transform: translateY(1px); }
+  .btn-sync:focus { outline: 2px solid var(--color-sync-ring); outline-offset: 2px; }
+  .btn-sync[disabled] { opacity: .75; cursor: not-allowed; }
+
+  .filter-toolbar {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem; padding: 1.25rem; border-bottom: 1px solid var(--color-border); align-items: flex-end;
+  }
+  .filter-toolbar .form-group label { display: block; font-weight: 500; font-size: 0.75rem; margin-bottom: 0.25rem; color: var(--text-muted); }
+  .filter-toolbar input, .filter-toolbar select {
+    width: 100%; padding: 0.5rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+    font-size: 0.875rem; box-shadow: var(--shadow-sm);
+  }
+  .filter-toolbar .actions { display: flex; align-items: center; gap: 0.5rem; }
+  .btn-filter {
+    width: 100%; padding: 0.5rem 1rem; font-size: 0.875rem; border-radius: var(--radius-md);
+    font-weight: 500; border: 1px solid; cursor: pointer;
+  }
+  .btn-apply { background-color: var(--color-primary); color: white; border-color: var(--color-primary); }
+  .btn-clear { background-color: white; color: var(--text-body); border-color: var(--color-border); text-decoration: none; text-align: center; }
+
+  /* ───────────────────────────────────
+      DATA TABLE (ALIGNED)
+  ─────────────────────────────────── */
+  .table-meta-header {
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;
+    gap: 0.5rem; padding: 1rem 1.25rem; font-size: 0.875rem; color: var(--text-muted);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .data-table-container { overflow-x: auto; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .data-table th, .data-table td { padding: 0.75rem 1rem; text-align: left; vertical-align: middle; border-bottom: 1px solid var(--color-border); }
+  .data-table thead th {
+    color: var(--text-muted); font-weight: 600; text-transform: uppercase;
+    font-size: 0.75rem; letter-spacing: 0.05em; background-color: var(--color-bg-subtle);
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover { background-color: var(--color-bg-subtle); }
+  .entry-link { font-weight: 500; color: var(--color-primary); text-decoration: none; }
+  .entry-link:hover { text-decoration: underline; }
+
+  .status-pill, .decision-pill {
+    display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px;
+    font-size: 0.75rem; font-weight: 600; text-align: center;
+  }
+  .status-draft { background-color: #f1f5f9; color: #475569; } /* slate */
+  .status-pending_qc { background-color: #fef9c3; color: #854d0e; } /* yellow */
+  .status-qc_completed { background-color: #dcfce7; color: #166534; } /* green */
+  .status-cancelled { background-color: #fee2e2; color: #991b1b; } /* red */
+  
+  .decision-approved { background-color: #dcfce7; color: #166534; } /* green */
+  .decision-rejected, .decision-fail { background-color: #fee2e2; color: #991b1b; } /* red */
+  .decision-approved_under_deviation { background-color: #ffedd5; color: #9a3412; } /* orange */
+
+  /* ───────────────────────────────────
+      ACTIONS & PAGINATION (ALIGNED)
+  ─────────────────────────────────── */
+  .actions-cell { display: flex; gap: 0.5rem; justify-content: center; }
+  .action-btn {
+    display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+    text-decoration: none; color: var(--text-muted); background-color: #f1f5f9; transition: all 0.2s;
+  }
+  .action-btn:hover { color: white; }
+  .action-btn.view:hover { background-color: #2563eb; } /* blue */
+  .action-btn.edit:hover { background-color: #ca8a04; } /* yellow */
+  .action-btn.cancel:hover { background-color: #dc2626; } /* red */
+  .action-btn i { font-size: 0.8rem; }
+
+  .pagination-container { padding: 1rem 1.25rem; border-top: 1px solid var(--color-border); }
+  .pagination { display: inline-flex; list-style: none; padding: 0; margin: 0; }
+  .page-item .page-link {
+    display: block; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+    color: var(--text-body); text-decoration: none; background-color: white;
+    border: 1px solid var(--color-border); border-left-width: 0;
+  }
+  .page-item:first-child .page-link { border-left-width: 1px; border-top-left-radius: var(--radius-md); border-bottom-left-radius: var(--radius-md); }
+  .page-item:last-child .page-link { border-top-right-radius: var(--radius-md); border-bottom-right-radius: var(--radius-md); }
+  .page-link:hover { background-color: var(--color-bg-subtle); }
+  .page-item.active .page-link { z-index: 1; color: var(--color-primary); background-color: #dbeafe; border-color: #93c5fd; }
+  .page-item.disabled .page-link { color: var(--text-muted); pointer-events: none; background-color: var(--color-bg-subtle); }
+
+  .no-entries { text-align: center; padding: 4rem 1.5rem; color: var(--text-muted); }
+  .no-entries i { font-size: 3rem; color: #d1d5db; margin-bottom: 1rem; }
+
+  /* ─────────── ERP Sync modal & spinner ─────────── */
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { from {transform:rotate(0)} to {transform:rotate(360deg)} }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; z-index: 60; }
+  .modal { position:fixed; top:10%; left:50%; transform:translateX(-50%); width:min(900px, 92vw);
+           background:#fff; border:1px solid #e5e7eb; border-radius:.5rem; box-shadow:0 25px 50px rgba(0,0,0,.25);
+           display:none; z-index: 70; }
+  .modal header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e5e7eb; }
+  .modal pre { max-height:60vh; overflow:auto; padding:12px 16px; margin:0; background:#0a0a0a; color:#e5e7eb; font-size:.85rem; }
+  .badge { display:inline-flex; align-items:center; gap:.5rem; font-size:.8rem; padding:.25rem .5rem; border:1px solid #e5e7eb; border-radius:9999px; }
+  .btn-excel{display:inline-flex;align-items:center;gap:.5rem;background:#16a34a;color:#fff;
+             border:1px solid #117034;border-radius:.5rem;padding:.4rem .6rem;text-decoration:none}
+  .btn-excel:hover{background:#073e1b}
+</style>
+
+<div class="qc-list-page">
+
+  <div class="page-header">
+    <div>
+      <h1>QC Entries</h1>
+      <p>Manage and review all quality control entries.</p>
+    </div>
+
+    <div style="display:flex; gap:.5rem; align-items:center;">
+      {% if perms.QC.change_qcentry %}
+    <a href="{% url 'qc:qc_draft_list' %}"
+       class="relative inline-flex items-center gap-2 rounded-md bg-slate-200 px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-300">
+      <i class="fa-solid fa-eye"></i>
+      <span>SFG Draft</span>
+
+      {# red notification badge #}
+      {% if sfg_draft_count %}
+        <span class="absolute -top-1 -right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
+          {{ sfg_draft_count }}
+        </span>
+      {% endif %}
+    </a>
+  {% endif %}
+
+      {% if request.user.is_authenticated %}
+      <button id="btn-sync-erp" class="btn-sync" type="button" title="Sync ERP (background)">
+        <i class="fa-solid fa-rotate"></i> Sync ERP
+      </button>
+      {% endif %}
+      {% if perms.QC.add_qcentry %}
+        <a href="{% url 'qc:qc_create' %}" class="btn-primary-action">
+          <i class="fa-solid fa-plus"></i> New QC Entry
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+  <div class="messages-container">
+    {% for message in messages %}
+    <div class="message-box {{ message.tags }}" role="alert">
+      <span>
+        {% if 'success' in message.tags %}<i class="fa-solid fa-check-circle"></i>
+        {% elif 'error' in message.tags %}<i class="fa-solid fa-times-circle"></i>
+        {% elif 'warning' in message.tags %}<i class="fa-solid fa-exclamation-triangle"></i>
+        {% else %}<i class="fa-solid fa-info-circle"></i>{% endif %}
+        {{ message }}
+      </span>
+      <button type="button" class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="content-panel">
+    <form method="get" class="filter-toolbar">
+      <div class="form-group" style="grid-column: span 2;">
+        <label for="search-query">Search</label>
+        <input type="text" id="search-query" name="q" placeholder="Product, Batch, or Entry No..." value="{{ q|default:'' }}">
+      </div>
+      <div class="form-group">
+        <label for="status-filter">Status</label>
+        <select id="status-filter" name="status">
+          <option value="">All</option>
+          <option value="draft" {% if status == 'draft' %}selected{% endif %}>Draft</option>
+          <option value="pending_qc" {% if status == 'pending_qc' %}selected{% endif %}>Pending QC</option>
+          <option value="qc_completed" {% if status == 'qc_completed' %}selected{% endif %}>Completed</option>
+          <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="decision-filter">Decision</label>
+        <select id="decision-filter" name="decision">
+          <option value="">All</option>
+          <option value="approved" {% if decision == 'approved' %}selected{% endif %}>Approved</option>
+          <option value="approved_under_deviation" {% if decision == 'approved_under_deviation' %}selected{% endif %}>Under Deviation</option>
+          <option value="rejected" {% if decision == 'rejected' %}selected{% endif %}>Rejected</option>
+          <option value="fail" {% if decision == 'fail' %}selected{% endif %}>Fail</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="item-type-filter">Item Type</label>
+        <select id="item-type-filter" name="item_type">
+          <option value="">All</option>
+          {% for type in item_type_choices %}<option value="{{ type }}" {% if item_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="start-date">Start Date</label>
+        <input type="date" id="start-date" name="start_date" value="{{ start_date|default:'' }}">
+      </div>
+      <div class="form-group">
+        <label for="end-date">End Date</label>
+        <input type="date" id="end-date" name="end_date" value="{{ end_date|default:'' }}">
+      </div>
+      <div class="actions">
+        <button type="submit" class="btn-filter btn-apply">Apply</button>
+        <a href="{% url 'qc:qc_list' %}" class="btn-filter btn-clear">Clear</a>
+      </div>
+      <a class="btn btn-excel" href="{% url 'qc:qc_export_excel' %}?{{ query_params }}">
+        <i class="fa-regular fa-file-excel"></i> Download Excel
+      </a>
+    </form>
+
+    {% if entries %}
+      <div class="table-meta-header">
+        <span>Showing <strong>{{ entries.start_index }}–{{ entries.end_index }}</strong> of <strong>{{ entries.paginator.count }}</strong> entries</span>
+        {% if entries.has_other_pages %}
+        <nav aria-label="Page navigation"><ul class="pagination">
+          {% if entries.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page=1&{{ query_params }}">&laquo;</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ entries.previous_page_number }}&{{ query_params }}">&lsaquo;</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&lsaquo;</span></li>
+          {% endif %}
+          {% for num in entries.paginator.get_elided_page_range %}
+            {% if num == entries.paginator.ELLIPSIS %}
+              <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+            {% else %}
+              <li class="page-item {% if entries.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&{{ query_params }}">{{ num }}</a>
+              </li>
+            {% endif %}
+          {% endfor %}
+          {% if entries.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ entries.next_page_number }}&{{ query_params }}">&rsaquo;</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ entries.paginator.num_pages }}&{{ query_params }}">&raquo;</a></li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">&rsaquo;</span></li>
+            <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+          {% endif %}
+        </ul></nav>
+        {% endif %}
+      </div>
+
+      <div class="data-table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Entry No.</th><th>Product</th><th>Batch No.</th><th>Group</th>
+              <th>Item Type</th><th>Entry Date</th><th>Status</th><th>QC Decision</th>
+              {% if perms.QC.view_qcentry or perms.QC.change_qcentry or perms.QC.delete_qcentry %}
+                <th style="text-align: center;">Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+              <tr>
+                <td><a href="{% url 'qc:qc_detail' entry.id %}" class="entry-link">{{ entry.entry_no }}</a></td>
+                <td>{{ entry.product.name }}</td>
+                <td>{{ entry.batch_no|default:"—" }}</td>
+                <td>{{ entry.group|default:"—" }}</td>
+                <td>{{ entry.product.item_type|default:"—" }}</td>
+                <td style="white-space: nowrap;">{{ entry.entry_date|date:"d-m-Y"|default:"—" }}</td>
+                <td>
+                  <span class="status-pill status-{{ entry.status|default:'draft' }}">{{ entry.get_status_display }}</span>
+                </td>
+                <td>
+                  {% if entry.decision_status %}
+                    <span class="decision-pill decision-{{ entry.decision_status }}">{{ entry.get_decision_status_display }}</span>
+                  {% else %}
+                    <span>—</span>
+                  {% endif %}
+                </td>
+                {% if perms.QC.view_qcentry or perms.QC.change_qcentry or perms.QC.delete_qcentry %}
+                  <td class="actions-cell">
+                    {% if perms.QC.view_qcentry %}<a href="{% url 'qc:qc_detail' entry.id %}" class="action-btn view" title="View Details"><i class="fa-solid fa-eye"></i></a>{% endif %}
+                    {% if perms.QC.change_qcentry and entry.status in 'draft,pending_qc' %}<a href="{% url 'qc:qc_update' entry.id %}" class="action-btn edit" title="Edit Entry"><i class="fa-solid fa-pencil"></i></a>{% endif %}
+                    {% if perms.QC.delete_qcentry and entry.status != 'cancelled' %}<a href="{% url 'qc:qc_cancel' entry.id %}" class="action-btn cancel" title="Cancel Entry" onclick="return confirm('Cancel entry #{{ entry.id }}?');"><i class="fa-solid fa-trash"></i></a>{% endif %}
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="no-entries">
+        <i class="fa-solid fa-folder-open"></i>
+        <p><strong>No QC entries found for the selected filters.</strong></p>
+        <p><a href="{% url 'qc:qc_list' %}" class="entry-link">Clear the filters</a> to see all entries.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ───────────── ERP Sync modal + polling (background) ───────────── #}
+<div id="qc-sync-backdrop" class="modal-backdrop"></div>
+<div id="qc-sync-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="qc-sync-title">
+  <header>
+    <div style="display:flex; align-items:center; gap:.5rem;">
+      <strong id="qc-sync-title">ERP Sync</strong>
+      <span id="qc-sync-status" class="badge">Queued</span>
+    </div>
+    <button type="button" onclick="closeSyncModal()" class="btn-filter btn-clear">Close</button>
+  </header>
+  <pre id="qc-sync-log">Starting…</pre>
+</div>
+
+<script>
+(function(){
+  // Resolve endpoints from Django urls
+  const startUrl  = "{% url 'qc:sync_erp_start' %}";
+  const statusUrl = (job) => "{% url 'qc:sync_erp_status' '00000000-0000-0000-0000-000000000000' %}".replace("00000000-0000-0000-0000-000000000000", job);
+
+  // CSRF helper (read cookie)
+  function getCookie(name){
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";").map(c=>c.trim());
+      for (let c of cookies){
+        if (c.substring(0, name.length + 1) === (name + "=")) {
+          cookieValue = decodeURIComponent(c.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrfToken = getCookie("csrftoken");
+
+  const btn   = document.getElementById("btn-sync-erp");
+  const modal = document.getElementById("qc-sync-modal");
+  const bg    = document.getElementById("qc-sync-backdrop");
+  const st    = document.getElementById("qc-sync-status");
+  const logEl = document.getElementById("qc-sync-log");
+  let pollId = null;
+
+  function openSyncModal(){ bg.style.display="block"; modal.style.display="block"; }
+  function closeSyncModal(){ bg.style.display="none"; modal.style.display="none"; if (pollId){clearInterval(pollId)} }
+  window.closeSyncModal = closeSyncModal;
+
+  async function poll(job){
+    async function tick(){
+      try{
+        const res = await fetch(statusUrl(job), {headers: {"X-Requested-With":"XMLHttpRequest"}});
+        if(!res.ok){ throw new Error("Status " + res.status); }
+        const data = await res.json();
+        st.textContent = (data.status || "unknown").replaceAll('_',' ').toUpperCase();
+        logEl.textContent = data.log_tail || "";
+
+        if(data.status === "done" || data.status === "error" || data.status === "unknown"){
+          clearInterval(pollId); pollId = null;
+          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync ERP';
+        }
+      }catch(e){
+        clearInterval(pollId); pollId=null;
+        st.textContent = "ERROR";
+        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync ERP';
+      }
+    }
+    await tick();
+    pollId = setInterval(tick, 3000);
+  }
+
+  if(btn){
+    btn.addEventListener("click", async function(){
+      try{
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-rotate spin"></i> Syncing...';
+        openSyncModal();
+        st.textContent = "QUEUED";
+        logEl.textContent = "Queuing background job...";
+
+        const res = await fetch(startUrl, {
+          method:"POST",
+          headers:{
+            "X-CSRFToken": csrfToken || "{{ csrf_token }}",
+            "X-Requested-With":"XMLHttpRequest"
+          }
+        });
+        const data = await res.json();
+        if(data.job_id){
+          st.textContent = "RUNNING";
+          logEl.textContent = "Job started. Fetching logs...";
+          poll(data.job_id);
+        }else{
+          st.textContent = "ERROR";
+          logEl.textContent = (data && data.log) ? data.log : "Failed to start job.";
+          btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync ERP';
+        }
+      }catch(err){
+        st.textContent = "ERROR";
+        logEl.textContent = String(err);
+        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync ERP';
+      }
+    });
+  }
+})();
+</script>
+{% endblock maincontent %}

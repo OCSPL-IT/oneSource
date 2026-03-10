@@ -1,0 +1,518 @@
+{% extends "main/index.html" %}
+{% load static %}
+ 
+{% block title %}New FG QC Header – QC Project{% endblock %}
+ 
+{% block maincontent %}
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ── your existing styles unchanged ───────────────────────────── */
+    .qc-form-container { font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; padding:1.5rem; }
+    .qc-header-card{ background:#fff; padding:2rem; border-radius:.5rem; border:1px solid #e5e7eb; box-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05); margin:1rem auto; max-width:900px; }
+    .qc-header-card h1{ font-size:1.5rem; font-weight:700; margin-bottom:1.5rem; padding-bottom:1.5rem; color:#111827; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; gap:.75rem; }
+    .qc-header-card h1 .fa-solid{ color:#2563eb; }
+    .form-section-header{ font-size:.75rem; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.05em; margin:2rem 0 1rem; padding-bottom:.5rem; border-bottom:1px solid #f3f4f6; }
+    .form-fields-container{ border:1px solid #e5e7eb; border-radius:.5rem; overflow:hidden; }
+    .form-field-row{ display:flex; align-items:stretch; border-bottom:1px solid #e5e7eb; background:#fff; }
+    .form-field-row:last-child{ border-bottom:none; }
+    .field-label{ flex:0 0 220px; padding:1rem 1.5rem; font-weight:500; color:#374151; font-size:.875rem; background:#f8fafc; display:flex; align-items:center; }
+    .field-control{ flex:1; padding:.75rem 1.5rem; display:flex; flex-direction:column; justify-content:center; }
+    .action-area{ margin-top:2rem; padding-top:1.5rem; border-top:1px solid #e5e7eb; text-align:right; }
+    .btn-submit-qc{ font-size:.875rem; font-weight:600; padding:.625rem 1.25rem; border-radius:.375rem; background:#2563eb; border-color:#2563eb; color:#fff; }
+    .btn-submit-qc:hover{ background:#1d4ed8; border-color:#1d4ed8; }
+    .static-value{ color:#1f2937; font-weight:500; font-size:.875rem; }
+    .form-control, .form-select{ display:block; width:100%; padding:.5rem .75rem; font-size:.875rem; line-height:1.5; color:#111827; background:#fff; border:1px solid #d1d5db; border-radius:.375rem; transition:border-color .15s, box-shadow .15s; }
+    .form-control:focus, .form-select:focus{ border-color:#3b82f6; outline:0; box-shadow:0 0 0 2px rgba(59,130,246,.25); }
+    .select2-container--bootstrap-5 .select2-selection{ font-size:.875rem; box-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05); }
+    .invalid-feedback{ color:#ef4444; font-size:.875em; margin-top:.25rem; }
+    .d-block{ display:block!important; }
+
+    /* ── Batch No tooltip + border ── */
+    .is-invalid .select2-selection,
+    .is-invalid.form-select { border-color:#ef4444!important; box-shadow:0 0 0 2px rgba(239,68,68,.15)!important; }
+    .validator-anchor { width:1px; height:1px; opacity:0; border:0; padding:0; margin:0; background:transparent; }
+  </style>
+
+<div class="qc-form-container">
+<div class="qc-header-card">
+  <h1><span>New FG QC Header</span></h1>
+ 
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+ 
+  <form method="post" novalidate>
+    {% csrf_token %}
+ 
+    {# Submit-safe hidden fields #}
+    <input type="hidden" id="hid_ar_type" name="ar_type" value="FG">
+    <input type="hidden" id="hid_ar_no"   name="ar_no"   value="{{ form.ar_no.value|default:'' }}">
+ 
+    <h3 class="form-section-header">Core Information</h3>
+    <div class="form-fields-container">
+
+      <div class="form-field-row">
+        <label class="field-label">Prepared By</label>
+        <div class="field-control">
+          <p class="static-value">
+            {% if form.instance and form.instance.pk %}
+              {{ form.instance.created_by.get_full_name }}
+            {% else %}
+              {{ request.user.get_full_name }}
+            {% endif %}
+          </p>
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label class="field-label">AR Category</label>
+        <div class="field-control">
+          <select class="form-select" disabled>
+            <option selected>Finished Goods</option>
+          </select>
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label class="field-label">AR No.</label>
+        <div class="field-control">
+          <input id="vis_ar_no" class="form-control" type="text"
+                 value="{{ form.ar_no.value|default:form.initial.ar_no|default:'' }}"
+                 readonly>
+          <small class="text-muted" style="margin-top:.25rem;">Auto-generated; no action needed.</small>
+        </div>
+      </div>
+    </div>
+ 
+    <h3 class="form-section-header">Batch & Equipment</h3>
+    <div class="form-fields-container">
+      <div class="form-field-row">
+        <label for="id_stage" class="field-label">Stage</label>
+        <div class="field-control">
+          <select id="id_stage" name="stage" class="form-select">
+            <option value="">— Select Stage —</option>
+            {% for s in stage_options %}
+              <option value="{{ s.stages }}" data-product="{{ s.id }}"
+                      {% if form.stage.value == s.stages %}selected{% endif %}>
+                {{ s.stages }}
+              </option>
+            {% endfor %}
+          </select>
+          {% for err in form.stage.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label class="field-label">Product Name</label>
+        <div class="field-control">
+          <p id="product-name-display" class="static-value">—</p>
+          <input type="hidden" id="id_product" name="product"
+                 value="{{ form.product.value|default:'' }}">
+          {% for err in form.product.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label class="field-label">Block</label>
+        <div class="field-control">
+          <select id="id_block" name="block" class="form-select">
+            <option value="">— Select Block —</option>
+            {% if block_list %}
+              {% for b in block_list %}
+                <option value="{{ b }}" {% if form.block.value == b %}selected{% endif %}>
+                  {{ b }}
+                </option>
+              {% endfor %}
+            {% endif %}
+          </select>
+          {% for err in form.block.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label for="id_equipment_id" class="field-label">Equipment</label>
+        <div class="field-control">
+          <select id="id_equipment_id" name="equipment_id" class="form-select">
+            <option value="">— Select Equipment —</option>
+            {% for eq in equipment_list %}
+              <option value="{{ eq.eqp_code }}"
+                      data-block="{{ eq.block_name|default:'' }}"
+                      {% if form.equipment_id.value == eq.eqp_code %}selected{% endif %}>
+                {{ eq.eqp_name }} ({{ eq.eqp_code }})
+              </option>
+            {% endfor %}
+          </select>
+          {% for err in form.equipment_id.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label for="id_batch_no" class="field-label">Batch No</label>
+        <div class="field-control">
+          <select id="id_batch_no" name="batch_no" class="form-select">
+            <option value="">— Select Batch No —</option>
+            {% for bn in distinct_batch_nos %}
+              <option value="{{ bn }}" {% if form.batch_no.value == bn %}selected{% endif %}>
+                {{ bn }}
+              </option>
+            {% endfor %}
+          </select>
+          {% for err in form.batch_no.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label for="{{ form.qty.id_for_label }}" class="field-label">Qty</label>
+        <div class="field-control">
+          {{ form.qty }}
+          {% for err in form.qty.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+ 
+    <h3 class="form-section-header">Timestamps</h3>
+    <div class="form-fields-container">
+      <div class="form-field-row">
+        <label for="{{ form.entry_date.id_for_label }}" class="field-label">Entry Date & Time</label>
+        <div class="field-control">
+          {{ form.entry_date }}
+          {% for err in form.entry_date.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-field-row">
+        <label for="{{ form.sample_sent_at.id_for_label }}" class="field-label">Sample Sent Date & Time</label>
+        <div class="field-control">
+          {{ form.sample_sent_at }}
+          {% for err in form.sample_sent_at.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+ 
+    <h3 class="form-section-header">Details</h3>
+    <div class="form-fields-container">
+      <div class="form-field-row">
+        <label for="{{ form.sample_description.id_for_label }}" class="field-label">Sample Description</label>
+        <div class="field-control">
+          {{ form.sample_description }}
+          {% for err in form.sample_description.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+          <div style="margin-top:.5rem;max-width:320px;">
+            {{ form.frequency }}
+            {% for err in form.frequency.errors %}
+              <div class="invalid-feedback d-block">{{ err }}</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label for="{{ form.sample_description_text.id_for_label }}" class="field-label">Description Notes</label>
+        <div class="field-control">
+          {{ form.sample_description_text }}
+          {% for err in form.sample_description_text.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label for="{{ form.test_required_for.id_for_label }}" class="field-label">Test Required For</label>
+        <div class="field-control">
+          {{ form.test_required_for }}
+          {% for err in form.test_required_for.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+ 
+      <div class="form-field-row">
+        <label for="id_test_parameters" class="field-label">Test Parameters</label>
+        <div class="field-control">
+          {{ form.test_parameters }}
+          {% for err in form.test_parameters.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+ 
+    <div class="action-area">
+      <button type="submit" class="btn btn-primary btn-submit-qc">
+        <i class="fa-solid fa-paper-plane me-2"></i>Submit for QC
+      </button>
+    </div>
+  </form>
+</div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(function () {
+  const productMap = {
+    {% for prod in product_list %}
+      "{{ prod.id }}": "{{ prod.name|escapejs }}",
+    {% endfor %}
+  };
+  const initialTestRequiredFor = "{{ form.test_required_for.value|default:''|escapejs }}";
+ 
+  // Init Select2
+  $('#id_stage, #id_equipment_id, #id_batch_no, #id_test_required_for, #id_block, #id_test_parameters')
+    .select2({ theme: 'bootstrap-5', width: '100%' });
+ 
+  // Preview AR No (comes from view). If empty, fetch one.
+  const $hidArNo = $('#hid_ar_no');
+  const $visArNo = $('#vis_ar_no');
+  function ensureArNo() {
+    if ($hidArNo.val()) { $visArNo.val($hidArNo.val()); return; }
+    $.get("{% url 'qc:generate_ar_no' %}", { ar_type: 'FG' })
+      .done(function (d) {
+        if (d && d.ar_no) { $hidArNo.val(d.ar_no); $visArNo.val(d.ar_no); }
+      });
+  }
+  ensureArNo();
+ 
+  // Show product name
+  if ($('#id_product').val()) {
+    $('#product-name-display').text(productMap[$('#id_product').val()] || '—');
+  }
+ 
+  // ---------- EQUIPMENT <-> BLOCK FILTERING (NO normalization) ----------
+  const $equip = $('#id_equipment_id');
+  const $block = $('#id_block');
+
+  const allEquipments = $equip.find('option').map(function () {
+    return {
+      value: this.value,
+      text: $(this).text(),
+      block: ($(this).data('block') || '').toString().trim()   // e.g. "A-Block", "ETP", "Tank Farm"
+    };
+  }).get();
+
+  // exact match on block name as stored
+  function matchesBlock(selectedBlock, eqBlock) {
+    const sel = (selectedBlock || '').trim();
+    const eb  = (eqBlock || '').trim();
+    if (!sel) return true;        // no block chosen → show all
+    return eb === sel;            // strict equality
+  }
+
+  function populateEquipmentsByBlock(block, keepCurrent=false) {
+    const current = $equip.val();
+    $equip.empty().append('<option value="">— Select Equipment —</option>');
+
+    const list = allEquipments.filter(e => e.value && matchesBlock(block, e.block));
+    list.forEach(e => {
+      const opt = new Option(e.text, e.value, false, false);
+      $(opt).attr('data-block', e.block);
+      $equip.append(opt);
+    });
+
+    if (keepCurrent && current && list.some(e => e.value === current)) {
+      $equip.val(current);
+    } else {
+      $equip.val('');
+    }
+    $equip.trigger('change.select2');
+  }
+
+  // When Block changes → filter equipments (exact block name)
+  $block.on('change', function () {
+    populateEquipmentsByBlock($(this).val());
+  });
+
+  // When Equipment changes → set Block to that exact block_name
+  $equip.on('change', function () {
+    const raw = ($(this).find('option:selected').data('block') || '').toString().trim();
+    if (!raw) return; // equipment without block info → leave user's block
+    if ($block.val() !== raw) {
+      $block.val(raw).trigger('change.select2');
+      populateEquipmentsByBlock(raw, true);
+    }
+  });
+ 
+  // Batch list by product+stage
+  function updateBatchNoDropdown() {
+    var productId = $('#id_product').val();
+    var stage = $('#id_stage').val();
+    var $dd = $('#id_batch_no');
+    $dd.empty().append('<option value="">— Loading… —</option>').prop('disabled', true).trigger('change.select2');
+ 
+    if (!productId || !stage) {
+      $dd.empty().append('<option value="">— Select Product & Stage First —</option>')
+         .prop('disabled', true).trigger('change.select2');
+      return;
+    }
+    $.ajax({
+      url: "{% url 'qc:api_get_batch_nos' %}",
+      data: { product_id: productId, stage: stage },
+      success: function(resp) {
+        $dd.empty().prop('disabled', false);
+        if (resp.batch_nos && resp.batch_nos.length > 0) {
+          $dd.append('<option value="">— Select Batch No —</option>');
+          $.each(resp.batch_nos, function(i, bn) { $dd.append(new Option(bn, bn)); });
+        } else {
+          $dd.append('<option value="">— No Batch Nos Found —</option>')
+             .prop('disabled', true);
+        }
+        $dd.trigger('change.select2');
+      },
+      error: function() {
+        $dd.empty().append('<option value="">— Error Loading —</option>')
+           .prop('disabled', true).trigger('change.select2');
+      }
+    });
+  }
+ 
+  // Spec Groups for product
+  function updateTestRequiredForDropdown() {
+    const productId = $('#id_product').val();
+    const $t = $('#id_test_required_for');
+    $t.empty().append('<option value="">— Loading... —</option>')
+      .prop('disabled', true).trigger('change.select2');
+    if (!productId) {
+      $t.empty().append('<option value="">— First select a Stage —</option>')
+        .prop('disabled', true).trigger('change.select2');
+      return;
+    }
+    $.ajax({
+      url: "{% url 'qc:api_get_spec_groups' %}",
+      data: { 'product_id': productId },
+      success: function(data) {
+        $t.empty().prop('disabled', false)
+          .append('<option value="">— Select Test Group —</option>');
+        if (data.groups && data.groups.length > 0) {
+          $.each(data.groups, function(i, g) {
+            const sel = (g === initialTestRequiredFor);
+            $t.append(new Option(g, g, sel, sel));
+          });
+        } else {
+          $t.append('<option value="">— No test groups found —</option>')
+            .prop('disabled', true);
+        }
+        $t.trigger('change.select2');
+      },
+      error: function() {
+        $t.empty().append('<option value="">— Error loading data —</option>')
+          .prop('disabled', true).trigger('change.select2');
+      }
+    });
+  }
+ 
+  // Stage change → set product + reload dependent dropdowns
+  $('#id_stage').on('change', function() {
+    const sel = $(this).find('option:selected');
+    const productId = sel.data('product') || '';
+    $('#id_product').val(productId);
+    $('#product-name-display').text(productMap[productId] || '—');
+    if (productId && $(this).val()) {
+      updateBatchNoDropdown();
+      updateTestRequiredForDropdown();
+    } else {
+      $('#id_batch_no').empty()
+        .append('<option value="">— Select Product & Stage First —</option>')
+        .prop('disabled', true).trigger('change.select2');
+      $('#id_test_required_for').empty()
+        .append('<option value="">— First select a Stage —</option>')
+        .prop('disabled', true).trigger('change.select2');
+    }
+  });
+ 
+  // ---------- INITIAL POPULATION (no normalization) ----------
+  let initialBlock = $block.val() || $equip.find('option:selected').data('block') || '';
+  initialBlock = (initialBlock || '').toString().trim();
+  if (initialBlock) {
+    $block.val(initialBlock).trigger('change.select2');
+    populateEquipmentsByBlock(initialBlock, true);
+  } else {
+    populateEquipmentsByBlock('', true);
+  }
+  if ($('#id_stage').val() && $('#id_product').val()) {
+    $('#id_stage').trigger('change');
+  }
+ 
+  // Test parameters: add Select All helper
+  $('#id_test_parameters').on('select2:open', function () {
+    if (!$('.select2-container--open .select2-dropdown .select2-selectall').length) {
+      $('.select2-container--open .select2-dropdown').prepend(
+        '<div class="select2-selectall" style="padding: 8px; border-bottom: 1px solid #eee;">' +
+        '<input type="checkbox" id="select2-selectall-checkbox"> ' +
+        '<label for="select2-selectall-checkbox" style="margin-bottom:0">Select All</label>' +
+        '</div>'
+      );
+      $('#select2-selectall-checkbox').on('change', function() {
+        if ($(this).is(':checked')) {
+          var allValues = [];
+          $('#id_test_parameters option').each(function() { allValues.push($(this).val()); });
+          $('#id_test_parameters').val(allValues).trigger('change');
+        } else {
+          $('#id_test_parameters').val([]).trigger('change');
+        }
+      });
+    }
+  });
+
+  /* ── Batch No front-end required with native tooltip ── */
+  const $form   = $('form[method="post"]');
+  const $batch  = $('#id_batch_no');
+  const $batchS2 = $batch.next('.select2');
+
+  // hidden anchor for browser tooltip
+  let $anchor = $('#batch_validator');
+  if (!$anchor.length) {
+    $anchor = $('<input>', {
+      type:'text',
+      id:'batch_validator',
+      class:'validator-anchor',
+      tabindex:-1,
+      'aria-hidden':'true'
+    });
+    $batchS2.after($anchor);
+  }
+
+  function clearBatchError(){
+    $batch.removeClass('is-invalid');
+    $batchS2.removeClass('is-invalid');
+    $anchor[0].setCustomValidity('');
+  }
+  function showBatchError(){
+    $batch.addClass('is-invalid');
+    $batchS2.addClass('is-invalid');
+    $anchor[0].setCustomValidity('Batch No is required. Select a Batch No before submitting.');
+    $anchor[0].reportValidity();
+    setTimeout(()=>{ $batch.select2('open'); }, 50);
+  }
+
+  $batch.on('change', function(){ if ($(this).val()) clearBatchError(); });
+  $form.on('submit', function(e){
+    if (!$batch.val()){
+      e.preventDefault();
+      showBatchError();
+    }
+  });
+});
+</script>
+{% endblock maincontent %}

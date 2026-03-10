@@ -1,0 +1,50 @@
+{% extends "main/index.html" %}
+
+{% block maincontent %}
+<div class="max-w-lg mx-auto mt-10 bg-white rounded-lg shadow-md overflow-hidden">
+  <!-- Header -->
+  <div class="bg-red-600 px-6 py-4">
+    <h1 class="text-white text-xl font-semibold">Delete Dispatch Plan</h1>
+  </div>
+
+  <div class="p-6 space-y-6">
+    <!-- Warning banner -->
+    <div class="flex items-start bg-yellow-50 border-l-4 border-yellow-400 p-4">
+      <svg class="h-5 w-5 text-yellow-400 flex-shrink-0 mr-3" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd"
+              d="M8.257 3.099c.765-1.36 2.72-1.36 3.485 0l6.518 11.59c.75 1.334-.213 2.991-1.742 2.991H3.48
+                 c-1.53 0-2.492-1.657-1.742-2.99L8.257 3.1zM11 13a1 1 0 10-2 0 1 1 0 002 0zm-.25-4.75a.75.75
+                 0 00-1.5 0v2.5a.75.75 0 001.5 0v-2.5z"
+              clip-rule="evenodd"/>
+      </svg>
+      <p class="text-yellow-700">
+        Are you sure you want to permanently delete this dispatch plan?
+      </p>
+    </div>
+
+    <!-- Details -->
+    <ul class="space-y-2 text-gray-700">
+      <li><span class="font-medium">Type:</span> {{ object.get_type_display }}</li>
+      <li><span class="font-medium">Material Name:</span> {{ object.material_name }}</li>
+      <li><span class="font-medium">Trade Name:</span> {{ object.trade_name }}</li>
+      <li><span class="font-medium">Quantity:</span> {{ object.qty }} {{ object.unit }}</li>
+      <li><span class="font-medium">Tentative Date:</span> {{ object.tentative_date }}</li>
+    </ul>
+
+    <!-- Actions -->
+    <form method="post" class="flex justify-end space-x-4">
+      {% csrf_token %}
+      <button type="submit"
+              class="px-5 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700
+                     focus:outline-none focus:ring-2 focus:ring-red-500">
+        Yes, Delete
+      </button>
+      <a href="{% url 'material-list' %}"
+         class="px-5 py-2 border border-gray-300 rounded-md text-gray-700 shadow-sm
+                hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        Cancel
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}

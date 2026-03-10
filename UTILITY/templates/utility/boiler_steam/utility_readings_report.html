@@ -1,0 +1,179 @@
+{% extends "main/index.html" %} {# Or your base template #}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-100 py-5">
+  <div class="w-full px-4 sm:px-6 lg:px-8">
+    <div class="bg-white shadow rounded-2xl p-6">
+      <!-- Messages Section -->
+      {% if messages %}
+      <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+          {% for message in messages %}
+          <div
+              class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                              {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+              <span class="flex-1">{{ message }}</span>
+              <!-- Close Button -->
+              <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                  onclick="this.parentElement.remove()">
+                  ✖
+              </button>
+          </div>
+          {% endfor %}
+      </div>
+      {% endif %}
+      <div class="container mx-auto px-2 sm:px-4">
+        <div class="flex items-center justify-between mb-5">
+            <!-- Back to Main Page Button -->
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+              <i class="fa fa-arrow-left" aria-hidden="true"></i>
+            </a>
+
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-700 flex-1 text-center">Daily Utility Readings</h2>
+            <a href="{% url 'utility_entry' %}" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-xs sm:text-sm whitespace-nowrap">
+                <i class="fa-solid fa-plus mr-1"></i> New Entry
+            </a>
+            
+            <a href="{% url 'utility_consumption_report' %}"
+                class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 mx-1 rounded shadow-md">
+                <i class="fa-solid fa-chart-simple fa-xl "></i>
+            </a>
+        </div>
+
+        <form method="get" class="flex flex-wrap items-end gap-4 mb-4">
+          <div>
+            <label for="from_date" class="block text-xs font-medium text-gray-600">From Date</label>
+            <input type="date" name="from_date" id="from_date" class="border px-3 py-2 rounded-md text-sm"
+                   value="{{ from_date }}">
+          </div>
+          <div>
+            <label for="to_date" class="block text-xs font-medium text-gray-600">To Date</label>
+            <input type="date" name="to_date" id="to_date" class="border px-3 py-2 rounded-md text-sm"
+                   value="{{ to_date }}">
+          </div>
+          <div class="py-1">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow text-sm">
+              <i class="fa-solid fa-filter"></i></button>
+            {% if from_date or to_date %}
+              <a href="{% url 'utility_readings_report' %}" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg shadow text-sm">
+                <i class="fa-solid fa-eraser"></i></a>
+            {% endif %}
+            <a href="{% url 'utility_readings_excel' %}?from_date={{ from_date }}&to_date={{ to_date }}{% if page_obj.number %}&page={{ page_obj.number }}{% endif %}" 
+            class="text-green-700 hover:text-green-900 py-2 px-2">
+            <i class="fa-solid fa-file-excel fa-2xl"></i>
+          </a>
+          </div>
+          
+        </form>
+      <div class="flex justify-end mt-2 gap-2">
+        {% if page_obj.has_previous %}
+          <a href="?page=1{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}" 
+            class="px-2 py-1 bg-gray-200 rounded hover:bg-blue-200">&laquo; First</a>
+          <a href="?page={{ page_obj.previous_page_number }}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}" 
+            class="px-2 py-1 bg-gray-200 rounded hover:bg-blue-200">Prev</a>
+        {% endif %}
+        <span class="px-3 py-1 bg-blue-100 rounded font-semibold">
+          Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}" 
+            class="px-2 py-1 bg-gray-200 rounded hover:bg-blue-200">Next</a>
+          <a href="?page={{ page_obj.paginator.num_pages }}{% if from_date %}&from_date={{ from_date }}{% endif %}{% if to_date %}&to_date={{ to_date }}{% endif %}" 
+            class="px-2 py-1 bg-gray-200 rounded hover:bg-blue-200">Last &raquo;</a>
+        {% endif %}
+      </div>
+
+
+        {% if report_rows %}
+          <div class="overflow-x-auto shadow-md sm:rounded-lg">
+            <table class="min-w-full text-xs sm:text-sm border-collapse border border-slate-400">
+              <thead class="text-slate-700 uppercase">
+                {# First Header Row - Group Labels #}
+                <tr class="bg-slate-200">
+                  <th rowspan="2" scope="col" class="px-2 py-2 border border-slate-400 text-center align-middle whitespace-nowrap sticky left-0 z-10 bg-orange-100 font-semibold">
+                    Date
+                  </th>
+                  {% for group in header_structure %}
+                    <th colspan="{{ group.fields|length }}" scope="col"
+                        class="px-2 py-2 border border-slate-400 text-center align-middle font-semibold {{ group.group_bg_color|default:'bg-slate-200' }}">
+                      {{ group.group_label|safe }}
+                    </th>
+                  {% endfor %}
+                  
+                  {% if  perms.UTILITY.change_utilityrecord or perms.UTILITY.delete_utilityrecord %}
+                  <th rowspan="2" scope="col" class="px-2 py-2 border border-slate-400 text-center align-middle whitespace-nowrap sticky right-0 z-10 bg-gray-200 font-semibold">
+                    Action
+                  </th>
+                  {% endif %}
+                </tr>
+                {# Second Header Row - Individual Field Labels #}
+                <tr>
+                  {% for group in header_structure %}
+                    {% for _model_field, field_label in group.fields %}
+                      <th scope="col" class="px-2 py-2 border border-slate-400 text-center align-middle whitespace-nowrap font-medium {{ group.cell_bg_color|default:'bg-slate-50' }}">
+                        {{ field_label|safe }}
+                      </th>
+                    {% endfor %}
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row_item in report_rows %}
+                  <tr class="bg-white border-b border-slate-300 hover:bg-slate-50 even:bg-slate-50 group">
+                    <td class="px-2 py-1.5 border border-slate-300 text-center whitespace-nowrap sticky left-0 z-0 bg-white group-hover:bg-slate-50 even:bg-slate-50">
+                      {{ row_item.date|date:"d/m/Y" }}
+                    </td>
+                    {% for data_cell in row_item.values %}
+                      <td class="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap">
+                        {% if data_cell.value is not None %}
+                          {% if data_cell.name == "briquette_sb_3" %}
+                            {{ data_cell.value|floatformat:3 }}
+                          {% elif data_cell.name == "sb_3_e_22_main_fm_fv" or data_cell.name == "sb_3_sub_fm_oc" %}
+                            {{ data_cell.value|floatformat:2 }}
+                          {% elif data_cell.value.as_tuple.exponent >= 0 %}
+                            {{ data_cell.value|floatformat:0 }}
+                          {% else %}
+                            {{ data_cell.value|floatformat:2 }}
+                          {% endif %}
+                        {% else %}
+                           
+                        {% endif %}
+                      </td>
+                    {% endfor %}
+
+                    {% if  perms.UTILITY.change_utilityrecord or perms.UTILITY.delete_utilityrecord %}
+                    <td class="px-2 py-1.5 border border-slate-300 text-center whitespace-nowrap sticky right-0 z-0 bg-white group-hover:bg-slate-50 even:bg-slate-50">
+                      {% if perms.UTILITY.change_utilityrecord %}
+                        <a href="{% url 'utility_entry_edit_date' date_str=row_item.date|date:'Y-m-d' %}" 
+                           class="text-indigo-600 hover:text-indigo-900 font-medium px-2 py-1 rounded-md hover:bg-indigo-100 transition-colors duration-150"
+                           title="Edit readings for {{ row_item.date|date:'m/d/Y' }}">
+                           <i class="fas fa-edit"></i>
+                        </a>
+                        {% endif %}
+                        {% if perms.UTILITY.delete_utilityrecord %}
+                        <form action="{% url 'utility_entry_delete_date' date_str=row_item.date|date:'Y-m-d' %}" method="POST" style="display:inline;"
+                                    onsubmit="return confirm('Are you sure you want to delete all readings for {{ row_item.date|date:'m/d/Y' }}?');">
+                            {% csrf_token %}
+                            <button type="submit"
+                                    class="text-red-600 hover:text-red-900 font-medium px-2 py-1 rounded-md hover:bg-red-100 transition-colors duration-150"
+                                    title="Delete readings for {{ row_item.date|date:'m/d/Y' }}">
+                                    <i class="fa fa-trash" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-center text-slate-600 italic py-8">
+            <p>No utility readings data to display.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

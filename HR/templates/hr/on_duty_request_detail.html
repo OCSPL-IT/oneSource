@@ -1,0 +1,139 @@
+{% extends 'hr/HRone_base.html' %}
+
+{% block HRone_title %}
+<title>On Duty Request Detail</title>
+{% endblock HRone_title %}
+
+{% block HRone_report_header %}
+<div class="flex justify-between items-center mb-4">
+  <h2 class="text-xl font-bold text-gray-600">On Duty Request Detail</h2>
+  <h2 class="text-xl font-bold text-gray-600">Status: {{ late_status }}</h2>
+</div>
+{% endblock HRone_report_header %}
+
+{% block HRone_report_content %}
+<div class="container mx-auto px-4 py-6">
+  <!-- Filter Form -->
+  <form method="get" class="flex flex-wrap justify-center gap-4 items-end mb-6 bg-white shadow-md p-4 rounded-lg">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Month</label>
+      <select name="month" class="text-xs border border-gray-300 rounded py-2">
+        {% for num, name in months %}
+        <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Year</label>
+      <select name="year" class="text-xs border border-gray-300 rounded py-2">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Company</label>
+      <select name="company" class="text-xs border border-gray-300 rounded py-2">
+        <option value="">All</option>
+        {% for company in company_list %}
+        <option value="{{ company }}" {% if company == selected_company %}selected{% endif %}>{{ company }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Branch</label>
+      <select name="branch" class="text-xs border border-gray-300 rounded py-2">
+        <option value="">All</option>
+        {% for branch in branch_list %}
+        <option value="{{ branch }}" {% if branch == selected_branch %}selected{% endif %}>{{ branch }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Filter</button>
+    <a href="{% url 'on_duty_request_summary' %}" class="text-xs bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Clear</a>
+    <a href="{% url 'on_duty_request_download' request_status=late_status %}?month={{ selected_month }}&year={{ selected_year }}&company={{ selected_company }}&branch={{ selected_branch }}">
+      <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+    </a>
+  </form>
+
+  <!-- Detail Table -->
+  <div class="overflow-x-auto bg-white shadow rounded">
+    <table class="min-w-full text-sm border">
+      <thead class="bg-gray-100 text-xs text-left text-gray-600">
+        <tr>
+          <th class="p-2 whitespace-nowrap">Emp Code</th>
+          <th class="p-2 whitespace-nowrap">Name</th>
+          <th class="p-2 whitespace-nowrap">Status</th>
+          <th class="p-2 whitespace-nowrap">Company</th>
+          <th class="p-2 whitespace-nowrap">BU</th>
+          <th class="p-2 whitespace-nowrap">Dept</th>
+          <th class="p-2 whitespace-nowrap">Desig</th>
+          <th class="p-2 whitespace-nowrap">Branch</th>
+          <th class="p-2 whitespace-nowrap">Sub Branch</th>
+          <th class="p-2 whitespace-nowrap">Req Type</th>
+          <th class="p-2 whitespace-nowrap">Attend Date</th>
+          <th class="p-2 whitespace-nowrap">Day</th>
+          <th class="p-2 whitespace-nowrap">OD Type</th>
+          <th class="p-2 whitespace-nowrap">Shift Code</th>
+          <th class="p-2 whitespace-nowrap">Timings</th>
+          <th class="p-2 whitespace-nowrap">Actual IO</th>
+          <th class="p-2 whitespace-nowrap">Punch In</th>
+          <th class="p-2 whitespace-nowrap">Punch Out</th>
+          <th class="p-2 whitespace-nowrap">Remarks</th>
+          <th class="p-2 whitespace-nowrap">Request By</th>
+          <th class="p-2 whitespace-nowrap">Request On</th>
+          <th class="p-2 whitespace-nowrap">Pending With</th>
+          <th class="p-2 whitespace-nowrap">Approved By</th>
+          <th class="p-2 whitespace-nowrap">Approved On</th>
+          <th class="p-2 whitespace-nowrap">Approver Remark</th>
+          <th class="p-2 whitespace-nowrap">Billable</th>
+          <th class="p-2 whitespace-nowrap">In Timing</th>
+          <th class="p-2 whitespace-nowrap">Out Timing</th>
+        </tr>
+      </thead>
+      <tbody class="text-xs">
+        {% for r in records %}
+        <tr class="border-b hover:bg-gray-50">
+          <td class="p-2">{{ r.employee_code }}</td>
+          <td class="p-2">{{ r.full_name }}</td>
+          <td class="p-2">{{ r.employment_status }}</td>
+          <td class="p-2">{{ r.company }}</td>
+          <td class="p-2">{{ r.business_unit }}</td>
+          <td class="p-2">{{ r.department }}</td>
+          <td class="p-2">{{ r.designation }}</td>
+          <td class="p-2">{{ r.branch }}</td>
+          <td class="p-2">{{ r.sub_branch }}</td>
+          <td class="p-2">{{ r.request_type }}</td>
+          <td class="p-2 whitespace-nowrap">{{ r.attendance_date|date:"d-m-Y" }}</td>
+          <td class="p-2">{{ r.attendance_day }}</td>
+          <td class="p-2">{{ r.on_duty_type }}</td>
+          <td class="p-2">{{ r.shift_code }}</td>
+          <td class="p-2 whitespace-nowrap">{{ r.shift_timings }}</td>
+          <td class="p-2 whitespace-nowrap">{{ r.actual_punch_in_out }}</td>
+          <td class="p-2 whitespace-nowrap">{{ r.punch_in_date }}</td>
+          <td class="p-2 whitespace-nowrap">{{ r.punch_out_date }}</td>
+          <td class="p-2">{{ r.remarks }}</td>
+          <td class="p-2">{{ r.request_by }}</td>
+          <td class="p-2 whitespace-nowrap">{{ r.request_on }}</td>
+          <td class="p-2">{{ r.pending_with }}</td>
+          <td class="p-2">{{ r.approved_by }}</td>
+          <td class="p-2">{{ r.approved_on }}</td>
+          <td class="p-2">{{ r.approver_remark }}</td>
+          <td class="p-2">{{ r.billable_type }}</td>
+          <td class="p-2">{{ r.punch_in_timing }}</td>
+          <td class="p-2">{{ r.punch_out_timing }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="28" class="text-center py-4 text-gray-500">No records found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock HRone_report_content %}

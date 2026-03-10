@@ -1,0 +1,424 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}{% if edit_mode %}Edit{% else %}New{% endif %} Analytical Downtime – QC Project{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --surface: #fff;
+    --border: #e0e7ed;
+    --brand-primary: #3b82f6;
+    --brand-dark: #1e40af;
+    --text-base: #374151;
+    --text-light: #6b7280;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06);
+  }
+  .ad-body {
+    background: var(--bg);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-base);
+    line-height: 1.5;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 32px auto;
+    padding: 0 24px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .grid-container {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--text-base);
+    font-size: .925rem;
+  }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: .925rem;
+    color: var(--text-base);
+    background-color: var(--surface);
+    transition: border-color .2s, box-shadow .2s;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.2);
+  }
+  textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 0 8px;
+  }
+  .toolbar h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--brand-dark);
+  }
+  .btn {
+    appearance: none;
+    border: none;
+    background: var(--brand-primary);
+    color: #fff;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background-color .2s, box-shadow .2s;
+    box-shadow: var(--shadow-sm);
+  }
+  .btn:hover {
+    background-color: var(--brand-dark);
+    box-shadow: var(--shadow-md);
+  }
+  .btn.secondary {
+    background: var(--surface);
+    color: var(--text-base);
+    border: 1px solid var(--border);
+  }
+  .btn.secondary:hover {
+    background-color: #f0f4f8;
+    border-color: #cbd5e1;
+  }
+  h3 {
+    margin-top: 28px;
+    margin-bottom: 18px;
+    font-size: 1.35rem;
+    color: var(--brand-dark);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .form-actions {
+    margin-top: 28px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start;
+  }
+  .form-group.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+  }
+  .form-group.checkbox-group label { margin-bottom: 0; }
+  .form-group.checkbox-group input[type="checkbox"] { width: auto; margin-top: 2px; }
+  .hint { color: var(--text-light); font-size: 12px; margin-top: 4px; }
+  .grid-container .full-width { grid-column: 1 / -1; }
+
+  @media (max-width: 768px) {
+    .grid-container { grid-template-columns: 1fr; }
+    .toolbar { flex-direction: column; align-items: flex-start; }
+    .toolbar div {
+      margin-top: 12px; width: 100%; display: flex; justify-content: flex-start; gap: 8px;
+    }
+    .toolbar .btn { flex-grow: 1; }
+  }
+</style>
+
+<div class="ad-body">
+  <div class="wrap">
+    <div class="toolbar">
+      <h2>{% if edit_mode %}Edit{% else %}New{% endif %} Analytical Downtime</h2>
+      <div>
+        <a class="btn secondary" href="{% url 'qc:downtime_list' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          Back to List
+        </a>
+        <a class="btn secondary" href="{% url 'qc:qc_home' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          Home
+        </a>
+      </div>
+    </div>
+
+    <form method="post" class="card">
+      {% csrf_token %}
+      <div class="grid-container">
+        <div class="form-group">
+          <label>Entry No</label>
+          {% if form.instance.pk and form.instance.incident_no %}
+              <input type="text" id="id_incident_no_preview" class="form-control" value="{{ form.instance.incident_no }}" readonly />
+              <div class="hint">Auto-generated; cannot be edited.</div>
+          {% else %}
+              <input type="text" id="id_incident_no_preview" class="form-control" value="(will be auto-generated on save)" readonly />
+              <div class="hint">Format: INC/YY-YY/00001 (financial year Apr–Mar).</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.instrument_id.id_for_label }}">Instrument</label>
+          {{ form.instrument_id }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.start_at.id_for_label }}">Start Date & Time</label>
+          {{ form.start_at }}
+        </div>
+        <div class="form-group">
+          <label for="{{ form.end_at.id_for_label }}">End Date & Time</label>
+          {{ form.end_at }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.status.id_for_label }}">Status</label>
+          {{ form.status }}
+        </div>
+        <div class="form-group checkbox-group">
+          <label for="{{ form.ongoing.id_for_label }}">Ongoing?</label>
+          {{ form.ongoing }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.category.id_for_label }}">Downtime Category</label>
+          {{ form.category }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.short_reason.id_for_label }}">Short Reason</label>
+          {{ form.short_reason }}
+        </div>
+
+        <div class="form-group full-width">
+          <label for="{{ form.detail_reason.id_for_label }}">Detailed Reason / Description</label>
+          {{ form.detail_reason }}
+        </div>
+      </div>
+
+      <h3>Impact Assessment</h3>
+      <div class="grid-container">
+        <div class="form-group">
+          <label for="{{ form.stage.id_for_label }}">Stage</label>
+          {{ form.stage }}
+          <datalist id="stage-options">
+            {% for s in stage_options %}
+              <option value="{{ s }}"></option>
+            {% endfor %}
+          </datalist>
+          <div class="hint">Type to filter, then pick the stage.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.product_name.id_for_label }}">Product</label>
+          {{ form.product_name }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.batch_no.id_for_label }}">Batch No</label>
+          {{ form.batch_no }}
+          <datalist id="batch-options"></datalist>
+          <div class="hint">Start typing to see suggested batch numbers.</div>
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.tests_delayed.id_for_label }}">Tests Delayed</label>
+          {{ form.tests_delayed }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.retest_due_date.id_for_label }}">Retest Due Date</label>
+          {{ form.retest_due_date }}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.resolved_by.id_for_label }}">Resolved By</label>
+          {{ form.resolved_by }}
+        </div>
+
+        <div class="form-group full-width">
+          <label for="{{ form.remarks.id_for_label }}">Remarks</label>
+          {{ form.remarks }}
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn" type="submit">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          {% if edit_mode %}Update{% else %}Save{% endif %}
+        </button>
+        <a class="btn secondary" href="{% url 'qc:downtime_report' %}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          View Report
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const stageSelect = document.getElementById("id_stage");
+  const prodInput   = document.getElementById("id_product_name");
+  const batchInput  = document.getElementById("id_batch_no");
+
+  // ───────────── Stage: type-to-search on the existing <select> ─────────────
+  if (stageSelect) {
+    let buffer = "";
+    let timer  = null;
+    let composing = false;
+
+    function bestMatch(q) {
+      const opts = Array.from(stageSelect.options);
+      const s = (q || "").trim().toLowerCase();
+      if (!s) return null;
+
+      let hit = opts.find(o =>
+        (o.text || "").toLowerCase() === s || (o.value || "").toLowerCase() === s
+      );
+      if (hit) return hit.value;
+
+      hit = opts.find(o => (o.text || "").toLowerCase().startsWith(s));
+      if (hit) return hit.value;
+
+      hit = opts.find(o => (o.text || "").toLowerCase().includes(s));
+      return hit ? hit.value : null;
+    }
+
+    function applyBuffer() {
+      const v = bestMatch(buffer);
+      if (v !== null) {
+        stageSelect.value = v;
+        stageSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+
+    stageSelect.addEventListener("compositionstart", () => { composing = true; });
+    stageSelect.addEventListener("compositionend", (e) => {
+      composing = false;
+      buffer += e.data || "";
+      applyBuffer();
+      clearTimeout(timer);
+      timer = setTimeout(() => (buffer = ""), 800);
+    });
+
+    stageSelect.addEventListener("keydown", (e) => {
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Home","End","Tab"].includes(e.key)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || composing) return;
+
+      if (e.key.length === 1) {
+        buffer += e.key;
+        applyBuffer();
+        e.preventDefault();
+        clearTimeout(timer);
+        timer = setTimeout(() => (buffer = ""), 800);
+        return;
+      }
+      if (e.key === "Backspace") {
+        buffer = buffer.slice(0, -1);
+        applyBuffer();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Enter") {
+        applyBuffer();
+        buffer = "";
+        e.preventDefault();
+        return;
+      }
+      if (e.key === "Escape") {
+        buffer = "";
+        return;
+      }
+    });
+
+    stageSelect.addEventListener("blur", () => (buffer = ""));
+  }
+
+  // ───────────── Batch suggestions via <datalist> (rebuild on each input) ─────────────
+  let batchDL = document.getElementById("batch-options");
+  if (!batchDL) {
+    batchDL = document.createElement("datalist");
+    batchDL.id = "batch-options";
+    document.body.appendChild(batchDL);
+  }
+  const batchInputEl = batchInput;
+  if (batchInputEl && !batchInputEl.getAttribute("list")) {
+    batchInputEl.setAttribute("list", "batch-options");
+  }
+
+  let allBatches = [];
+
+  function renderBatchOptions(list) {
+    batchDL.innerHTML = "";
+    list.slice(0, 100).forEach((b) => {
+      if (!b) return;
+      const opt = document.createElement("option");
+      opt.value = b;
+      batchDL.appendChild(opt);
+    });
+  }
+
+  function filterBatches(q) {
+    const s = (q || "").trim().toLowerCase();
+    if (!s) { renderBatchOptions(allBatches); return; }
+    const filtered = allBatches.filter(b => b.toLowerCase().includes(s));
+    renderBatchOptions(filtered);
+  }
+
+  if (batchInputEl) {
+    batchInputEl.addEventListener("input", () => filterBatches(batchInputEl.value));
+  }
+
+  // ───────────── Fetch product & batches when stage changes ─────────────
+  async function refreshFromStage() {
+    const stage = (stageSelect?.value || "").trim();
+    if (!stage) return;
+    try {
+      const res  = await fetch("{% url 'qc:api_product_and_batches' %}?stage=" + encodeURIComponent(stage),
+                               { credentials: "same-origin" });
+      const json = await res.json();
+      if (!json.ok) return;
+
+      if (prodInput && json.product_name) prodInput.value = json.product_name;
+
+      if (Array.isArray(json.batches)) {
+        const uniq = Array.from(
+          new Set(json.batches.map(b => String(b || "").trim()).filter(Boolean))
+        ).sort();
+        allBatches = uniq;
+        renderBatchOptions(allBatches);
+      }
+    } catch (e) {
+      console.error("Stage lookup failed:", e);
+    }
+  }
+
+  if (stageSelect) {
+    stageSelect.addEventListener("change", refreshFromStage);
+    if (stageSelect.value) refreshFromStage(); // prefill on edit
+  }
+})();
+</script>
+{% endblock maincontent %}

@@ -1,0 +1,95 @@
+{% extends "main/index.html" %}
+
+{% block title %}
+  {% if is_edit %}Edit Email Account{% else %}New Email Account{% endif %}
+{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">
+        {% if is_edit %}Edit Email Account{% else %}New Email Account{% endif %}
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Configure SMTP settings used for payment reminders and receivable follow-ups.
+      </p>
+    </div>
+
+    <a href="{% url 'accounts:email_account_list' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-slate-300
+              bg-white text-slate-700 text-sm hover:bg-slate-50">
+      <i class="fa-solid fa-arrow-left"></i>
+      Back
+    </a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="rounded-md px-4 py-3 text-sm
+           {% if message.tags == 'success' %}
+             bg-emerald-50 text-emerald-700 border border-emerald-200
+           {% else %}
+             bg-slate-50 text-slate-700 border border-slate-200
+           {% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Form -->
+  <form method="post" class="bg-white border border-slate-200 rounded-lg p-6 space-y-6">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="rounded-md border border-rose-200 bg-rose-50 text-rose-700 text-sm px-4 py-3">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      {% for field in form %}
+        <div class="
+          {% if field.name == 'password' or field.name == 'app_password' or field.name == 'smtp_password' %}
+            md:col-span-2
+          {% endif %}
+        ">
+          <label class="block text-sm font-medium text-slate-700 mb-1">
+            {{ field.label }}
+            {% if field.field.required %}
+              <span class="text-rose-600">*</span>
+            {% endif %}
+          </label>
+
+          {{ field }}
+
+          {% if field.help_text %}
+            <p class="text-xs text-slate-500 mt-1">{{ field.help_text|safe }}</p>
+          {% endif %}
+
+          {% if field.errors %}
+            <p class="text-xs text-rose-600 mt-1">{{ field.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+
+    </div>
+
+    <div class="flex items-center justify-end gap-3 pt-2">
+      <a href="{% url 'accounts:email_account_list' %}"
+         class="px-4 py-2 rounded-md border border-slate-300 bg-white text-slate-700 text-sm hover:bg-slate-50">
+        Cancel
+      </a>
+      <button type="submit"
+              class="px-5 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+        Save
+      </button>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}

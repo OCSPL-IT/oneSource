@@ -1,0 +1,174 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block title %}Certificate of Analysis – {{ entry.product.name }}{% endblock %}
+
+{% block maincontent %}
+  <style>
+    /* ─── VARIABLES & BASE (ALIGNED) ────────────────────────────────── */
+    :root {
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --color-surface: #ffffff;
+      --color-border: #e5e7eb; /* slate-200 */
+      --color-bg-subtle: #f8fafc; /* slate-50 */
+      --text-heading: #111827; /* slate-900 */
+      --text-body: #374151; /* slate-700 */
+      --text-muted: #6b7280; /* slate-500 */
+      --color-primary: #2563eb; /* blue-600 */
+      --color-primary-hover: #1d4ed8; /* blue-700 */
+      --radius-md: 0.375rem;
+      --radius-lg: 0.5rem;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .coa-page-container { font-family: var(--font-sans); color: var(--text-body); font-size: 0.875rem; line-height: 1.5; padding: 1.5rem; }
+
+    /* --- Form Control Styles (ALIGNED) --- */
+    .form-control {
+      display: block; width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+      font-weight: 400; line-height: 1.5; color: var(--text-heading); background-color: #fff;
+      background-clip: padding-box; border: 1px solid #d1d5db; border-radius: var(--radius-md);
+      transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+    }
+    .form-control:focus {
+      border-color: var(--color-primary); outline: 0;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+    .text-danger { color: #ef4444; }
+    .small { font-size: .875em; }
+    .mt-1 { margin-top: 0.25rem; }
+    .mt-3 { margin-top: 1rem; }
+    .text-muted { color: var(--text-muted); }
+
+    /* --- LAYOUT & HEADER (ALIGNED) --- */
+    .coa-wrapper {
+      max-width: 900px; margin: 1rem auto 4rem; background: var(--color-surface);
+      border-radius: var(--radius-lg); padding: 2.5rem; border: 1px solid var(--color-border);
+      box-shadow: var(--shadow-sm);
+    }
+    .coa-header { text-align: center; margin-bottom: 2rem; }
+    .coa-header h1 { font-size: 1.875rem; font-weight: 700; color: var(--text-heading); margin: 0; }
+    .coa-subtitle { margin-top: 0.5rem; font-size: 1rem; color: var(--text-muted); }
+    .section-box { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .section-title { font-weight: 600; font-size: 1.125rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-heading); }
+    .two-cols { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .col-half { flex: 1 1 300px; min-width: 280px; }
+
+    /* --- TABLES (ALIGNED) --- */
+    .detail-table { width: 100%; border-collapse: collapse; }
+    .detail-table th, .detail-table td { padding: 0.75rem; border: 1px solid var(--color-border); font-size: 0.875rem; vertical-align: middle; }
+    .detail-label { width: 160px; font-weight: 500; background-color: var(--color-bg-subtle); color: var(--text-body); }
+    .readonly-field { background-color: var(--color-bg-subtle); padding: 0.75rem; border-radius: var(--radius-md); font-weight: 500; }
+    
+    .test-params-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .test-params-table thead th { background: var(--color-bg-subtle); padding: 0.75rem; border: 1px solid var(--color-border); font-weight: 500; text-align: left; }
+    .test-params-table tbody td { padding: 0.75rem; border: 1px solid var(--color-border); }
+
+    /* --- FOOTER & SIGNATURES (ALIGNED) --- */
+    .footer-blocks { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem; }
+    .sign-block { flex: 1 1 200px; min-width: 180px; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; background: var(--color-bg-subtle); }
+    .sign-block .title { font-weight: 600; margin-bottom: 0.5rem; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    .sign-line { margin: 0.5rem 0; height: 1px; background: var(--text-muted); }
+    .sign-meta { display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.75rem; }
+    .small-label { font-weight: 500; margin-bottom: 0.125rem; display: block; font-size: 0.75rem; color: var(--text-muted); }
+    .inline-label { font-size: 0.875rem; color: var(--text-body); margin-bottom: 0.25rem; font-weight: 500; }
+    .dashed-box { border: 1px dashed #cbd5e1; border-radius: var(--radius-md); padding: 1rem; background: var(--color-bg-subtle); margin-bottom: 1rem; font-size: 0.875rem; }
+    
+    /* --- ACTIONS & BUTTONS (ALIGNED) --- */
+    .actions { margin-top: 2rem; display: flex; justify-content: flex-end; gap: 0.75rem; }
+    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid transparent; border-radius: var(--radius-md); font-weight: 500; font-size: 0.875rem; cursor: pointer; text-decoration: none; }
+    .btn-save { background-color: var(--color-primary); color: white; }
+    .btn-save:hover { background-color: var(--color-primary-hover); }
+    .btn-cancel { background-color: var(--color-bg-card); color: var(--text-body); border-color: var(--color-border); }
+    .btn-cancel:hover { border-color: #d1d5db; background-color: var(--color-bg-subtle); }
+    
+    .flex-container { display: flex; flex-wrap: wrap; gap: 1.5rem; }
+    .flex-item { flex: 1 1 300px; }
+  </style>
+
+<div class="coa-page-container">
+<div class="coa-wrapper">
+  <!-- Title -->
+  <div class="coa-header">
+    <div style="font-size:0.8rem; font-weight:500; letter-spacing:1px; text-transform:uppercase; color: var(--text-muted); margin-bottom:4px;">Certificate Code: F/QC/005/01</div>
+    <h1>CERTIFICATE OF ANALYSIS</h1>
+    <div class="coa-subtitle">Detailed quality and test parameters for the batch below</div>
+  </div>
+
+  <!-- Form -->
+  <form method="post" action="{% url 'qc:generate_coa' entry.pk %}" novalidate>
+    {% csrf_token %}
+    <div class="section-box form-section">
+      <div class="section-title"><i class="fas fa-file-alt"></i>Header Information</div>
+      <div class="two-cols">
+        <!-- Left column -->
+        <div class="col-half">
+          <table class="detail-table">
+            <tr>
+              <th class="detail-label">Issue Date Of Certificate</th>
+              <td><input type="date" name="issue_date" id="id_issue_date" class="form-control" value="{% if form.issue_date.value %}{{ form.issue_date.value|date:'Y-m-d' }}{% else %}{% now 'Y-m-d' %}{% endif %}"></td>
+            </tr>
+            <tr><th class="detail-label">Product Name</th><td class="readonly-field">{{ entry.product.name }}</td></tr>
+            <tr><th class="detail-label">Batch No.</th><td class="readonly-field">{{ entry.batch_no }}</td></tr>
+          </table>
+        </div>
+        <!-- Right column -->
+        <div class="col-half">
+          <table class="detail-table">
+            <tr><th class="detail-label">Quantity</th><td><input type="text" name="quantity" id="id_quantity" class="form-control" value="{{ form.quantity.value|default_if_none:'' }}">{% if form.quantity.errors %}<div class="text-danger small mt-1">{{ form.quantity.errors.0 }}</div>{% endif %}</td></tr>
+            <tr><th class="detail-label">Manufacture Date</th><td><input type="date" name="mfg_date" id="id_mfg_date" class="form-control" value="{{ form.mfg_date.value|default_if_none:'' }}">{% if form.mfg_date.errors %}<div class="text-danger small mt-1">{{ form.mfg_date.errors.0 }}</div>{% endif %}</td></tr>
+            <tr><th class="detail-label">Re-test Date</th><td><input type="date" name="retest_date" id="id_retest_date" class="form-control" value="{{ form.retest_date.value|default_if_none:'' }}">{% if form.retest_date.errors %}<div class="text-danger small mt-1">{{ form.retest_date.errors.0 }}</div>{% endif %}</td></tr>
+          </table>
+        </div>
+      </div>
+      <!-- Optional Customer -->
+      <div class="flex-container mt-3">
+        <div class="flex-item">
+            <label class="inline-label" for="id_customer_name">Customer Name</label>
+            <input type="text" name="customer_name" id="id_customer_name" class="form-control" value="{{ form.customer_name.value|default_if_none:'' }}">
+            {% if form.customer_name.errors %}<div class="text-danger small mt-1">{{ form.customer_name.errors.0 }}</div>{% endif %}
+        </div>
+        <div class="flex-item">
+            <label class="inline-label">&nbsp;</label>
+            <div class="text-muted" style="padding: .75rem; border:1px solid var(--color-border); border-radius:var(--radius-md); background:var(--color-bg-subtle);">
+              <strong>QC Entry:</strong> #{{ entry.entry_no }} &nbsp;|&nbsp; Final Decision: {{ entry.get_decision_status_display }}
+            </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test Parameters Section -->
+    <div class="section-box">
+      <div class="section-title"><i class="fas fa-vial"></i>Test Parameters & Results</div>
+      {% if spec_entries %}
+        <table class="test-params-table">
+          <thead><tr><th style="width:40px;">#</th><th>Test Parameter</th><th>Specification</th><th>Value</th><th>Unit</th></tr></thead>
+          <tbody>
+            {% for se in spec_entries %}
+              <tr><td>{{ forloop.counter }}</td><td>{{ se.spec.name }}</td>
+                <td>{% if se.spec.spec_type == 'numeric' %}{{ se.spec.min_val|default_if_none:"–" }} – {{ se.spec.max_val|default_if_none:"–" }}{% elif se.spec.spec_type == 'choice' %}{{ se.spec.allowed_choices|default_if_none:"–" }}{% else %}{{ se.spec.acceptance_criteria|default_if_none:"–" }}{% endif %}</td>
+                <td>{{ se.value|default:"–" }}</td><td>{{ se.spec.unit|default:"–" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="dashed-box">No test parameter results are available for this QC entry.</div>
+      {% endif %}
+    </div>
+
+    <!-- Footer / approval blocks -->
+    <div class="footer-blocks">
+      <div class="sign-block"><div class="title">Prepared By</div><div class="sign-line"></div><div class="sign-meta"><div><label class="small-label">Name</label><input type="text" name="prepared_by" class="form-control" placeholder="Enter name"></div><div><label class="small-label">Date</label><input type="date" name="prepared_date" class="form-control"></div></div></div>
+      <div class="sign-block"><div class="title">Verified By</div><div class="sign-line"></div><div class="sign-meta"><div><label class="small-label">Name</label><input type="text" name="verified_by" class="form-control" placeholder="Enter name"></div><div><label class="small-label">Date</label><input type="date" name="verified_date" class="form-control"></div></div></div>
+      <div class="sign-block"><div class="title">Approved By</div><div class="sign-line"></div><div class="sign-meta"><div><label class="small-label">Name</label><input type="text" name="approved_by" class="form-control" placeholder="Enter name"></div><div><label class="small-label">Date</label><input type="date" name="approved_date" class="form-control"></div></div></div>
+      <div class="sign-block" style="flex: 0 1 140px;"><div class="title">Signature</div><div class="sign-line" style="margin-bottom:18px;"></div><div class="small-label">(Stamp / Sign)</div></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <a href="{% url 'qc:qc_detail' entry.pk %}" class="btn btn-cancel">Cancel</a>
+      <button type="submit" class="btn btn-save">Generate &amp; Save COA</button>
+    </div>
+  </form>
+</div>
+</div>
+{% endblock maincontent %}

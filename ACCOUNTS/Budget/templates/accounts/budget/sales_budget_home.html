@@ -1,0 +1,379 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block title %}Sales Budget{% endblock %}
+
+{% block maincontent %}
+
+<!-- Tailwind (CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .ai-shell{
+    background:
+      radial-gradient(1200px 600px at 18% -10%, rgba(99,102,241,.10), transparent 55%),
+      radial-gradient(900px 520px at 95% 0%, rgba(16,185,129,.08), transparent 55%),
+      #f7f7f8;
+  }
+  .glass {
+    background: rgba(255,255,255,.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  .sticky-head thead th{
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(250,250,250,.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .tnum{ font-variant-numeric: tabular-nums; }
+  .chip{
+    display:inline-flex; align-items:center;
+    border-radius: 999px;
+    padding: .28rem .7rem;
+    border: 1px solid #e5e7eb;
+    font-weight: 800;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+</style>
+
+<div class="ai-shell min-h-screen py-6">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+    <!-- HEADER + STATUS / LOCK BAR -->
+    <div class="glass rounded-3xl border border-slate-200 shadow-sm p-5">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex items-center gap-3 flex-wrap">
+            <div class="h-11 w-11 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+              <i class="fa-solid fa-chart-line text-slate-600"></i>
+            </div>
+            <div class="min-w-0">
+              <h1 class="text-[22px] sm:text-2xl font-black text-slate-900 tracking-tight">Sales Budget</h1>
+              <div class="mt-1 flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-600">
+                <span class="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-extrabold shadow-sm">
+                  Plan: <span class="text-slate-900">{{ plan.fy }}</span>
+                </span>
+                <span class="inline-flex items-center gap-2 rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-extrabold shadow-sm">
+                  Header INR/USD: <span class="text-slate-900 tnum">{{ sales_budget.inr_usd|default_if_none:"0.00" }}</span>
+                </span>
+                {% if mc %}
+                  {% with s=mc.status|stringformat:"s" %}
+                    <span class="chip
+                      {% if s == 'DRAFT' %}bg-slate-100 text-slate-700 border-slate-200
+                      {% elif s == 'SUBMITTED' %}bg-amber-100 text-amber-900 border-amber-200
+                      {% elif s == 'APPROVED' %}bg-emerald-100 text-emerald-900 border-emerald-200
+                      {% elif s == 'REJECTED' %}bg-rose-100 text-rose-900 border-rose-200
+                      {% else %}bg-slate-100 text-slate-700 border-slate-200{% endif %}">
+                      {{ s }}
+                    </span>
+                  {% endwith %}
+                {% else %}
+                  <span class="chip bg-slate-100 text-slate-700 border-slate-200">DRAFT</span>
+                {% endif %}
+                {% if is_locked %}
+                  <span class="chip bg-indigo-50 text-indigo-800 border-indigo-200">Locked</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {% if is_locked %}
+            <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              This budget is currently <b>{{ mc.status|default:"SUBMITTED" }}</b> and editing is disabled.
+              {% if perms.accounts_budget.can_approve_budgets %}
+                Please approve/reject (or reopen) from <b>Budget Approvals Inbox</b>.
+              {% else %}
+                Please contact approver to approve/reject.
+              {% endif %}
+            </div>
+          {% endif %}
+
+          {% if mc and mc.remarks %}
+            <div class="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+              <span class="font-black">Remarks:</span>
+              <span class="whitespace-pre-wrap">{{ mc.remarks }}</span>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          {% with s=mc.status|default:"DRAFT" %}
+            {% if not is_locked and s != "SUBMITTED" and s != "APPROVED" %}
+              <a href="{% url 'accounts_budget:sales_budget_edit' %}"
+                 class="px-4 py-2.5 rounded-2xl bg-slate-900 text-white font-extrabold hover:bg-slate-800 shadow-[0_10px_25px_rgba(2,6,23,.18)]">
+                Edit
+              </a>
+            {% else %}
+              <span class="px-4 py-2.5 rounded-2xl bg-slate-200 text-slate-600 font-extrabold cursor-not-allowed">
+                Edit (Locked)
+              </span>
+            {% endif %}
+          {% endwith %}
+
+          {% if submit_url and mc and mc.status == "DRAFT" and not is_locked %}
+            <a href="{{ submit_url }}?next={{ request.get_full_path|urlencode }}"
+               class="px-4 py-2.5 rounded-2xl bg-amber-600 text-white font-extrabold hover:bg-amber-700 shadow-sm">
+              Submit for Approval
+            </a>
+          {% endif %}
+
+          {% if mc and mc.status == "APPROVED" and perms.accounts_budget.can_approve_budgets and reopen_url %}
+            <a href="{{ reopen_url }}?next={{ request.get_full_path|urlencode }}"
+               class="px-4 py-2.5 rounded-2xl bg-indigo-600 text-white font-extrabold hover:bg-indigo-700 shadow-sm">
+              Reopen
+            </a>
+          {% endif %}
+
+          <a href="{% url 'accounts_budget:budget_approvals_inbox' %}"
+             class="px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 font-extrabold text-slate-700 shadow-sm">
+            Approvals Inbox
+          </a>
+
+          <a href="{% url 'accounts_budget:production_budget_home' %}"
+             class="px-4 py-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 font-extrabold text-slate-700 shadow-sm">
+            Production Budget
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+
+      <!-- Total Qty (MT) -->
+      <div class="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
+        <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Total Qty (MT)</div>
+        <div class="text-2xl font-black text-slate-900 mt-2 tnum">{{ total_qty|floatformat:0 }}</div>
+        <div class="text-xs font-semibold text-slate-500 mt-1">Metric Tonnes</div>
+      </div>
+
+      <!-- Total Value INR — Domestic + Export converted -->
+      <div class="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
+        <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Total Value (INR)</div>
+        <div class="text-2xl font-black text-emerald-800 mt-2 tnum">{{ total_amt_inr }}</div>
+        <div class="text-sm font-semibold text-slate-500 mt-1">( {{ total_amt_cr }} Cr )</div>
+        <div class="mt-2 flex flex-wrap gap-1">
+          <span class="chip bg-emerald-50 text-emerald-800 border-emerald-200">Dom: {{ domestic_amt_cr }} Cr</span>
+          <span class="chip bg-indigo-50 text-indigo-800 border-indigo-200">Exp: {{ export_amt_cr }} Cr</span>
+        </div>
+      </div>
+
+      <!-- Total Value USD — Export only (pre-formatted) -->
+      <div class="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
+        <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Total Value (USD)</div>
+        <div class="text-2xl font-black text-indigo-800 mt-2 tnum">{{ total_amt_usd }}</div>
+        <div class="mt-2">
+          <span class="chip bg-indigo-50 text-indigo-800 border-indigo-200">Export lines only</span>
+        </div>
+      </div>
+
+      <!-- Export / Domestic breakdown -->
+      <div class="bg-white border border-slate-200 rounded-3xl p-4 shadow-sm">
+        <div class="text-[11px] font-black tracking-widest text-slate-400 uppercase">Export / Domestic</div>
+
+        <div class="mt-3 rounded-xl bg-indigo-50 border border-indigo-100 px-3 py-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="chip bg-indigo-100 text-indigo-800 border-indigo-200">Export</span>
+            <span class="text-[10px] font-black tracking-widest text-indigo-400 uppercase">USD</span>
+          </div>
+          <!-- pre-formatted by fmt_usd() in view -->
+          <div class="text-xl font-black text-indigo-900 tnum mt-1">{{ export_amt_usd }}</div>
+          <div class="text-xs font-semibold text-indigo-400 mt-0.5">{{ export_amt_cr }} Cr (conv.)</div>
+        </div>
+
+        <div class="mt-2 rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="chip bg-emerald-100 text-emerald-800 border-emerald-200">Domestic</span>
+            <span class="text-[10px] font-black tracking-widest text-emerald-400 uppercase">INR</span>
+          </div>
+          <div class="text-xl font-black text-emerald-900 tnum mt-1">{{ domestic_amt_inr }}</div>
+          <div class="text-xs font-semibold text-emerald-400 mt-0.5">{{ domestic_amt_cr }} Cr</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MONTHWISE SUMMARY -->
+    <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+      <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <div class="text-base font-black text-slate-900">Monthwise Summary</div>
+          <div class="text-xs font-semibold text-slate-500 mt-0.5">Qty (MT)</div>
+        </div>
+        <span class="chip bg-slate-100 text-slate-700 border-slate-200">Summary</span>
+      </div>
+      <div class="overflow-x-auto sticky-head">
+        <table class="min-w-[1100px] w-full text-sm">
+          <thead>
+            <tr class="text-left">
+              {% for row in month_rows %}
+                <th class="px-4 py-3 text-slate-700 font-extrabold">{{ row.label|upper }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-t">
+              {% for row in month_rows %}
+                <td class="px-4 py-3 text-slate-900 font-bold tnum">
+                  {{ row.total|floatformat:0 }}
+                </td>
+              {% endfor %}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SALES LINES -->
+    <div class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+      <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+        <div>
+          <div class="text-base font-black text-slate-900">Sales Lines</div>
+          <div class="text-xs font-semibold text-slate-500 mt-0.5">
+            Amount in native currency &mdash; Export in USD, Domestic in INR &mdash; Cr column converted via Header INR/USD
+          </div>
+        </div>
+        <span class="chip bg-slate-900 text-white border-slate-900">Lines</span>
+      </div>
+
+      <div class="overflow-x-auto sticky-head">
+        <table class="min-w-[1300px] w-full text-sm">
+          <thead>
+            <tr class="text-left">
+              <th class="px-4 py-3 font-extrabold text-slate-700">Product / FG</th>
+              <th class="px-4 py-3 font-extrabold text-slate-700">Sale Type</th>
+              <th class="px-4 py-3 font-extrabold text-slate-700">Annual Qty (MT)</th>
+              <th class="px-4 py-3 font-extrabold text-slate-700">Rate USD (Export)</th>
+              <th class="px-4 py-3 font-extrabold text-slate-700">Rate INR/KG (Domestic)</th>
+              <th class="px-4 py-3 font-extrabold text-slate-700">Amount</th>
+              <th class="px-4 py-3 font-extrabold text-slate-700">Amt (Cr)</th>
+            </tr>
+          </thead>
+
+          <tbody class="bg-white">
+            {% for r in lines %}
+              <tr class="border-t hover:bg-slate-50/70">
+
+                <td class="px-4 py-3 font-black text-slate-900">{{ r.product_name }}</td>
+
+                <td class="px-4 py-3">
+                  {% if r.sale_type == "EXPORT" %}
+                    <span class="chip bg-indigo-50 text-indigo-800 border-indigo-200">EXPORT</span>
+                  {% elif r.sale_type == "DOMESTIC" %}
+                    <span class="chip bg-emerald-50 text-emerald-800 border-emerald-200">DOMESTIC</span>
+                  {% else %}
+                    <span class="chip bg-slate-100 text-slate-700 border-slate-200">{{ r.sale_type }}</span>
+                  {% endif %}
+                </td>
+
+                <!-- Annual Qty in MT (no decimals) -->
+                <td class="px-4 py-3 font-bold text-slate-900 tnum">{{ r.annual_qty_mt|floatformat:0 }}</td>
+
+                <!-- Rate USD — Export only -->
+                <td class="px-4 py-3 tnum">
+                  {% if r.sale_type == "EXPORT" %}
+                    {{ r.rate_usd|floatformat:3 }}
+                  {% else %}
+                    <span class="text-slate-300">—</span>
+                  {% endif %}
+                </td>
+
+                <!-- Rate INR/KG — Domestic only -->
+                <td class="px-4 py-3 tnum">
+                  {% if r.sale_type == "DOMESTIC" %}
+                    {{ r.rate_inr|floatformat:3 }}
+                  {% else %}
+                    <span class="text-slate-300">—</span>
+                  {% endif %}
+                </td>
+
+                <!-- Amount: pre-formatted, native currency only -->
+                <td class="px-4 py-3 tnum">
+                  {% if r.sale_type == "EXPORT" %}
+                    <!-- amt_usd_fmt: pre-formatted by fmt_usd() in view -->
+                    <span class="font-black text-indigo-800">{{ r.amt_usd_fmt }}</span>
+                    <span class="ml-1 text-[10px] font-black tracking-widest text-indigo-400 uppercase">USD</span>
+                  {% elif r.sale_type == "DOMESTIC" %}
+                    <span class="font-black text-emerald-800">{{ r.amt_inr_fmt }}</span>
+                    <span class="ml-1 text-[10px] font-black tracking-widest text-emerald-400 uppercase">INR</span>
+                  {% else %}
+                    <span class="text-slate-300">—</span>
+                  {% endif %}
+                </td>
+
+                <!-- Amt (Cr) — Domestic (native INR) and Export (USD→INR converted) -->
+                <td class="px-4 py-3 tnum">
+                  {% if r.sale_type == "DOMESTIC" %}
+                    <span class="font-bold text-emerald-800">{{ r.amt_inr_cr_fmt }}</span>
+                  {% elif r.sale_type == "EXPORT" %}
+                    <span class="font-bold text-indigo-800">{{ r.amt_inr_cr_fmt }}</span>
+                    <div class="text-[10px] font-black tracking-widest text-indigo-300 uppercase mt-0.5">USD→INR</div>
+                  {% else %}
+                    <span class="text-slate-300">—</span>
+                  {% endif %}
+                </td>
+
+              </tr>
+            {% empty %}
+              <tr>
+                <td class="px-4 py-8 text-slate-500 font-semibold" colspan="7">No sales lines yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+
+          <tfoot>
+            <tr class="border-t bg-slate-50">
+              <td class="px-4 py-3 font-black text-slate-900" colspan="2">TOTAL</td>
+
+              <!-- Total Qty in MT (no decimals) -->
+              <td class="px-4 py-3 font-black text-slate-900 tnum">{{ total_qty|floatformat:0 }}</td>
+
+              <!-- Weighted avg Rate USD (Export) -->
+              <td class="px-4 py-3 tnum">
+                <div class="font-black text-indigo-800">{{ export_rate_usd_wavg|floatformat:3 }}</div>
+                <div class="text-[10px] font-black tracking-widest text-indigo-300 uppercase mt-0.5">Wtd Avg</div>
+              </td>
+
+              <!-- Weighted avg Rate INR/KG (Domestic) -->
+              <td class="px-4 py-3 tnum">
+                <div class="font-black text-emerald-800">{{ domestic_rate_inr_wavg|floatformat:3 }}</div>
+                <div class="text-[10px] font-black tracking-widest text-emerald-300 uppercase mt-0.5">Wtd Avg</div>
+              </td>
+
+              <!-- Amount totals stacked: all pre-formatted -->
+              <td class="px-4 py-3">
+                <div class="tnum">
+                  <!-- total_amt_usd: pre-formatted by fmt_usd() in view -->
+                  <span class="font-black text-indigo-800">{{ total_amt_usd }}</span>
+                  <span class="ml-1 text-[10px] font-black tracking-widest text-indigo-400 uppercase">USD</span>
+                </div>
+                <div class="tnum mt-1">
+                  <span class="font-black text-emerald-800">{{ domestic_amt_inr }}</span>
+                  <span class="ml-1 text-[10px] font-black tracking-widest text-emerald-400 uppercase">INR</span>
+                </div>
+              </td>
+
+              <!-- Cr total with Dom + Exp breakdown -->
+              <td class="px-4 py-3 tnum">
+                <div class="font-black text-slate-900">{{ total_amt_cr }}</div>
+                <div class="mt-1 space-y-0.5">
+                  <div class="text-[10px] font-black text-emerald-600">Dom: {{ domestic_amt_cr }}</div>
+                  <div class="text-[10px] font-black text-indigo-600">Exp: {{ export_amt_cr }}</div>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
+
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

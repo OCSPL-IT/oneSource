@@ -1,0 +1,162 @@
+{% extends "main/index.html" %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-100 py-5">
+  <div class="w-full px-4 sm:px-6 lg:px-8">
+    <div class="bg-white shadow rounded-2xl p-5">
+      <div class="container mx-auto px-6 mt-1">
+        <div class="flex items-center justify-between mb-4">
+            <!-- Back to Main Page Button -->
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+              <i class="fa fa-arrow-left" aria-hidden="true"></i>
+            </a>
+            <!-- Heading -->
+            <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Utility Consumption Records</h2>
+            <!-- Go to Create Button -->
+            <a href="{% url 'utility_readings_report' %}"
+                class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 mx-1 rounded shadow-md">
+                <i class="fa fa-eye" aria-hidden="true"></i>
+            </a>
+            <a href="{% url 'utility_entry' %}"
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                <i class="fa-solid fa-square-plus"></i>
+            </a>
+        </div>
+        
+        <!-- Always show date filter form -->
+        <form method="get" class="mb-6 flex flex-wrap items-center gap-2">
+          <label class="font-semibold">From: <input type="date" name="from_date" value="{{ from_date|date:'Y-m-d' }}" class="border px-2 py-1 rounded" /></label>
+          <label class="font-semibold">To: <input type="date" name="to_date" value="{{ to_date|date:'Y-m-d' }}" class="border px-2 py-1 rounded" /></label>
+          <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-1 px-4 rounded">
+            <i class="fa-solid fa-filter"></i></button>
+          <a href="{% url request.resolver_match.url_name %}" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-1 px-4 rounded">
+            <i class="fa-solid fa-eraser"></i></a></a>
+            <a href="{% url 'utility_consumption_excel' %}?from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}"
+            class="text-green-700 hover:text-green-900 py-2 px-2">
+            <i class="fa-solid fa-file-excel fa-2xl"></i>
+          </a>
+        </form>
+        
+        {% if error %}
+          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline">{{ error }}</span>
+          </div>
+        {% else %}
+        {% if page_obj %}
+        <div class="flex justify-end mb-1">
+          <nav class="inline-flex rounded-md shadow-sm" aria-label="Pagination">
+            {# First button #}
+            {% if page_obj.has_previous %}
+              <a href="?from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}&page=1"
+                 class="px-3 py-1 bg-slate-200 rounded-l hover:bg-blue-300 font-semibold">First</a>
+            {% else %}
+              <span class="px-3 py-1 bg-slate-100 rounded-l text-gray-400 cursor-not-allowed font-semibold">First</span>
+            {% endif %}
+      
+            {# Previous button #}
+            {% if page_obj.has_previous %}
+              <a href="?from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}&page={{ page_obj.previous_page_number }}"
+                 class="px-3 py-1 bg-slate-200 hover:bg-blue-300">Prev</a>
+            {% else %}
+              <span class="px-3 py-1 bg-slate-100 text-gray-400 cursor-not-allowed">Prev</span>
+            {% endif %}
+      
+            {# Page number display #}
+            <span class="px-4 py-1 bg-blue-100 text-blue-700 font-semibold">
+              {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+            </span>
+      
+            {# Next button #}
+            {% if page_obj.has_next %}
+              <a href="?from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}&page={{ page_obj.next_page_number }}"
+                 class="px-3 py-1 bg-slate-200 hover:bg-blue-300">Next</a>
+            {% else %}
+              <span class="px-3 py-1 bg-slate-100 text-gray-400 cursor-not-allowed">Next</span>
+            {% endif %}
+      
+            {# Last button #}
+            {% if page_obj.has_next %}
+              <a href="?from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}&page={{ page_obj.paginator.num_pages }}"
+                 class="px-3 py-1 bg-slate-200 rounded-r hover:bg-blue-300 font-semibold">Last</a>
+            {% else %}
+              <span class="px-3 py-1 bg-slate-100 rounded-r text-gray-400 cursor-not-allowed font-semibold">Last</span>
+            {% endif %}
+          </nav>
+        </div>
+      {% endif %}
+      
+        {% if report_rows %}
+          <div class="overflow-x-auto shadow-md sm:rounded-lg">
+            <table class="min-w-full text-sm border-collapse border border-slate-300">
+              <thead class="text-slate-700 uppercase text-xs">
+                <!-- First Header Row - Group Labels -->
+                <tr class="bg-slate-200">
+                  <th rowspan="2" scope="col" class="px-3 py-2 border border-slate-300 text-center align-middle whitespace-nowrap sticky left-0 z-10 bg-orange-100">
+                    Date
+                  </th>
+                  {% for group in header_structure %}
+                    <th colspan="{{ group.fields|length }}" scope="col" 
+                        class="px-3 py-2 border border-slate-300 text-center align-middle font-semibold 
+                              {% if group.group_label == 'STEAM GENERATION' %}bg-green-100
+                              {% elif group.group_label == 'STEAM CONSUMPTION' %}bg-blue-200
+                              {% elif group.group_label == 'BRIQUETTE' %}bg-yellow-100
+                              {% elif group.group_label == 'WATER' %}bg-sky-200
+                              {% else %}bg-slate-200{% endif %}">
+                      {{ group.group_label }}
+                    </th>
+                  {% endfor %}
+                  <th colspan="3" class="text-center align-middle bg-blue-200 border border-slate-300 sticky" style="right:0; min-width:360px; z-index:10;">
+                    Steam
+                  </th>
+                </tr>
+                <!-- Second Header Row - Individual Field Labels -->
+                <tr class="bg-slate-50">
+                  {% for group in header_structure %}
+                    {% for _model_field, field_label, cell_class in group.fields %}
+                      <th scope="col" class="px-3 py-2 border border-slate-300 text-center align-middle whitespace-nowrap {{ cell_class|default_if_none:'' }}">
+                        {{ field_label|safe }}
+                      </th>
+                    {% endfor %}
+                  {% endfor %}
+                  <th class="text-center bg-blue-50 border border-slate-300 sticky" style="right:240px; min-width:120px; z-index:10;">MEE</th>
+                  <th class="text-center bg-blue-50 border border-slate-300 sticky" style="right:120px; min-width:120px; z-index:10;">Plant</th>
+                  <th class="text-center bg-blue-50 border border-slate-300 sticky" style="right:0; min-width:120px; z-index:10;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row_item in report_rows %}
+                  <tr class="bg-white border-b border-slate-300 hover:bg-slate-50 even:bg-slate-50">
+                    <td class="px-3 py-2 border border-slate-300 text-center whitespace-nowrap sticky left-0 z-0 bg-white group-hover:bg-slate-50 even:bg-slate-50">
+                      {{ row_item.date|date:"d/m/Y" }}
+                    </td>
+                    {% for value in row_item.values %}
+                      <td class="px-3 py-2 border border-slate-300 text-right whitespace-nowrap">
+                        {{ value|floatformat:2 }}
+                      </td>
+                    {% endfor %}
+                    <td class="px-3 py-2 border border-slate-300 text-right font-semibold whitespace-nowrap sticky" style="right:240px; background:#e0edfa; min-width:100px; z-index:5;">
+                      {{ row_item.steam_calc.mee|floatformat:2 }}
+                    </td>
+                    <td class="px-3 py-2 border border-slate-300 text-right font-semibold whitespace-nowrap sticky" style="right:120px; background:#e0edfa; min-width:100px; z-index:5;">
+                      {{ row_item.steam_calc.plant|floatformat:2 }}
+                    </td>
+                    <td class="px-3 py-2 border border-slate-300 text-right font-semibold whitespace-nowrap sticky" style="right:0; background:#e0edfa; min-width:100px; z-index:6;">
+                      {{ row_item.steam_calc.total|floatformat:2 }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-center text-slate-600 italic py-8">
+            <p>No consumption data to display.</p>
+            <p class="text-sm">(At least two days of readings are required for calculations)</p>
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

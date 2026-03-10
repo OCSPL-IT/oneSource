@@ -1,0 +1,140 @@
+{% extends 'hr/HRone_base.html' %}
+
+{% block HRone_title %}
+<title>Short Leave Detail – {{ status }}</title>
+{% endblock HRone_title %}
+
+
+{% block HRone_report_header %}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold text-gray-600">Short Leave Detail</h2>
+    <h2 class="text-xl font-bold text-gray-600">Status: {{ status|title }}</h2>
+</div>
+{% endblock HRone_report_header %}
+
+
+
+{% block HRone_report_content %}
+<div class="container mx-auto px-4 py-6">
+
+  <!-- Filter Form -->
+  <form method="get" class="flex flex-wrap gap-4 justify-center items-end mb-6 bg-white p-4 shadow-md rounded-lg">
+    <!-- Month -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Month</label>
+      <select name="month" class="text-xs border border-gray-300 rounded px-3 py-2">
+        {% for num, name in months %}
+        <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Year -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Year</label>
+      <select name="year" class="text-xs border border-gray-300 rounded px-3 py-2">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Company -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Company</label>
+        <select name="company" class="text-xs border border-gray-300 rounded px-3 py-2">
+        <option value="">All</option>
+        {% for c in company_list %}
+        <option value="{{ c }}" {% if c == selected_company %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+        </select>
+    </div>
+  
+    <!-- Branch -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700">Branch</label>
+        <select name="branch" class="text-xs border border-gray-300 rounded px-3 py-2">
+        <option value="">All</option>
+        {% for b in branch_list %}
+        <option value="{{ b }}" {% if b == selected_branch %}selected{% endif %}>{{ b }}</option>
+        {% endfor %}
+        </select>
+    </div>
+
+    <div class="flex gap-2 pt-1">
+      <button type="submit" class="text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Filter</button>
+      <a href="{% url 'short_leave_detail' status %}" class="text-xs bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Clear</a>
+      <a href="{% url 'download_short_leave_excel' status %}?month={{ selected_month }}&year={{ selected_year }}&company={{ selected_company }}&branch={{ selected_branch }}">
+        <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+      </a>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+    <table class="min-w-full text-xs divide-y divide-gray-200">
+      <thead class="bg-gray-100 text-left">
+        <tr>
+          <th class="px-4 py-2 whitespace-nowrap">Emp Code</th>
+          <th class="px-4 py-2">Name</th>
+          <th class="px-4 py-2">Status</th>
+          <th class="px-4 py-2">Company</th>
+          <th class="px-4 py-2">Branch</th>
+          <th class="px-4 py-2">Department</th>
+          <th class="px-4 py-2">Designation</th>
+          <th class="px-4 py-2 whitespace-nowrap">Request Type</th>
+          <th class="px-4 py-2 whitespace-nowrap">Attendance Date</th>
+          <th class="px-4 py-2">Day</th>
+          <th class="px-4 py-2 whitespace-nowrap">Shift Code</th>
+          <th class="px-4 py-2 whitespace-nowrap">Shift Timings</th>
+          <th class="px-4 py-2 whitespace-nowrap">Punch In</th>
+          <th class="px-4 py-2 whitespace-nowrap">Punch Out</th>
+          <th class="px-4 py-2 whitespace-nowrap">Actual IO</th>
+          <th class="px-4 py-2 whitespace-nowrap">Remarks</th>
+          <th class="px-4 py-2 whitespace-nowrap">Requested By</th>
+          <th class="px-4 py-2 whitespace-nowrap">Requested On</th>
+          <th class="px-4 py-2 whitespace-nowrap">Request Status</th>
+          <th class="px-4 py-2 whitespace-nowrap">Pending With</th>
+          <th class="px-4 py-2 whitespace-nowrap">Approved By</th>
+          <th class="px-4 py-2 whitespace-nowrap">Approved On</th>
+          <th class="px-4 py-2 whitespace-nowrap">Approver Remark</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for s in short_leaves %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2">{{ s.employee_code }}</td>
+          <td class="px-4 py-2">{{ s.full_name }}</td>
+          <td class="px-4 py-2">{{ s.employment_status }}</td>
+          <td class="px-4 py-2">{{ s.company }}</td>
+          <td class="px-4 py-2">{{ s.branch }}</td>
+          <td class="px-4 py-2">{{ s.department }}</td>
+          <td class="px-4 py-2">{{ s.designation }}</td>
+          <td class="px-4 py-2">{{ s.request_type }}</td>
+          <td class="px-4 py-2">{{ s.attendance_date|date:"d-m-Y" }}</td>
+          <td class="px-4 py-2">{{ s.attendance_day }}</td>
+          <td class="px-4 py-2">{{ s.shift_code }}</td>
+          <td class="px-4 py-2">{{ s.shift_timings }}</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ s.punch_in_timing }} ({{ s.punch_in_date }})</td>
+          <td class="px-4 py-2 whitespace-nowrap">{{ s.punch_out_timing }} ({{ s.punch_out_date }})</td>
+          <td class="px-4 py-2">{{ s.actual_punch_in_out }}</td>
+          <td class="px-4 py-2">{{ s.remarks }}</td>
+          <td class="px-4 py-2">{{ s.request_by }}</td>
+          <td class="px-4 py-2">{{ s.request_on }}</td>
+          <td class="px-4 py-2">{{ s.request_status }}</td>
+          <td class="px-4 py-2">{{ s.pending_with }}</td>
+          <td class="px-4 py-2">{{ s.approved_by }}</td>
+          <td class="px-4 py-2">{{ s.approved_on }}</td>
+          <td class="px-4 py-2">{{ s.approver_remark }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="22" class="text-center text-gray-500 py-4">No records found for this filter.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock HRone_report_content %}

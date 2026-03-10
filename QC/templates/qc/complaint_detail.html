@@ -1,0 +1,51 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Complaint Details – QC Project{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root { --brand:#3b82f6; --brand-dark:#1e40af; --bg:#f5f7fb; --surface:#fff; --border:#e5e7eb; --text:#0f172a; }
+  .cc-view{background:var(--bg);font-family:Inter,sans-serif;color:var(--text);}
+  .wrap{max-width:900px;margin:30px auto;background:var(--surface);border:1px solid var(--border);
+        border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.06);padding:24px 32px;}
+  h2{color:var(--brand-dark);margin-top:0}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:12px}
+  .field label{font-weight:600;color:var(--brand-dark)}
+  .field div{padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#f9fafb}
+  .long{grid-column:1/-1}
+  .btn{display:inline-block;margin-top:18px;padding:8px 14px;background:var(--brand);color:#fff;
+       border-radius:8px;text-decoration:none;font-weight:600}
+  .btn:hover{background:var(--brand-dark)}
+</style>
+
+<div class="cc-view">
+  <div class="wrap">
+    <h2>Customer Complaint – Details</h2>
+
+    <div class="grid">
+      <div class="field"><label>Complaint No</label><div>{{ c.complaint_no }}</div></div>
+      <div class="field"><label>Date</label><div>{{ c.complaint_date|date:"d-m-Y" }}</div></div>
+      <div class="field"><label>Status</label><div>{{ c.status }}</div></div>
+
+      <div class="field"><label>Alfa Product</label><div>{{ c.product_name }}</div></div>
+      <div class="field"><label>Finished Product</label><div>{{ finished_display|default:"—" }}</div></div>
+
+      <div class="field"><label>Customer</label><div>{{ c.customer_name }}</div></div>
+      <div class="field"><label>Complaint Type</label><div>{{ c.complaint_type }}</div></div>
+
+      <div class="field long"><label>Nature of Complaint</label><div>{{ c.nature_of_complaint|default:"—" }}</div></div>
+      <div class="field long"><label>Investigation / Root Cause Analysis</label><div>{{ c.investigation|default:"—" }}</div></div>
+      <div class="field long"><label>Corrective Action</label><div>{{ c.corrective_action|default:"—" }}</div></div>
+      <div class="field long"><label>Preventive Action</label><div>{{ c.preventive_action|default:"—" }}</div></div>
+
+      <div class="field"><label>Created</label><div>{{ c.created_at|date:"d-m-Y H:i" }}</div></div>
+      <div class="field"><label>Updated</label><div>{{ c.updated_at|date:"d-m-Y H:i" }}</div></div>
+    </div>
+
+    <a href="{% url 'qc:complaint_list' %}" class="btn">← Back to Register</a>
+  </div>
+</div>
+{% endblock maincontent %}

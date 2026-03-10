@@ -1,0 +1,1029 @@
+{% extends "main/index.html" %}
+{% load inr_format %}
+
+{% block title %}Target Detail{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-[calc(100vh-6rem)] bg-slate-50">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- =========================================================
+      HEADER (Sticky)
+    ========================================================== -->
+    <div class="sticky top-0 z-40 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 bg-slate-50/90 backdrop-blur border-b border-slate-200">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div class="space-y-1">
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Target Detail</h1>
+
+          <div class="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white border border-slate-200 font-medium text-slate-700">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              {{ target.week_start|date:"d M" }} - {{ target.week_end|date:"d M, Y" }}
+            </span>
+
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-white border border-slate-200 font-medium text-slate-700">
+              <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+              {{ target.company_group|default:"ALL Groups" }}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <a href="{% url 'accounts:payment_target_list' %}"
+             class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+            Back
+          </a>
+
+          <a href="{% url 'accounts:payment_target_detail_excel' target.pk %}"
+             data-skip-loader="1"
+             class="inline-flex items-center px-4 py-2 border border-emerald-200 shadow-sm text-sm font-medium rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 3v12m0 0l4-4m-4 4l-4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+            </svg>
+            Download Excel
+          </a>
+
+          <a href="{% url 'accounts:payment_target_edit' target.pk %}"
+             class="inline-flex items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+            Edit
+          </a>
+
+          <a href="{% url 'accounts:payment_target_select_bills' target.pk %}"
+             class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            Select Bills
+          </a>
+        </div>
+      </div>
+
+      <!-- Stats Grid (compact + sticky header area) -->
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+        <!-- 1) Outstanding (Actual) -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <dt class="truncate text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Outstanding (Actual)</dt>
+          <dd class="mt-1.5 text-xl font-bold text-slate-900">{{ target_totals.outstanding|default:0|inr }}</dd>
+          <div class="absolute top-3 right-3 p-2 bg-orange-50 rounded-lg">
+            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 2) Total Targeted -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <dt class="truncate text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Targeted</dt>
+          <dd class="mt-1.5 text-xl font-bold text-slate-900">{{ target_totals.expected|default:0|inr }}</dd>
+          <div class="absolute top-3 right-3 p-2 bg-slate-50 rounded-lg">
+            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- 3) Received Against Target -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <dt class="truncate text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Received Against Target</dt>
+          <dd class="mt-1.5 text-xl font-bold text-emerald-600">{{ target_totals.received|default:0|inr }}</dd>
+          <div class="absolute top-3 right-3 p-2 bg-emerald-50 rounded-lg">
+            <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-500">
+            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200">
+              Based on selected invoices
+            </span>
+          </div>
+        </div>
+
+        <!-- 4) Target Balance -->
+        <div class="bg-white rounded-xl border border-rose-100 p-4 shadow-sm relative overflow-hidden ring-1 ring-rose-500/10">
+          <dt class="truncate text-[11px] font-semibold text-rose-600 uppercase tracking-wider">Target Balance</dt>
+          <dd class="mt-1.5 text-xl font-bold text-rose-600">{{ target_totals.balance|default:0|inr }}</dd>
+          <div class="absolute top-3 right-3 p-2 bg-rose-50 rounded-lg">
+            <svg class="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Notes (compact, collapsible) -->
+      {% if target.notes %}
+      <details class="mt-4 group">
+        <summary class="cursor-pointer select-none flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            <span class="text-sm font-bold text-amber-900">Notes</span>
+            <span class="text-xs text-amber-700">(click to view)</span>
+          </div>
+          <svg class="w-4 h-4 text-amber-700 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </summary>
+        <div class="mt-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 whitespace-pre-line">
+          {{ target.notes }}
+        </div>
+      </details>
+      {% endif %}
+    </div>
+
+    <!-- =========================================================
+      TABS + TABLES AREA (No-page-scroll layout)
+      - Uses a fixed-height content area + internal scrolling
+      - Each tab has its own table pagination (frontend-only)
+    ========================================================== -->
+    <div class="mt-6">
+      <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <!-- Tabs bar -->
+        <div class="px-4 sm:px-6 py-3 border-b border-slate-200 bg-white">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div class="flex flex-wrap gap-2">
+              <button type="button"
+                      class="js-tab-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors bg-indigo-600 text-white border-indigo-600"
+                      data-tab="tab-against">
+                Against Target
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-white/15">
+                  {{ lines_with_received|length }}
+                </span>
+              </button>
+
+              <button type="button"
+                      class="js-tab-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      data-tab="tab-receipts">
+                All Receipts
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">
+                  {{ week_receipts|length|default:0 }}
+                </span>
+              </button>
+
+              <button type="button"
+                      class="js-tab-btn inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold border transition-colors bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                      data-tab="tab-receivable">
+                Receivable Entry (Cheque / PDC)
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700">
+                  {{ receivable_entries|length|default:0 }}
+                </span>
+              </button>
+            </div>
+
+            <!-- Table controls (per-tab; JS swaps targets) -->
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+              <div class="relative">
+                <input id="tabSearch"
+                       type="text"
+                       placeholder="Search in current tab..."
+                       class="w-full sm:w-72 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <div class="pointer-events-none absolute right-3 top-2.5 text-slate-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 103.5 10.5a7.5 7.5 0 0013.15 6.15z"></path>
+                  </svg>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Rows</label>
+                <select id="tabPageSize"
+                        class="rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="10">10</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Optional summary chips that update per tab -->
+          <div class="mt-3 flex flex-wrap items-center gap-2">
+            <span id="tabMeta"
+                  class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700">
+              Showing <span class="font-mono tabular-nums" id="metaShown">0</span> of
+              <span class="font-mono tabular-nums" id="metaTotal">0</span>
+              rows
+            </span>
+
+            <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700">
+              Tab:
+              <span id="metaTabName" class="font-bold text-slate-900">Against Target</span>
+            </span>
+
+            <!-- Keeps your week receipts total visible without taking vertical space -->
+            <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-semibold text-emerald-800">
+              Week Total Rcvd:
+              <span class="font-mono tabular-nums">{{ week_receipts_totals.received_total|default:0|inr }}</span>
+            </span>
+
+            <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg border border-indigo-200 bg-indigo-50 text-xs font-semibold text-indigo-800">
+              PDC Total:
+              <span class="font-mono tabular-nums">{{ receivable_entries_totals.pdc_total|default:0|inr }}</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Content area: fixed height; internal scroll only -->
+        <div class="js-tabs-host grid"
+             style="grid-template-rows: 1fr auto; height: clamp(420px, calc(100vh - 340px), 720px);">
+
+          <!-- ===================== TAB PANELS ===================== -->
+          <div class="relative min-h-0">
+            <!-- TAB 1: Against -->
+            <section id="tab-against"
+                     class="js-tab-panel absolute inset-0 min-h-0 flex flex-col">
+              <div class="px-4 sm:px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Against Target</h2>
+                  <p class="text-xs text-slate-500">Selected bills and matched receipts from bank query.</p>
+                </div>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-slate-800">
+                  {{ lines_with_received|length }} Records
+                </span>
+              </div>
+
+              <div class="min-h-0 overflow-auto">
+                <table class="min-w-full divide-y divide-slate-200 js-pag-table" data-table="against">
+                  <thead class="bg-white sticky top-0 z-10">
+                    <tr class="text-[11px]">
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Party / Invoice</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-center font-bold text-slate-500 uppercase tracking-wider">Due Date</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-center font-bold text-slate-500 uppercase tracking-wider">Pay Terms</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-center font-bold text-slate-500 uppercase tracking-wider">OverDue</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-right font-bold text-slate-500 uppercase tracking-wider">Outstanding</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-right font-bold text-slate-500 uppercase tracking-wider">Target Exp.</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-right font-bold text-slate-500 uppercase tracking-wider">Received</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-right font-bold text-slate-500 uppercase tracking-wider">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-slate-200">
+                    {% for row in lines_with_received %}
+                    {% with l=row.line %}
+                    <tr class="hover:bg-slate-50 transition-colors js-terms-row js-pag-row"
+                        data-scope="against"
+                        data-due="{{ l.due_date|date:'Y-m-d'|default:'' }}"
+                        data-trans="{{ l.invoice_date|date:'Y-m-d'|default:'' }}"
+                        data-terms="{{ row.pay_terms_days|default_if_none:'' }}"
+                        data-overdue="{{ row.overdue_days|default_if_none:'' }}"
+                        data-search="{{ l.party_name|default:'' }} {{ l.party_code|default:'' }} {{ l.invoice_no|default:'' }} {{ l.due_date|default:'' }} {{ l.outstanding_amount|default:'' }} {{ l.expected_amount|default:'' }} {{ row.received_amount|default:'' }} {{ row.balance_amount|default:'' }}">
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <div class="text-sm font-semibold text-slate-900">{{ l.party_name|default:"-" }}</div>
+                        <div class="text-xs text-slate-500 flex gap-2">
+                          <span>{{ l.party_code|default:"-" }}</span>
+                          <span class="text-slate-300">|</span>
+                          <span class="font-mono">{{ l.invoice_no|default:"-" }}</span>
+                        </div>
+
+                        {% if request.GET.dbg == "1" %}
+                          <div class="mt-1 text-[11px] text-slate-500 font-mono">
+                            recv_raw={{ row.received_amount|default:0 }}
+                            key={{ l.party_code|default:"" }}||{{ l.invoice_no|default:"" }}
+                          </div>
+                        {% endif %}
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-center text-sm text-slate-600">
+                        {{ l.due_date|default:"-" }}
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-center text-sm">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono">
+                          <span class="js-terms-val tabular-nums">0</span>d
+                        </span>
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-center text-sm">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md border font-mono js-od-pill bg-emerald-50 text-emerald-700 border-emerald-200">
+                          <span class="js-od-val tabular-nums">0</span>d
+                        </span>
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-semibold text-slate-900 font-mono">
+                        {{ l.outstanding_amount|default:0|inr }}
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-bold text-indigo-600 font-mono">
+                        {{ l.expected_amount|default:0|inr }}
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-bold text-emerald-600 font-mono">
+                        {{ row.received_amount|default:0|inr }}
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-bold text-rose-600 font-mono">
+                        {{ row.balance_amount|default:0|inr }}
+                      </td>
+                    </tr>
+                    {% endwith %}
+                    {% empty %}
+                    <tr class="js-pag-row" data-search="no bills mapped">
+                      <td colspan="8" class="px-6 py-12 text-center">
+                        <div class="mx-auto h-12 w-12 text-slate-300">
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                          </svg>
+                        </div>
+                        <p class="mt-2 text-sm font-semibold text-slate-900">No bills mapped</p>
+                        <p class="mt-1 text-sm text-slate-500">Click "Select Bills" to add items to this target.</p>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- TAB 2: Receipts -->
+            <section id="tab-receipts"
+                     class="js-tab-panel absolute inset-0 min-h-0 flex flex-col hidden">
+              <div class="px-4 sm:px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">All Receipts in Week</h2>
+                  <p class="text-xs text-slate-500">Receipts matched by date, including unselected parties.</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <div class="px-3 py-1 bg-white border border-slate-200 rounded-md shadow-sm">
+                    <span class="text-slate-500 text-[11px] uppercase mr-2 font-semibold">Total Rcvd</span>
+                    <span class="font-bold text-emerald-700 font-mono">{{ week_receipts_totals.received_total|default:0|inr }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="min-h-0 overflow-auto">
+                <table class="min-w-full divide-y divide-slate-200 js-pag-table" data-table="receipts">
+                  <thead class="bg-white sticky top-0 z-10">
+                    <tr class="text-[11px]">
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Company</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Party</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Invoice No</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-center font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                      <th scope="col" class="px-4 sm:px-6 py-3 text-right font-bold text-slate-500 uppercase tracking-wider">Received</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-slate-200">
+                    {% for r in week_receipts %}
+                    <tr class="hover:bg-slate-50 transition-colors js-pag-row"
+                        data-search="{{ r.company_name|default:'' }} {{ r.party_name|default:'' }} {{ r.party_code|default:'' }} {{ r.invoice_no|default:'' }} {{ r.trans_date|default:'' }} {{ r.paid_amount|default:'' }}">
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-sm text-slate-600">{{ r.company_name|default:"-" }}</td>
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap">
+                        <div class="text-sm font-semibold text-slate-900">{{ r.party_name|default:"-" }}</div>
+                        <div class="text-xs text-slate-500">{{ r.party_code|default:"-" }}</div>
+                      </td>
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-sm text-slate-600 font-mono">{{ r.invoice_no|default:"-" }}</td>
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-center text-sm text-slate-600">{{ r.trans_date|default:"-" }}</td>
+                      <td class="px-4 sm:px-6 py-3.5 whitespace-nowrap text-right text-sm font-bold text-emerald-600 font-mono">{{ r.paid_amount|default:0|inr }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr class="js-pag-row" data-search="no receipts found">
+                      <td colspan="5" class="px-6 py-8 text-center text-sm text-slate-500">
+                        No receipts found for this period.
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- TAB 3: Receivable Entry -->
+            <section id="tab-receivable"
+                     class="js-tab-panel absolute inset-0 min-h-0 flex flex-col hidden">
+              <div class="px-4 sm:px-6 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div>
+                  <h2 class="text-sm font-bold text-slate-900">Receivable Entry (Cheque / PDC)</h2>
+                  <p class="text-xs text-slate-500">Taken from application receivable entry. ERP receipt will reflect later; until then Receipt No/Date stays blank.</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <div class="px-3 py-1 bg-white border border-slate-200 rounded-md shadow-sm">
+                    <span class="text-slate-500 text-[11px] uppercase mr-2 font-semibold">Total</span>
+                    <span class="font-bold text-slate-900 font-mono">{{ receivable_entries_totals.total|default:0|inr }}</span>
+                  </div>
+                  <div class="px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-md shadow-sm">
+                    <span class="text-indigo-600 text-[11px] uppercase mr-2 font-semibold">PDC</span>
+                    <span class="font-bold text-indigo-700 font-mono">{{ receivable_entries_totals.pdc_total|default:0|inr }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="min-h-0 overflow-auto">
+                <table class="min-w-full divide-y divide-slate-200 js-pag-table" data-table="receivable">
+                  <thead class="bg-white sticky top-0 z-10">
+                    <tr class="text-[11px]">
+                      <th class="px-4 sm:px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Party / Invoice</th>
+                      <th class="px-4 sm:px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Cheque Details</th>
+                      <th class="px-4 sm:px-6 py-3 text-left font-bold text-slate-500 uppercase tracking-wider">Receipt (ERP)</th>
+                      <th class="px-4 sm:px-6 py-3 text-center font-bold text-slate-500 uppercase tracking-wider">PDC</th>
+                      <th class="px-4 sm:px-6 py-3 text-right font-bold text-slate-500 uppercase tracking-wider">Amount</th>
+                    </tr>
+                  </thead>
+
+                  <tbody class="bg-white divide-y divide-slate-200">
+                    {% for r in receivable_entries %}
+                    <tr class="hover:bg-slate-50 transition-colors js-terms-row js-pag-row"
+                        data-scope="receivable"
+                        data-due="{{ r.due_date|date:'Y-m-d'|default:'' }}"
+                        data-trans="{{ r.invoice_date|date:'Y-m-d'|default:'' }}"
+                        data-terms="{{ r.pay_terms_days|default_if_none:'' }}"
+                        data-overdue="{{ r.overdue_days|default_if_none:'' }}"
+                        data-search="{{ r.party_name|default:'' }} {{ r.party_code|default:'' }} {{ r.invoice_no|default:'' }} {{ r.mode|default:'' }} {{ r.cheque_no|default:'' }} {{ r.cheque_date|default:'' }} {{ r.receipt_no|default:'' }} {{ r.receipt_date|default:'' }} {{ r.amount|default:'' }}">
+                      <td class="px-4 sm:px-6 py-3.5">
+                        <div class="text-sm font-semibold text-slate-900">{{ r.party_name|default:"-" }}</div>
+                        <div class="text-xs text-slate-500">{{ r.party_code|default:"-" }}</div>
+
+                        <div class="mt-2 text-xs text-slate-600">
+                          <div><span class="text-slate-400">Invoice:</span> <span class="font-mono">{{ r.invoice_no|default:"-" }}</span></div>
+
+                          <div class="flex flex-wrap gap-2 mt-0.5">
+                            <span><span class="text-slate-400">Inv Dt:</span> {{ r.invoice_date|date:"d-m-Y"|default:"-" }}</span>
+                            <span class="text-slate-300">|</span>
+                            <span><span class="text-slate-400">Due:</span> {{ r.due_date|date:"d-m-Y"|default:"-" }}</span>
+                          </div>
+
+                          <div class="flex flex-wrap items-center gap-2 mt-2">
+                            <span class="text-slate-400">Pay:</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 font-mono">
+                              <span class="js-terms-val tabular-nums">0</span>d
+                            </span>
+
+                            <span class="text-slate-300">|</span>
+                            <span class="text-slate-400">OD:</span>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-md border font-mono js-od-pill bg-emerald-50 text-emerald-700 border-emerald-200">
+                              <span class="js-od-val tabular-nums">0</span>d
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5">
+                        <div class="text-sm text-slate-900">{{ r.mode|default:"-" }}</div>
+                        <div class="text-xs text-slate-500 font-mono mt-0.5">
+                          {% if r.cheque_no %}#{{ r.cheque_no }}{% else %}-{% endif %}
+                          {% if r.cheque_date %}
+                            <span class="text-slate-300 mx-1">|</span>{{ r.cheque_date|date:"d-m-Y" }}
+                          {% endif %}
+                        </div>
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5">
+                        {% if r.erp_matched or r.receipt_no or r.receipt_date %}
+                          <div class="text-sm text-slate-900 font-mono">{{ r.receipt_no|default:"-" }}</div>
+                          <div class="text-xs text-slate-500">{{ r.receipt_date|default:"" }}</div>
+
+                          {% if r.erp_matched %}
+                            <div class="text-xs text-emerald-700 font-mono mt-1">
+                              Value: {{ r.erp_receipt_value|default:0|inr }}
+                            </div>
+                          {% endif %}
+
+                          {% if r.erp_receipts and r.erp_receipts|length > 1 %}
+                            <details class="mt-1">
+                              <summary class="cursor-pointer text-xs text-indigo-600 hover:text-indigo-700">
+                                View {{ r.erp_receipts|length }} receipts
+                              </summary>
+                              <div class="mt-2 space-y-1">
+                                {% for e in r.erp_receipts %}
+                                  <div class="text-[11px] text-slate-600 font-mono">
+                                    {{ e.receipt_no|default:"-" }}
+                                    {% if e.trans_date %}
+                                      <span class="text-slate-300 mx-1">|</span>{{ e.trans_date }}
+                                    {% endif %}
+                                    <span class="text-slate-300 mx-1">|</span>{{ e.paid_amount|default:0|inr }}
+                                  </div>
+                                {% endfor %}
+                              </div>
+                            </details>
+                          {% endif %}
+                        {% else %}
+                          <div class="text-sm text-slate-400">(Blank until ERP entry)</div>
+                        {% endif %}
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 text-center">
+                        {% if r.is_pdc %}
+                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">PDC</span>
+                          <div class="text-xs text-indigo-600 mt-1">{{ r.pdc_date|date:"d-m-Y" }}</div>
+                        {% else %}
+                          <span class="text-slate-300">-</span>
+                        {% endif %}
+                      </td>
+
+                      <td class="px-4 sm:px-6 py-3.5 text-right text-sm font-bold text-emerald-600 font-mono">
+                        {{ r.amount|default:0|inr }}
+                      </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="js-pag-row" data-search="no receivable cheque pdc entries">
+                      <td colspan="5" class="px-6 py-8 text-center text-sm text-slate-500">
+                        No receivable cheque/PDC entries found for this week.
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <!-- ===================== PAGINATION BAR (frontend-only) ===================== -->
+          <div class="px-4 sm:px-6 py-3 border-t border-slate-200 bg-white">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div class="text-xs text-slate-600">
+                <span class="font-semibold text-slate-900">Page</span>
+                <span class="font-mono tabular-nums" id="pgPage">1</span>
+                <span class="text-slate-400 mx-1">/</span>
+                <span class="font-mono tabular-nums" id="pgPages">1</span>
+                <span class="text-slate-400 mx-2">|</span>
+                <span class="font-semibold text-slate-900">Rows</span>
+                <span class="font-mono tabular-nums" id="pgFrom">0</span>-<span class="font-mono tabular-nums" id="pgTo">0</span>
+                <span class="text-slate-400 mx-1">of</span>
+                <span class="font-mono tabular-nums" id="pgTotal">0</span>
+              </div>
+
+              <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="pgFirst"
+                        class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                  First
+                </button>
+                <button type="button" id="pgPrev"
+                        class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                  Prev
+                </button>
+
+                <div id="pgNums" class="flex items-center gap-1"></div>
+
+                <button type="button" id="pgNext"
+                        class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                  Next
+                </button>
+                <button type="button" id="pgLast"
+                        class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                  Last
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {% if request.GET.dbg == "1" %}
+      <div class="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-700">
+        <div class="font-bold text-slate-900">Debug</div>
+        <div class="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>Received Total (ctx): <span class="font-mono font-bold text-emerald-700">{{ target_totals.received|default:0 }}</span></div>
+          <div>Lines With Received: <span class="font-mono font-bold">{{ lines_with_received|length }}</span></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Loader unchanged -->
+<div id="pageLoader"
+     class="fixed inset-0 z-[9999] hidden items-center justify-center bg-white/80 backdrop-blur-md transition-opacity duration-300">
+  <div class="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white px-10 py-8 shadow-2xl">
+    <div class="relative flex items-center justify-center">
+      <div class="h-20 w-20 rounded-full border-[6px] border-slate-100 border-t-indigo-600 animate-spin"></div>
+      <div class="absolute flex flex-col items-center justify-center">
+        <span id="pageLoadPct" class="text-lg font-black text-indigo-600 tabular-nums">0%</span>
+      </div>
+    </div>
+    <div class="text-center">
+      <div class="text-[11px] font-black uppercase tracking-widest text-slate-800">Processing Analytics</div>
+      <div id="loaderStatusText" class="text-[10px] font-bold text-slate-400 mt-1">Preparing target insights...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #pageLoader.is-active { display: flex !important; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+</style>
+
+<script>
+(function () {
+  // ===============================================================
+  // Loader (skip downloads + auto-close safety) - unchanged
+  // ===============================================================
+  const pageLoader = document.getElementById("pageLoader");
+  const pctDisplay = document.getElementById("pageLoadPct");
+  let progressInterval = null;
+  let autoCloseTimer = null;
+
+  function showProcessingLoader() {
+    if (!pageLoader) return;
+    pageLoader.classList.add("is-active");
+
+    let progress = 0;
+    if (progressInterval) clearInterval(progressInterval);
+    if (autoCloseTimer) clearTimeout(autoCloseTimer);
+
+    progressInterval = setInterval(() => {
+      if (progress < 95) {
+        let increment = progress < 40 ? (Math.random() * 10) : (Math.random() * 2);
+        progress += increment;
+        if (progress > 95) progress = 95;
+        if (pctDisplay) pctDisplay.innerText = Math.floor(progress) + "%";
+      }
+    }, 350);
+
+    autoCloseTimer = setTimeout(hideProcessingLoader, 2500);
+  }
+
+  function hideProcessingLoader() {
+    if (!pageLoader) return;
+    pageLoader.classList.remove("is-active");
+    if (progressInterval) clearInterval(progressInterval);
+    if (autoCloseTimer) clearTimeout(autoCloseTimer);
+    progressInterval = null;
+    autoCloseTimer = null;
+    if (pctDisplay) pctDisplay.innerText = "0%";
+  }
+
+  function isDownloadLink(a) {
+    if (!a) return false;
+    if (a.hasAttribute("data-skip-loader")) return true;
+    if (a.hasAttribute("download")) return true;
+
+    const href = (a.getAttribute("href") || "").toLowerCase();
+    if (href.endsWith(".xlsx") || href.endsWith(".xls") || href.endsWith(".csv") || href.endsWith(".pdf")) return true;
+    if (href.includes("excel") || href.includes("export") || href.includes("download")) return true;
+
+    return false;
+  }
+
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (!a) return;
+
+    const href = a.getAttribute("href") || "";
+    if (!href || href.startsWith("#") || href.startsWith("javascript:") || a.target) return;
+
+    if (isDownloadLink(a)) {
+      setTimeout(hideProcessingLoader, 300);
+      return;
+    }
+
+    showProcessingLoader();
+  });
+
+  window.addEventListener("beforeunload", () => showProcessingLoader());
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      setTimeout(() => {
+        if (pageLoader && pageLoader.classList.contains("is-active")) hideProcessingLoader();
+      }, 600);
+    }
+  });
+
+  // ===============================================================
+  // Pay Terms + Overdue Fallback (unchanged)
+  // ===============================================================
+  function parseYmd(s) {
+    if (!s) return null;
+    const m = String(s).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    const y = Number(m[1]), mo = Number(m[2]) - 1, d = Number(m[3]);
+    const dt = new Date(y, mo, d);
+    return Number.isFinite(dt.getTime()) ? dt : null;
+  }
+
+  function daysBetween(a, b) {
+    if (!a || !b) return 0;
+    const da = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+    const db = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+    const ms = db.getTime() - da.getTime();
+    const d = Math.round(ms / 86400000);
+    return Number.isFinite(d) ? d : 0;
+  }
+
+  function toIntOrNull(v) {
+    if (v === null || v === undefined) return null;
+    const s = String(v).trim();
+    if (s === "") return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? Math.trunc(n) : null;
+  }
+
+  function applyTermsOd(row, terms, overdue) {
+    row.setAttribute("data-terms", String(terms));
+    row.setAttribute("data-overdue", String(overdue));
+
+    row.querySelectorAll(".js-terms-val").forEach(el => el.textContent = String(terms));
+    row.querySelectorAll(".js-od-val").forEach(el => el.textContent = String(overdue));
+
+    row.querySelectorAll(".js-od-pill").forEach(pill => {
+      if (overdue > 0) {
+        pill.classList.remove("bg-emerald-50", "text-emerald-700", "border-emerald-200");
+        pill.classList.add("bg-rose-50", "text-rose-700", "border-rose-200");
+      } else {
+        pill.classList.remove("bg-rose-50", "text-rose-700", "border-rose-200");
+        pill.classList.add("bg-emerald-50", "text-emerald-700", "border-emerald-200");
+      }
+    });
+  }
+
+  function computeFromDates(row) {
+    const due = parseYmd(row.getAttribute("data-due"));
+    const trans = parseYmd(row.getAttribute("data-trans"));
+
+    let terms = 0;
+    if (due && trans) terms = Math.max(0, daysBetween(trans, due));
+
+    const today = new Date();
+    const today0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let overdue = 0;
+    if (due) overdue = Math.max(0, daysBetween(due, today0));
+
+    return { terms, overdue };
+  }
+
+  function initTermsOverdue() {
+    document.querySelectorAll(".js-terms-row").forEach(row => {
+      const backendTerms = toIntOrNull(row.getAttribute("data-terms"));
+      const backendOd = toIntOrNull(row.getAttribute("data-overdue"));
+
+      const calc = computeFromDates(row);
+
+      let terms = (backendTerms !== null) ? Math.max(0, backendTerms) : calc.terms;
+      let overdue = (backendOd !== null) ? Math.max(0, backendOd) : calc.overdue;
+
+      if (terms === 0 && calc.terms > 0) terms = calc.terms;
+      if (overdue === 0 && calc.overdue > 0) overdue = calc.overdue;
+
+      applyTermsOd(row, terms, overdue);
+    });
+  }
+
+  initTermsOverdue();
+
+  // ===============================================================
+  // Tabs + Frontend Pagination + Search (NO backend changes)
+  // - Keeps page from scrolling by using internal scrolling container
+  // - Paginates each tab independently using DOM rows
+  // ===============================================================
+  const tabButtons = Array.from(document.querySelectorAll(".js-tab-btn"));
+  const tabPanels  = Array.from(document.querySelectorAll(".js-tab-panel"));
+  const tabSearch  = document.getElementById("tabSearch");
+  const pageSizeEl = document.getElementById("tabPageSize");
+
+  const metaShown  = document.getElementById("metaShown");
+  const metaTotal  = document.getElementById("metaTotal");
+  const metaTabName= document.getElementById("metaTabName");
+
+  const pgFirst = document.getElementById("pgFirst");
+  const pgPrev  = document.getElementById("pgPrev");
+  const pgNext  = document.getElementById("pgNext");
+  const pgLast  = document.getElementById("pgLast");
+  const pgNums  = document.getElementById("pgNums");
+
+  const pgPage  = document.getElementById("pgPage");
+  const pgPages = document.getElementById("pgPages");
+  const pgFrom  = document.getElementById("pgFrom");
+  const pgTo    = document.getElementById("pgTo");
+  const pgTotal = document.getElementById("pgTotal");
+
+  const TAB_NAME = {
+    "tab-against": "Against Target",
+    "tab-receipts": "All Receipts",
+    "tab-receivable": "Receivable Entry"
+  };
+
+  // state per tab
+  const state = {
+    activeTabId: "tab-against",
+    pageSize: Number(pageSizeEl?.value || 25),
+    search: "",
+    tab: {
+      "tab-against":   { page: 1 },
+      "tab-receipts":  { page: 1 },
+      "tab-receivable":{ page: 1 }
+    }
+  };
+
+  function getActivePanel() {
+    return document.getElementById(state.activeTabId);
+  }
+
+  function getActiveRows() {
+    const panel = getActivePanel();
+    if (!panel) return [];
+    // rows for pagination are any .js-pag-row inside that panel
+    return Array.from(panel.querySelectorAll(".js-pag-row"));
+  }
+
+  function norm(s) {
+    return String(s || "").toLowerCase().trim();
+  }
+
+  function isRowMatch(row, q) {
+    if (!q) return true;
+    const hay = norm(row.getAttribute("data-search") || row.textContent || "");
+    return hay.includes(q);
+  }
+
+  function getFilteredRows() {
+    const q = norm(state.search);
+    const rows = getActiveRows();
+    return rows.filter(r => isRowMatch(r, q));
+  }
+
+  function setRowVisible(row, yes) {
+    row.style.display = yes ? "" : "none";
+  }
+
+  function clamp(n, a, b) {
+    return Math.max(a, Math.min(b, n));
+  }
+
+  function buildPageButtons(cur, pages) {
+    pgNums.innerHTML = "";
+    if (pages <= 1) return;
+
+    // windowed numbers: show up to 7 buttons
+    const maxBtns = 7;
+    let start = Math.max(1, cur - Math.floor(maxBtns / 2));
+    let end = start + maxBtns - 1;
+    if (end > pages) {
+      end = pages;
+      start = Math.max(1, end - maxBtns + 1);
+    }
+
+    function mkBtn(label, page, active) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = active
+        ? "px-3 py-2 rounded-lg border border-indigo-600 bg-indigo-600 text-white text-sm font-bold"
+        : "px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-sm font-semibold";
+      b.textContent = label;
+      b.addEventListener("click", () => {
+        state.tab[state.activeTabId].page = page;
+        render();
+      });
+      return b;
+    }
+
+    if (start > 1) {
+      pgNums.appendChild(mkBtn("1", 1, cur === 1));
+      if (start > 2) {
+        const ell = document.createElement("span");
+        ell.className = "px-2 text-slate-400 text-sm";
+        ell.textContent = "…";
+        pgNums.appendChild(ell);
+      }
+    }
+
+    for (let p = start; p <= end; p++) {
+      pgNums.appendChild(mkBtn(String(p), p, p === cur));
+    }
+
+    if (end < pages) {
+      if (end < pages - 1) {
+        const ell = document.createElement("span");
+        ell.className = "px-2 text-slate-400 text-sm";
+        ell.textContent = "…";
+        pgNums.appendChild(ell);
+      }
+      pgNums.appendChild(mkBtn(String(pages), pages, cur === pages));
+    }
+  }
+
+  function render() {
+    const panelId = state.activeTabId;
+    const perTab = state.tab[panelId] || { page: 1 };
+
+    const allRows = getActiveRows();
+    const filtered = getFilteredRows();
+
+    const total = filtered.length;
+    const pageSize = state.pageSize;
+
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    perTab.page = clamp(perTab.page || 1, 1, pages);
+    state.tab[panelId] = perTab;
+
+    const startIdx = (perTab.page - 1) * pageSize;
+    const endIdxExcl = startIdx + pageSize;
+    const slice = filtered.slice(startIdx, endIdxExcl);
+
+    // Hide all rows, then show slice
+    allRows.forEach(r => setRowVisible(r, false));
+    slice.forEach(r => setRowVisible(r, true));
+
+    // Update meta + pagination bar
+    metaTabName.textContent = TAB_NAME[panelId] || "Tab";
+    metaShown.textContent = String(slice.length);
+    metaTotal.textContent = String(total);
+
+    pgPage.textContent = String(perTab.page);
+    pgPages.textContent = String(pages);
+    pgTotal.textContent = String(total);
+
+    const from = total === 0 ? 0 : (startIdx + 1);
+    const to = Math.min(total, endIdxExcl);
+    pgFrom.textContent = String(from);
+    pgTo.textContent = String(to);
+
+    pgFirst.disabled = perTab.page <= 1;
+    pgPrev.disabled  = perTab.page <= 1;
+    pgNext.disabled  = perTab.page >= pages;
+    pgLast.disabled  = perTab.page >= pages;
+
+    buildPageButtons(perTab.page, pages);
+
+    // Scroll active panel's scroller to top on page change for clarity
+    const scroller = panelId ? document.querySelector(`#${panelId} .overflow-auto`) : null;
+    if (scroller) scroller.scrollTop = 0;
+  }
+
+  function setActiveTab(tabId) {
+    state.activeTabId = tabId;
+
+    tabButtons.forEach(btn => {
+      const isActive = btn.getAttribute("data-tab") === tabId;
+      btn.classList.toggle("bg-indigo-600", isActive);
+      btn.classList.toggle("text-white", isActive);
+      btn.classList.toggle("border-indigo-600", isActive);
+
+      btn.classList.toggle("bg-white", !isActive);
+      btn.classList.toggle("text-slate-700", !isActive);
+      btn.classList.toggle("border-slate-200", !isActive);
+      btn.classList.toggle("hover:bg-slate-50", !isActive);
+    });
+
+    tabPanels.forEach(p => {
+      p.classList.toggle("hidden", p.id !== tabId);
+    });
+
+    // reset search input visual only (keep value, apply to new tab)
+    render();
+  }
+
+  // Wire tab clicks
+  tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tabId = btn.getAttribute("data-tab");
+      if (!tabId) return;
+      setActiveTab(tabId);
+    });
+  });
+
+  // Search and page size controls
+  if (tabSearch) {
+    tabSearch.addEventListener("input", () => {
+      state.search = tabSearch.value || "";
+      // when search changes, go back to page 1 for active tab
+      state.tab[state.activeTabId].page = 1;
+      render();
+    });
+  }
+
+  if (pageSizeEl) {
+    pageSizeEl.addEventListener("change", () => {
+      state.pageSize = Number(pageSizeEl.value || 25);
+      // reset to page 1 in active tab
+      state.tab[state.activeTabId].page = 1;
+      render();
+    });
+  }
+
+  // Pagination buttons
+  pgFirst.addEventListener("click", () => { state.tab[state.activeTabId].page = 1; render(); });
+  pgPrev.addEventListener("click", () => { state.tab[state.activeTabId].page -= 1; render(); });
+  pgNext.addEventListener("click", () => { state.tab[state.activeTabId].page += 1; render(); });
+  pgLast.addEventListener("click", () => {
+    // compute last page from filtered rows
+    const total = getFilteredRows().length;
+    const pages = Math.max(1, Math.ceil(total / state.pageSize));
+    state.tab[state.activeTabId].page = pages;
+    render();
+  });
+
+  // Initial render
+  setActiveTab(state.activeTabId);
+})();
+</script>
+{% endblock %}

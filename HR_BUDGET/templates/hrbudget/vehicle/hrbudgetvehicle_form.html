@@ -1,0 +1,396 @@
+{% extends 'hrbudget/HRBudget_base.html' %}
+
+{% block HRbudget_title %}
+<title>{% if form.instance.pk %}Edit{% else %}Add{% endif %} Vehicle Entry</title>
+{% endblock HRbudget_title %}
+
+{% block HRbudget_report_header %}
+<div class="relative mb-4 flex items-center min-h-[48px]">
+    <h2 class="absolute left-1/2 transform -translate-x-1/2 text-xl font-bold text-gray-600">
+        Vehicle Entry
+    </h2>
+    <a href="{% url 'hrbudget_vehicle_list' %}"
+       class="absolute right-0 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow flex items-center">
+        <i class="fa fa-eye mr-2" aria-hidden="true"></i> View
+    </a>
+</div>
+{% endblock HRbudget_report_header %}
+
+{% block HRbudget_report_content %}
+<!-- Messages Section -->
+{% if messages %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+    <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                {% if message.tags == 'debug' %}bg-gray-500
+                {% elif message.tags == 'info' %}bg-blue-500
+                {% elif message.tags == 'success' %}bg-green-500
+                {% elif message.tags == 'warning' %}bg-yellow-500
+                {% elif message.tags == 'error' %}bg-red-500
+                {% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+            onclick="this.parentElement.remove()">?</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if form.non_field_errors %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for error in form.non_field_errors %}
+    <div class="relative p-4 border-l-4 rounded-md bg-red-50 border-red-500">
+        <span class="text-red-700">{{ error }}</span>
+        <button type="button" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 p-1"
+            onclick="this.parentElement.remove()">X</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-8 mt-4">
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                {{ form.invoice_date.label_tag }}
+                {{ form.invoice_date }}
+                {% if form.invoice_date.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.invoice_date.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <div>
+                {{ form.invoice_no.label_tag }}
+                {{ form.invoice_no }}
+                {% if form.invoice_no.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.invoice_no.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block mb-1">Vehicle Name</label>
+                <select id="vehicle_name_select" class="w-full p-2 border border-gray-300 rounded-lg">
+                    <option value="">Select Vehicle Name</option>
+                    <option value="Royal Travels (Company Bus)">Royal Travels (Company Bus)</option>
+                    <option value="Shri Samarth Tours & travels (Tata Summo)">Shri Samarth Tours & travels (Tata Summo)</option>
+                    <option value="Matoshree Travels(Cruizer)">Matoshree Travels(Cruizer)</option>
+                    <option value="MERCEDES BENZ">MERCEDES BENZ</option>
+                    <option value="TOYOTA FORTUNER">TOYOTA FORTUNER</option>
+                    <option value="HONDA JAZZ">HONDA JAZZ</option>
+                    <option value="HONDA AMAZE">HONDA AMAZE</option>
+                    <option value="KIA CARENS">KIA CARENS</option>
+                    <option value="MAHINDRA XUV700">MAHINDRA XUV700</option>
+                    <option value="SUZUKI ACCESS">SUZUKI ACCESS</option>
+                    <option value="BMW">BMW</option>
+                    <option value="HONDA CITY">HONDA CITY</option>
+                    <option value="HONDA AVAITOR">HONDA AVAITOR</option>
+                    <option value="HONDA ACTIVA 110">HONDA ACTIVA 110</option>
+                    <option value="VESPA">VESPA</option>
+                    <option value="HONDA ACTIVA">HONDA ACTIVA</option>
+                    <option value="HONDA MOBILIO">HONDA MOBILIO</option>
+                    <option value="VOLKSWAGAN VENTO">VOLKSWAGAN VENTO</option>
+                    <option value="FORD FIGO ASPIRE">FORD FIGO ASPIRE</option>
+                    <option value="HYUNDAI CRETA">HYUNDAI CRETA</option>
+                    <option value="MARUTI CIAZ">MARUTI CIAZ</option>
+                    <option value="MG HECTOR">MG HECTOR</option>
+                    <option value="HYUNDAI VENUE">HYUNDAI VENUE</option>
+                    <option value="ALCAZAR">ALCAZAR</option>
+                    <option value="SKODA OCTAVIA">SKODA OCTAVIA</option>
+                    <option value="HYUNDAI VERNA">HYUNDAI VERNA</option>
+                    <option value="KIA SELTOS">KIA SELTOS</option>
+                    <option value="NEXON">NEXON</option>
+                    <option value="MAHINDRA ALTURUS">MAHINDRA ALTURUS</option>
+                    <option value="CIAZ">CIAZ</option>
+                    <option value="RENAULT DUSTER">RENAULT DUSTER</option>
+                    <option value="BALENO">BALENO</option>
+                    <option value="Other">Other</option>
+                </select>
+                <input type="text" id="other_vehicle_name_input" class="w-full p-2 border border-gray-300 rounded-lg mt-2" placeholder="Enter custom vehicle name" style="display:none;" />
+                <input type="hidden" name="vehicle_name" id="id_vehicle_name" value="{{ form.initial.vehicle_name|default:'' }}">
+                {% if form.errors.vehicle_name %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.errors.vehicle_name }}</p>
+                {% endif %}
+            </div>
+            <div id="vehicle_number_dropdown_row" style="display:none;">
+                <label class="block font-medium mb-1">Vehicle Number</label>
+                <select id="vehicle_number_select" class="w-full p-2 border border-gray-300 rounded-lg"></select>
+            </div>
+            <div id="vehicle_number_input_row">
+                {{ form.vehicle_number.label_tag }}
+                {{ form.vehicle_number }}
+                {% if form.vehicle_number.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.vehicle_number.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <div>
+                {{ form.category.label_tag }}
+                {{ form.category }}
+                {% if form.category.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.category.errors|striptags }}</p>
+                {% endif %}
+            </div>
+
+    <div>
+        <label class="block font-medium mb-1">Liter</label>
+        <input type="number" step="0.01" name="liter"
+            value="{{ form.liter.value|default:'' }}"
+            class="w-full p-2 border border-gray-300 rounded-lg">
+    </div>
+
+    <div>
+        <label class="block font-medium mb-1">Kilometer</label>
+        <input type="number" step="0.01" name="kilometer"
+            value="{{ form.kilometer.value|default:'' }}"
+            class="w-full p-2 border border-gray-300 rounded-lg">
+    </div>
+
+            <div>
+                {{ form.gst.label_tag }}
+                {{ form.gst }}
+                {% if form.gst.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.gst.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <div>
+                {{ form.bill_amount.label_tag }}
+                {{ form.bill_amount }}
+                {% if form.bill_amount.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.bill_amount.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <!-- Total Bill Amount Field (NEW) -->
+            <div>
+                {{ form.total_bill_amount.label_tag }}
+                {{ form.total_bill_amount }}
+                {% if form.total_bill_amount.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.total_bill_amount.errors|striptags }}</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-4">
+            {{ form.description.label_tag }}
+            {{ form.description }}
+            {% if form.description.errors %}
+                <p class="text-red-600 text-xs mt-1">{{ form.description.errors|striptags }}</p>
+            {% endif %}
+        </div>
+        <button type="submit" class="mt-6 bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 px-6 rounded-lg shadow">
+            {% if form.instance.pk %}Update{% else %}Submit{% endif %}
+        </button>
+    </form>
+</div>
+<style>
+/* Make Select2 EXACTLY like Tailwind input */
+
+.select2-container {
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection--single {
+    height: 43px !important;              /* matches input */
+    padding: 8px !important;              /* p-2 */
+    border: 1px solid #d1d5db !important; /* border-gray-300 */
+    border-radius: 0.5rem !important;     /* rounded-lg */
+    background-color: white !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.select2-container--default .select2-selection__rendered {
+    padding-left: 0 !important;
+    line-height: normal !important;
+}
+.select2-container--default .select2-selection__placeholder {
+    font-weight: 400 !important;
+}
+
+.select2-container--default .select2-selection__arrow {
+    height: 100% !important;
+    right: 8px !important;
+}
+/* Make all labels consistent */
+label {
+    font-weight: 500 !important;   /* same as font-medium */
+    font-size: 14px !important;
+    margin-bottom: 4px !important;
+    display: block;
+}
+
+/* Make all inputs same height */
+input,
+select,
+textarea,
+.select2-container--default .select2-selection--single {
+    height: 42px !important;
+}
+
+/* Fix Select2 vertical alignment */
+.select2-container--default .select2-selection--single {
+    display: flex !important;
+    align-items: center !important;
+}
+
+</style>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+const vehicleBrandToNumbers = {
+    "Royal Travels (Company Bus)": ["MH12HB0963","MH12HB0699",""],
+    "Shri Samarth Tours & travels (Tata Summo)": ["MH13CU4885"],
+    "Matoshree Travels(Cruizer)": ["MH13DE6717"],
+    "MERCEDES BENZ": ["DD01A2810", "DD01A8799", "DD02G5619"],
+    "TOYOTA FORTUNER": ["GJ01WE8163"],
+    "HONDA JAZZ": ["MH02FN1418"],
+    "HONDA AMAZE": ["MH13BN7758"],
+    "KIA CARENS": ["MH02FY4464", "MH02FR7841"],
+    "MAHINDRA XUV700": ["MH02GE0328"],
+    "SUZUKI ACCESS": ["MH02GK7442", "MH02GK7283", "MH02GK7652"],
+    "BMW": ["DD03K6125"],
+    "HONDA CITY": ["MH02BJ8286", "MH03DU9046", "MH48CC5728"],
+    "HONDA AVAITOR": ["MH02BS1134"],
+    "HONDA ACTIVA 110": ["MH02CS9578"],
+    "VESPA": ["MH02DD3022"],
+    "HONDA ACTIVA": ["MH02DM4315", "MH02DM4317", "MH02DV4437", "MH02EJ2235", "MH02EX7858", "MH02FK8812"],
+    "HONDA MOBILIO": ["MH02DN8573"],
+    "VOLKSWAGAN VENTO": ["MH02DZ3541"],
+    "FORD FIGO ASPIRE": ["MH02EE9317", "MH48AK3350", "MH48AT1736", "MH48AK3350"],
+    "HYUNDAI CRETA": ["MH02EK0686"],
+    "MARUTI CIAZ": ["MH02EK1775", "MH02GB3822"],
+    "MG HECTOR": ["MH02FE5985"],
+    "HYUNDAI VENUE": ["MH02FN3397"],
+    "ALCAZAR": ["MH02GE9521"],
+    "SKODA OCTAVIA": ["MH03CM6612"],
+    "HYUNDAI VERNA": ["MH47AN3372"],
+    "KIA SELTOS": ["MH48CC7120", "MH13DT6323"],
+    "NEXON": ["MH01DX9878"],
+    "MAHINDRA ALTURUS": ["MH02EZ9375"],
+    "CIAZ": ["MH02GB3822"],
+    "RENAULT DUSTER": ["MH13BN0320"],
+    "BALENO": ["MH13BN9658"],
+};
+
+
+document.addEventListener('DOMContentLoaded', function () {
+        // ? Make Vehicle Name Searchable
+    $('#vehicle_name_select').select2({
+        placeholder: "Select Vehicle Name",
+        allowClear: true,
+        width: '100%'
+    });
+
+    // ?? IMPORTANT: Trigger your existing change logic
+    $('#vehicle_name_select').on('select2:select select2:clear', function () {
+        this.dispatchEvent(new Event('change'));
+    });
+    var vehicleSelect = document.getElementById('vehicle_name_select');
+    var otherInput = document.getElementById('other_vehicle_name_input');
+    var hiddenInput = document.getElementById('id_vehicle_name');
+    var vehicleNumberInput = document.getElementById('id_vehicle_number');
+    var vehicleNumberDropdownRow = document.getElementById('vehicle_number_dropdown_row');
+    var vehicleNumberSelect = document.getElementById('vehicle_number_select');
+    var vehicleNumberInputRow = document.getElementById('vehicle_number_input_row');
+
+    // On page load (for edit)
+    function prefillVehicleNumbers() {
+        if (hiddenInput.value && vehicleBrandToNumbers[hiddenInput.value]) {
+            vehicleSelect.value = hiddenInput.value;
+            otherInput.style.display = "none";
+            showVehicleNumberDropdown(hiddenInput.value, vehicleNumberInput.value);
+        } else if (hiddenInput.value && hiddenInput.value !== "" && hiddenInput.value !== "Other") {
+            vehicleSelect.value = "Other";
+            otherInput.style.display = "";
+            otherInput.value = hiddenInput.value;
+            vehicleNumberDropdownRow.style.display = "none";
+            vehicleNumberInputRow.style.display = "";
+            vehicleNumberInput.readOnly = false;
+        }
+    }
+    prefillVehicleNumbers();
+
+    // Vehicle Name selection change logic
+    vehicleSelect.addEventListener('change', function() {
+        if (vehicleSelect.value === "Other") {
+            otherInput.style.display = "";
+            hiddenInput.value = otherInput.value;
+            vehicleNumberDropdownRow.style.display = "none";
+            vehicleNumberInputRow.style.display = "";
+            vehicleNumberInput.value = "";
+            vehicleNumberInput.readOnly = false;
+        } else if (vehicleSelect.value && vehicleBrandToNumbers[vehicleSelect.value]) {
+            otherInput.style.display = "none";
+            hiddenInput.value = vehicleSelect.value;
+            showVehicleNumberDropdown(vehicleSelect.value);
+        } else {
+            otherInput.style.display = "none";
+            hiddenInput.value = "";
+            vehicleNumberDropdownRow.style.display = "none";
+            vehicleNumberInputRow.style.display = "";
+            vehicleNumberInput.value = "";
+            vehicleNumberInput.readOnly = false;
+        }
+    });
+
+    // Other input (custom vehicle name) handling
+    otherInput.addEventListener('input', function() {
+        if (vehicleSelect.value === "Other") {
+            hiddenInput.value = otherInput.value;
+        }
+    });
+
+    // Dropdown logic for multiple vehicle numbers
+    function showVehicleNumberDropdown(vehicleBrand, selectedValue) {
+        var numbers = vehicleBrandToNumbers[vehicleBrand] || [];
+        if (numbers.length > 1) {
+            vehicleNumberDropdownRow.style.display = "";
+            vehicleNumberInputRow.style.display = "none";
+            vehicleNumberSelect.innerHTML = '';
+            numbers.forEach(function(num) {
+                var opt = document.createElement('option');
+                opt.value = num;
+                opt.text = num;
+                if (selectedValue && selectedValue === num) opt.selected = true;
+                vehicleNumberSelect.appendChild(opt);
+            });
+            vehicleNumberSelect.onchange = function() {
+                vehicleNumberInput.value = vehicleNumberSelect.value;
+            };
+            vehicleNumberInput.value = vehicleNumberSelect.value || numbers[0];
+        } else if (numbers.length === 1) {
+            vehicleNumberDropdownRow.style.display = "none";
+            vehicleNumberInputRow.style.display = "";
+            vehicleNumberInput.value = numbers[0];
+            vehicleNumberInput.readOnly = true;
+        } else {
+            vehicleNumberDropdownRow.style.display = "none";
+            vehicleNumberInputRow.style.display = "";
+            vehicleNumberInput.value = "";
+            vehicleNumberInput.readOnly = false;
+        }
+    }
+
+    if (vehicleNumberSelect) {
+        vehicleNumberSelect.onchange = function() {
+            vehicleNumberInput.value = vehicleNumberSelect.value;
+        };
+    }
+
+    // --- Total Bill Amount Auto-calc ---
+    function calcTotal() {
+        var bill = parseFloat(document.getElementById('id_bill_amount')?.value) || 0;
+        var gst = parseFloat(document.getElementById('id_gst')?.value) || 0;
+        var total = bill + gst;
+        if(document.getElementById('id_total_bill_amount')) {
+            document.getElementById('id_total_bill_amount').value = total.toFixed(2);
+        }
+    }
+    var billEl = document.getElementById('id_bill_amount');
+    var gstEl = document.getElementById('id_gst');
+    if (billEl) billEl.addEventListener('input', calcTotal);
+    if (gstEl) gstEl.addEventListener('input', calcTotal);
+    calcTotal();
+});
+// Run on page load
+
+</script>
+
+{% endblock HRbudget_report_content %}

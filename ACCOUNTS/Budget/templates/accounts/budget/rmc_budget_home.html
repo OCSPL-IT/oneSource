@@ -1,0 +1,699 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block title %}RMC Budget{% endblock %}
+
+{% block maincontent %}
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  * { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:#f8fafc; border-radius:999px; }
+  ::-webkit-scrollbar-thumb{ background:linear-gradient(180deg,#cbd5e1,#94a3b8); border-radius:999px; border:2px solid #f8fafc; }
+  ::-webkit-scrollbar-thumb:hover{ background:linear-gradient(180deg,#94a3b8,#64748b); }
+
+  .glass { background: rgba(255,255,255,.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .card { border: 1px solid rgba(226,232,240,.9); box-shadow: 0 12px 30px -18px rgba(2,6,23,.35); }
+  .numeric { font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+  .sticky-head { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+  .row-hover { transition: all .14s ease; }
+  .row-hover:hover { background: linear-gradient(90deg, rgba(241,245,249,.9), rgba(248,250,252,.9)) !important; transform: translateX(2px); }
+
+  .tab-btn { position: relative; transition: all .2s ease; overflow: hidden; }
+  .tab-btn::after{
+    content:""; position:absolute; left:0; bottom:0; height:3px; width:100%;
+    background: linear-gradient(90deg,#6366f1,#8b5cf6);
+    transform: scaleX(0); transform-origin:left; transition: transform .28s ease;
+  }
+  .tab-btn.active::after{ transform: scaleX(1); }
+
+  .step-dot { width: 10px; height:10px; border-radius:999px; border:2px solid #cbd5e1; background:#fff; }
+  .step-line { height:2px; background:#e2e8f0; flex:1; }
+  .step.done .step-dot{ border-color:#22c55e; background:#22c55e; }
+  .step.active .step-dot{ border-color:#6366f1; background:#6366f1; }
+  .step.done .step-line{ background:#86efac; }
+  .step.active .step-line{ background:linear-gradient(90deg,#a5b4fc,#6366f1); }
+</style>
+
+{% with status=mc.status|default:"DRAFT" %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-sky-50/20 py-8">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 space-y-8" data-status="{{ status }}" data-locked="{{ is_locked|yesno:'1,0' }}" id="rmc-root">
+
+    <!-- HERO / STATUS -->
+    <div class="glass rounded-2xl card overflow-hidden">
+      <div class="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+      <div class="p-7 sm:p-8">
+        <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-6">
+
+          <!-- Left -->
+          <div class="space-y-5">
+
+            <div class="flex items-center gap-4 flex-wrap">
+              <div class="flex items-center gap-3">
+                <div class="h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 text-white flex items-center justify-center shadow-lg">
+                  <i class="fa-solid fa-chart-line text-2xl"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-extrabold uppercase tracking-widest text-slate-500">Budget • RMC</div>
+                  <h1 class="text-3xl font-black text-slate-900 leading-tight">RMC Budget</h1>
+                </div>
+              </div>
+
+              <!-- Status pill -->
+              <span class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold border-2 shadow-sm
+                {% if status == 'DRAFT' %}
+                  bg-slate-100 text-slate-700 border-slate-300
+                {% elif status == 'SUBMITTED' %}
+                  bg-amber-100 text-amber-900 border-amber-300
+                {% elif status == 'CHECKED' %}
+                  bg-blue-100 text-blue-900 border-blue-300
+                {% elif status == 'APPROVED' %}
+                  bg-emerald-100 text-emerald-900 border-emerald-300
+                {% elif status == 'REJECTED' %}
+                  bg-rose-100 text-rose-900 border-rose-300
+                {% else %}
+                  bg-slate-100 text-slate-700 border-slate-300
+                {% endif %}
+              ">
+                <i class="fa-solid fa-circle text-[8px]"></i>
+                {{ status }}
+              </span>
+
+              {% if is_locked %}
+                <span class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold border-2 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-700 border-indigo-300 shadow-sm">
+                  <i class="fa-solid fa-lock"></i>
+                  Locked
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-extrabold border-2 bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm">
+                  <i class="fa-solid fa-pen"></i>
+                  Editable
+                </span>
+              {% endif %}
+            </div>
+
+            <!-- FY + Ex -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="rounded-xl bg-white border border-slate-200 p-4">
+                <div class="text-[11px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Fiscal Plan</div>
+                <div class="text-xl font-black text-slate-900">{{ plan.fy }}</div>
+              </div>
+
+              <div class="rounded-xl bg-white border border-slate-200 p-4">
+                <div class="text-[11px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Exchange Rate</div>
+                <div class="text-xl font-black text-slate-900 numeric">
+                  <span class="text-xs font-extrabold text-slate-500">$ / ₹</span>
+                  {{ rmc_budget.usd_inr|floatformat:2 }}
+                </div>
+              </div>
+
+              <div class="rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 p-4 text-white border border-slate-700">
+                <div class="text-[11px] font-extrabold uppercase tracking-widest text-slate-300 mb-1">Current Mode</div>
+                <div class="text-xl font-black">
+                  {% if is_locked %}Approval{% else %}Working{% endif %}
+                </div>
+              </div>
+            </div>
+
+            <!-- STATUS TRACKER -->
+            <div class="rounded-xl bg-white border border-slate-200 p-5">
+              <div class="flex items-center justify-between gap-4 flex-wrap">
+                <div>
+                  <div class="text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Workflow</div>
+                  <div class="text-sm font-bold text-slate-800 mt-1">
+                    {% if status == "DRAFT" %}
+                      Draft — you can edit and save.
+                    {% elif status == "SUBMITTED" %}
+                      Submitted — waiting for Checker / Approver.
+                    {% elif status == "CHECKED" %}
+                      Checked — waiting for final approval.
+                    {% elif status == "APPROVED" %}
+                      Approved — locked as final.
+                    {% elif status == "REJECTED" %}
+                      Rejected — update and resubmit.
+                    {% else %}
+                      Status — {{ status }}
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="text-xs font-bold text-slate-600">
+                  {% if is_locked %}
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200">
+                      <i class="fa-solid fa-shield-halved text-slate-500"></i>
+                      Editing disabled
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
+                      <i class="fa-solid fa-check text-emerald-600"></i>
+                      Editing enabled
+                    </span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <div class="mt-4 flex items-center gap-3">
+                <div class="step flex items-center gap-3" data-step="DRAFT">
+                  <div class="step-dot"></div><div class="text-[11px] font-extrabold text-slate-600">DRAFT</div>
+                  <div class="step-line"></div>
+                </div>
+                <div class="step flex items-center gap-3" data-step="SUBMITTED">
+                  <div class="step-dot"></div><div class="text-[11px] font-extrabold text-slate-600">SUBMITTED</div>
+                  <div class="step-line"></div>
+                </div>
+                <div class="step flex items-center gap-3" data-step="CHECKED">
+                  <div class="step-dot"></div><div class="text-[11px] font-extrabold text-slate-600">CHECKED</div>
+                  <div class="step-line"></div>
+                </div>
+                <div class="step flex items-center gap-3" data-step="APPROVED">
+                  <div class="step-dot"></div><div class="text-[11px] font-extrabold text-slate-600">APPROVED</div>
+                </div>
+              </div>
+
+              {% if status == "REJECTED" and mc and mc.remarks %}
+                <div class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3">
+                  <div class="text-xs font-extrabold text-rose-800 uppercase tracking-widest">Remarks</div>
+                  <div class="text-sm font-semibold text-rose-900 mt-1">{{ mc.remarks }}</div>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- WHAT TO DO NEXT -->
+            <div class="rounded-xl border border-slate-200 bg-gradient-to-r from-white to-slate-50 p-5">
+              <div class="flex items-start gap-3">
+                <div class="h-10 w-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                  <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div class="flex-1">
+                  <div class="text-sm font-black text-slate-900">Next action</div>
+                  <div class="text-sm text-slate-700 mt-1 leading-relaxed">
+                    {% if is_locked %}
+                      This budget is locked because it is <b>{{ status }}</b>.
+                      {% if perms.Budget.can_approve_budgets %}
+                        You can <b>Approve / Reject</b> from <b>Approvals Inbox</b>.
+                      {% elif perms.Budget.can_check_budgets %}
+                        You can <b>Check</b> from <b>Approvals Inbox</b>.
+                      {% else %}
+                        Please contact the Checker/Approver to proceed.
+                      {% endif %}
+                    {% else %}
+                      You can edit this budget (status: <b>{{ status }}</b>).
+                      Use <b>Edit Budget</b> to update rates/inputs, then <b>Save &amp; Lock</b> from the edit page to submit for approval.
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right actions -->
+          <div class="flex flex-col gap-3 min-w-[260px]">
+            {% if is_locked %}
+              <button type="button"
+                      class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-200 text-slate-500 cursor-not-allowed font-extrabold border-2 border-slate-300"
+                      title="Locked for approval">
+                <i class="fa-solid fa-lock"></i>
+                Edit (Locked)
+              </button>
+            {% else %}
+              <a href="{% url 'accounts_budget:rmc_budget_edit' %}"
+                 class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:from-indigo-700 hover:to-purple-800 font-extrabold shadow-lg hover:shadow-xl transition-all">
+                <i class="fa-solid fa-pen-to-square"></i>
+                Edit Budget
+              </a>
+            {% endif %}
+
+            <a href="{% url 'accounts_budget:rmc_budget_report_excel' %}"
+               class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border-2 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-extrabold transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel"></i>
+              Download Excel
+            </a>
+
+            <a href="{% url 'accounts_budget:budget_approvals_inbox' %}"
+               class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-extrabold transition-all shadow-sm">
+              <i class="fa-solid fa-inbox"></i>
+              Approvals Inbox
+            </a>
+
+            <a href="{% url 'accounts_budget:budget_home' %}"
+               class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-800 font-extrabold transition-all shadow-sm">
+              <i class="fa-solid fa-home"></i>
+              Budget Home
+            </a>
+
+            <!-- Quick legend -->
+            <div class="mt-1 rounded-xl border border-slate-200 bg-white p-4">
+              <div class="text-[11px] font-extrabold uppercase tracking-widest text-slate-500 mb-2">Legend</div>
+              <div class="flex flex-wrap gap-2 text-xs font-bold">
+                <span class="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-700">LOCAL</span>
+                <span class="px-2.5 py-1 rounded-full bg-purple-100 border border-purple-200 text-purple-700">IMPORT</span>
+                <span class="px-2.5 py-1 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-700">CAPTIVE</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKING SECTION -->
+    <div class="bg-white rounded-2xl card overflow-hidden">
+
+      <!-- Section header -->
+      <div class="px-6 py-5 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+          <div>
+            <h2 class="text-xl font-black text-slate-900 mb-1">RMC Working</h2>
+            <p class="text-sm text-slate-600">
+              Captive materials are separated based on <b>Captive Tick</b> from Production BOM Input.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <div class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2 text-white font-black shadow-md">
+              <i class="fa-solid fa-dollar-sign text-sm"></i>
+              <span class="text-sm">$ / ₹</span>
+              <span class="numeric">{{ rmc_budget.usd_inr|floatformat:2 }}</span>
+            </div>
+
+            <div class="inline-flex rounded-xl bg-white border-2 border-slate-300 overflow-hidden shadow-sm">
+              <button type="button" id="tab-raw"
+                      class="tab-btn px-5 py-2.5 text-sm font-black bg-gradient-to-r from-indigo-600 to-purple-700 text-white active">
+                <i class="fa-solid fa-box mr-1.5"></i>
+                Raw Materials
+                <span id="raw-count" class="ml-2 px-2 py-0.5 rounded-full bg-white/20 text-xs font-bold">(0)</span>
+              </button>
+              <button type="button" id="tab-captive"
+                      class="tab-btn px-5 py-2.5 text-sm font-black text-slate-700 hover:bg-slate-100">
+                <i class="fa-solid fa-industry mr-1.5"></i>
+                Captive Materials
+                <span id="cap-count" class="ml-2 px-2 py-0.5 rounded-full bg-slate-200 text-xs font-bold text-slate-700">(0)</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RAW TABLE -->
+      <div id="panel-raw" class="overflow-x-auto">
+        <table class="min-w-[1700px] w-full text-sm">
+          <thead class="sticky-head bg-white/80 border-b border-slate-200">
+            <tr class="text-left">
+              <th class="px-4 py-4 font-black text-slate-700 uppercase tracking-wide text-xs">Material</th>
+              <th class="px-4 py-4 text-right font-black text-slate-700 uppercase tracking-wide text-xs">Required Qty (Annual)</th>
+              <th class="px-4 py-4 font-black text-slate-700 uppercase tracking-wide text-xs">Purchase Type</th>
+              <th class="px-4 py-4 text-right font-black text-emerald-700 uppercase tracking-wide text-xs">Budgeted ₹/Kg</th>
+              <th class="px-4 py-4 text-right font-black text-purple-700 uppercase tracking-wide text-xs">Import $/Kg</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Rate (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Duty %</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Custom Duty (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Freight (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Clearance (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-indigo-700 uppercase tracking-wide text-xs">Clr Total (₹)</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for r in lines %}
+              {% if not r.is_captive %}
+                <tr class="row-hover border-t {% if r.is_import %}bg-purple-50/40{% endif %}" data-row="1">
+                  <td class="px-4 py-3 font-semibold whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                      <div class="h-9 w-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center">
+                        <i class="fa-solid fa-cube text-slate-500 text-xs"></i>
+                      </div>
+                      <div>
+                        <div class="text-slate-900">{{ r.rm_name }}</div>
+                        <div class="text-xs text-slate-500 font-mono">({{ r.rm_code }})</div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.required_qty is not None %}
+                      <span class="numeric font-bold text-slate-900">{{ r.required_qty|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    {% if r.purchase_type %}
+                      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold border
+                        {% if r.is_import %}
+                          bg-purple-100 text-purple-700 border-purple-200
+                        {% else %}
+                          bg-slate-100 text-slate-700 border-slate-200
+                        {% endif %}
+                      ">
+                        {{ r.purchase_type }}
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    <span class="numeric font-extrabold text-emerald-700">{{ r.budget_rate_inr|default_if_none:"0"|floatformat:2 }}</span>
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-purple-700">{{ r.import_rate_usd|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.rate_inr_calc|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="numeric font-bold text-slate-700">{{ r.local_rate_inr|default_if_none:"0"|floatformat:2 }}</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.duty_percent|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.custom_duty_inr_calc|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.freight_inr|default_if_none:"0"|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.clearance_inr|default_if_none:"0"|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-100 border border-indigo-200">
+                        <span class="numeric font-extrabold text-indigo-700">{{ r.clearance_total_calc|default_if_none:""|floatformat:2 }}</span>
+                      </div>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+
+            <tr id="raw-empty-row" class="hidden">
+              <td class="px-4 py-16 text-center" colspan="11">
+                <div class="flex flex-col items-center gap-3">
+                  <div class="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center">
+                    <i class="fa-solid fa-inbox text-slate-400 text-2xl"></i>
+                  </div>
+                  <div class="text-slate-500 font-semibold">No Raw Material lines yet.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CAPTIVE TABLE -->
+      <div id="panel-captive" class="overflow-x-auto hidden">
+        <table class="min-w-[1700px] w-full text-sm">
+          <thead class="sticky-head bg-emerald-50/80 border-b border-emerald-200">
+            <tr class="text-left">
+              <th class="px-4 py-4 font-black text-emerald-900 uppercase tracking-wide text-xs">Material</th>
+              <th class="px-4 py-4 text-right font-black text-emerald-900 uppercase tracking-wide text-xs">Required Qty (Annual)</th>
+              <th class="px-4 py-4 font-black text-emerald-900 uppercase tracking-wide text-xs">Purchase Type</th>
+              <th class="px-4 py-4 text-right font-black text-emerald-800 uppercase tracking-wide text-xs">Budgeted ₹/Kg</th>
+              <th class="px-4 py-4 text-right font-black text-purple-700 uppercase tracking-wide text-xs">Import $/Kg</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Rate (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Duty %</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Custom Duty (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Freight (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-blue-700 uppercase tracking-wide text-xs">Clearance (₹)</th>
+              <th class="px-4 py-4 text-right font-black text-indigo-700 uppercase tracking-wide text-xs">Clr Total (₹)</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-emerald-100">
+            {% for r in lines %}
+              {% if r.is_captive %}
+                <tr class="row-hover bg-emerald-50/40 border-t" data-row="1">
+                  <td class="px-4 py-3 font-semibold whitespace-nowrap">
+                    <div class="flex items-center gap-2">
+                      <div class="h-9 w-9 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center">
+                        <i class="fa-solid fa-industry text-emerald-700 text-xs"></i>
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="text-slate-900">{{ r.rm_name }}</span>
+                          <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black border bg-emerald-100 text-emerald-900 border-emerald-300">
+                            <i class="fa-solid fa-industry"></i> CAPTIVE
+                          </span>
+                        </div>
+                        <div class="text-xs text-slate-500 font-mono">({{ r.rm_code }})</div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.required_qty is not None %}
+                      <span class="numeric font-extrabold text-emerald-900">{{ r.required_qty|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap">
+                    {% if r.purchase_type %}
+                      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-extrabold border
+                        {% if r.is_import %}
+                          bg-purple-100 text-purple-700 border-purple-200
+                        {% else %}
+                          bg-emerald-100 text-emerald-800 border-emerald-200
+                        {% endif %}
+                      ">
+                        {{ r.purchase_type }}
+                      </span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    <span class="numeric font-extrabold text-emerald-700">{{ r.budget_rate_inr|default_if_none:"0"|floatformat:2 }}</span>
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-purple-700">{{ r.import_rate_usd|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.rate_inr_calc|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="numeric font-bold text-slate-700">{{ r.local_rate_inr|default_if_none:"0"|floatformat:2 }}</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.duty_percent|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.custom_duty_inr_calc|default_if_none:""|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.freight_inr|default_if_none:"0"|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <span class="numeric font-bold text-blue-700">{{ r.clearance_inr|default_if_none:"0"|floatformat:2 }}</span>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-4 py-3 whitespace-nowrap text-right">
+                    {% if r.is_import %}
+                      <div class="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-100 border border-indigo-200">
+                        <span class="numeric font-extrabold text-indigo-700">{{ r.clearance_total_calc|default_if_none:""|floatformat:2 }}</span>
+                      </div>
+                    {% else %}
+                      <span class="text-slate-400">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endif %}
+            {% endfor %}
+
+            <tr id="cap-empty-row" class="hidden">
+              <td class="px-4 py-16 text-center" colspan="11">
+                <div class="flex flex-col items-center gap-3">
+                  <div class="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <i class="fa-solid fa-industry text-emerald-400 text-2xl"></i>
+                  </div>
+                  <div class="text-emerald-700 font-semibold">No Captive Material lines yet.</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Footer info -->
+      <div class="px-6 py-4 border-t border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-600">
+          <span class="inline-flex items-center gap-2 font-bold">
+            <i class="fa-solid fa-info-circle text-indigo-600"></i>
+            Import calculation
+          </span>
+          <span class="font-mono">Rate ₹ = USD × Ex</span>
+          <span class="text-slate-300">•</span>
+          <span class="font-mono">Duty = Rate ₹ × Duty%</span>
+          <span class="text-slate-300">•</span>
+          <span class="font-mono">Clr Total = Freight + Clearance</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endwith %}
+
+<script>
+(function () {
+  // -----------------------------
+  // Tabs + counts (existing flow)
+  // -----------------------------
+  const tabRaw   = document.getElementById("tab-raw");
+  const tabCap   = document.getElementById("tab-captive");
+  const panelRaw = document.getElementById("panel-raw");
+  const panelCap = document.getElementById("panel-captive");
+  const rawCount = document.getElementById("raw-count");
+  const capCount = document.getElementById("cap-count");
+  const rawEmpty = document.getElementById("raw-empty-row");
+  const capEmpty = document.getElementById("cap-empty-row");
+
+  function countRows() {
+    const rawRows = panelRaw ? panelRaw.querySelectorAll('tbody tr[data-row="1"]').length : 0;
+    const capRows = panelCap ? panelCap.querySelectorAll('tbody tr[data-row="1"]').length : 0;
+
+    if (rawCount) rawCount.textContent = "(" + rawRows + ")";
+    if (capCount) capCount.textContent = "(" + capRows + ")";
+
+    if (rawEmpty) rawEmpty.classList.toggle("hidden", rawRows > 0);
+    if (capEmpty) capEmpty.classList.toggle("hidden", capRows > 0);
+  }
+
+  function setTabState(active) {
+    const onRaw = (active === "raw");
+    if (panelRaw) panelRaw.classList.toggle("hidden", !onRaw);
+    if (panelCap) panelCap.classList.toggle("hidden", onRaw);
+
+    if (tabRaw) {
+      tabRaw.classList.toggle("bg-gradient-to-r", onRaw);
+      tabRaw.classList.toggle("from-indigo-600", onRaw);
+      tabRaw.classList.toggle("to-purple-700", onRaw);
+      tabRaw.classList.toggle("text-white", onRaw);
+      tabRaw.classList.toggle("text-slate-700", !onRaw);
+      tabRaw.classList.toggle("hover:bg-slate-100", !onRaw);
+      tabRaw.classList.toggle("active", onRaw);
+    }
+
+    if (tabCap) {
+      tabCap.classList.toggle("bg-gradient-to-r", !onRaw);
+      tabCap.classList.toggle("from-indigo-600", !onRaw);
+      tabCap.classList.toggle("to-purple-700", !onRaw);
+      tabCap.classList.toggle("text-white", !onRaw);
+      tabCap.classList.toggle("text-slate-700", onRaw);
+      tabCap.classList.toggle("hover:bg-slate-100", onRaw);
+      tabCap.classList.toggle("active", !onRaw);
+    }
+
+    try { history.replaceState(null, "", onRaw ? "#raw" : "#captive"); } catch (e) {}
+    countRows();
+  }
+
+  if (tabRaw) tabRaw.addEventListener("click", () => setTabState("raw"));
+  if (tabCap) tabCap.addEventListener("click", () => setTabState("cap"));
+
+  function observeCounts() {
+    if (!window.MutationObserver) return;
+    const obs = new MutationObserver(() => countRows());
+    if (panelRaw) obs.observe(panelRaw, { childList: true, subtree: true });
+    if (panelCap) obs.observe(panelCap, { childList: true, subtree: true });
+  }
+
+  countRows();
+  observeCounts();
+
+  const h = (location.hash || "").toLowerCase();
+  if (h.includes("captive")) setTabState("cap");
+  else setTabState("raw");
+
+  // -----------------------------
+  // Status tracker highlight
+  // -----------------------------
+  const root = document.getElementById("rmc-root");
+  if (root) {
+    const cur = (root.getAttribute("data-status") || "DRAFT").toUpperCase().trim();
+    const order = ["DRAFT", "SUBMITTED", "CHECKED", "APPROVED"];
+
+    // REJECTED: treat as "back to draft" visually (but keep badge as REJECTED)
+    const curIndex = (cur === "REJECTED") ? 0 : Math.max(0, order.indexOf(cur));
+
+    const steps = root.querySelectorAll(".step[data-step]");
+    steps.forEach((s) => {
+      const step = (s.getAttribute("data-step") || "").toUpperCase();
+      const idx = order.indexOf(step);
+      s.classList.remove("done","active");
+      if (idx >= 0 && idx < curIndex) s.classList.add("done");
+      if (idx === curIndex) s.classList.add("active");
+    });
+  }
+})();
+</script>
+
+{% endblock %}

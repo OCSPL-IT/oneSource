@@ -1,0 +1,215 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-indigo-600 via-slate-900 to-slate-900 text-white rounded-xl shadow-sm border border-slate-900/40 px-4 py-3 sm:px-6 sm:py-4 mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 class="text-base sm:text-lg font-semibold tracking-tight">Retest Dashboard</h1>
+          <p class="text-[11px] sm:text-xs text-indigo-100/90 mt-0.5">
+            Today: <span class="font-semibold">{{ today|date:"d-m-Y" }}</span>
+            • 7D: {{ d7|date:"d-m-Y" }} • 15D: {{ d15|date:"d-m-Y" }} • 30D: {{ d30|date:"d-m-Y" }}
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <a href="?{{ qs_prefix }}export=excel&bucket=all"
+             class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-sm">
+            Export All (Excel)
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <form method="get" class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+
+        <div>
+          <label class="text-xs font-medium text-slate-600">Company ID</label>
+          <input name="company_id" value="{{ filters.company_id }}" type="number"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+
+        <div>
+          <label class="text-xs font-medium text-slate-600">Item Name (contains)</label>
+          <input name="item_name" value="{{ filters.item_name }}" type="text"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                 placeholder="Search item name">
+        </div>
+
+        <div>
+          <label class="text-xs font-medium text-slate-600">Batch No (contains)</label>
+          <input name="batch_no" value="{{ filters.batch_no }}" type="text"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                 placeholder="Search batch">
+        </div>
+
+        <div>
+          <label class="text-xs font-medium text-slate-600">Rows (Detail)</label>
+          <input name="limit" value="{{ limit }}" type="number" min="10" step="10"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+
+        <!-- Location dropdown with checkboxes -->
+        <div class="relative">
+          <label class="text-xs font-medium text-slate-600">Locations</label>
+
+          <button type="button"
+                  onclick="(function(){
+                    var el=document.getElementById('locDropdown');
+                    if(el.classList.contains('hidden')){ el.classList.remove('hidden'); }
+                    else{ el.classList.add('hidden'); }
+                  })()"
+                  class="mt-1 w-full text-left rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-indigo-500">
+            {% if selected_locations|length %}
+              {{ selected_locations|length }} selected
+            {% else %}
+              Select locations
+            {% endif %}
+          </button>
+
+          <div id="locDropdown"
+               class="hidden absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-lg">
+            <div class="max-h-56 overflow-auto p-2">
+              {% for loc in locations %}
+                <label class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer">
+                  <input type="checkbox" name="location" value="{{ loc }}"
+                         {% if loc in selected_locations %}checked{% endif %}
+                         class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span class="text-sm text-slate-700">{{ loc }}</span>
+                </label>
+              {% empty %}
+                <div class="px-2 py-2 text-sm text-slate-500">No locations found.</div>
+              {% endfor %}
+            </div>
+
+            <div class="border-t border-slate-200 p-2 flex justify-end gap-2">
+              <button type="button"
+                      onclick="document.getElementById('locDropdown').classList.add('hidden')"
+                      class="px-3 py-1.5 rounded-md bg-slate-100 text-slate-700 text-xs hover:bg-slate-200">
+                Close
+              </button>
+            </div>
+          </div>
+
+          <p class="text-[11px] text-slate-400 mt-1">Tip: select locations then click Run</p>
+        </div>
+
+      </div>
+
+      <!-- keep selected bucket when running filters -->
+      <input type="hidden" name="bucket" value="{{ selected_bucket }}">
+
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm hover:bg-indigo-700">Run</button>
+        <a href="{% url 'erp_reports:retest_dashboard' %}"
+           class="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 text-sm hover:bg-slate-200">
+          Reset
+        </a>
+      </div>
+    </form>
+
+    <!-- Summary Table (click row -> opens detail) -->
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div class="text-sm font-semibold text-slate-900">Categories</div>
+        <div class="text-xs text-slate-500">Click a category to view details</div>
+      </div>
+
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50">
+            <tr class="text-left text-slate-600">
+              <th class="px-3 py-2 border-b">Category</th>
+              <th class="px-3 py-2 border-b text-right">Count</th>
+              <th class="px-3 py-2 border-b text-right">Total Stock</th>
+              <th class="px-3 py-2 border-b text-right">Export</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for s in summary_rows %}
+              <tr class="hover:bg-slate-50 cursor-pointer {% if s.key == selected_bucket %}bg-indigo-50{% endif %}"
+                  onclick="window.location='?{{ qs_prefix }}bucket={{ s.key }}#detailPanel'">
+                <td class="px-3 py-2 text-slate-900 font-medium whitespace-nowrap">
+                  {{ s.label }}
+                  {% if s.key == selected_bucket %}
+                    <span class="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-indigo-600 text-white">Selected</span>
+                  {% endif %}
+                </td>
+                <td class="px-3 py-2 text-right tabular-nums whitespace-nowrap">{{ s.count }}</td>
+                <td class="px-3 py-2 text-right tabular-nums whitespace-nowrap">{{ s.stock }}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                  <a href="?{{ qs_prefix }}export=excel&bucket={{ s.key }}"
+                     class="text-xs text-indigo-600 hover:underline"
+                     onclick="event.stopPropagation();">
+                    Export
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Detail Panel -->
+    <div id="detailPanel" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div class="text-sm font-semibold text-slate-900">
+          Details:
+          {% if selected_bucket == 'expired' %}Expired (Previous){% endif %}
+          {% if selected_bucket == 'next7' %}Expiring in Next 7 Days{% endif %}
+          {% if selected_bucket == 'next15' %}Expiring in Next 15 Days{% endif %}
+          {% if selected_bucket == 'next30' %}Expiring in Next 30 Days{% endif %}
+        </div>
+        <div class="text-xs text-slate-500">Showing top {{ detail_rows|length }} rows</div>
+      </div>
+
+      <!-- container -->
+      <div class="overflow-auto max-h-[70vh]">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 sticky top-0 z-10">
+            <tr class="text-left text-slate-600">
+              <th class="px-3 py-2 border-b">Location</th>
+              <th class="px-3 py-2 border-b">Item Name</th>
+              <th class="px-3 py-2 border-b">Batch No</th>
+              <th class="px-3 py-2 border-b text-right">Current Stock</th>
+              <th class="px-3 py-2 border-b">Retest / Expiry Date</th>
+              <th class="px-3 py-2 border-b">Batch Start Date</th>
+              <th class="px-3 py-2 border-b">First Doc No</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for r in detail_rows %}
+              <tr class="hover:bg-slate-50">
+                <td class="px-3 py-2 whitespace-nowrap text-slate-700">{{ r.location }}</td>
+                <td class="px-3 py-2 text-slate-900 whitespace-nowrap">{{ r.item_name }}</td>
+                <td class="px-3 py-2 font-mono text-xs whitespace-nowrap">{{ r.batch_no }}</td>
+                <td class="px-3 py-2 text-right tabular-nums whitespace-nowrap">{{ r.current_stock }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {% if r.expiry_date %}{{ r.expiry_date|date:"d-m-Y" }}{% else %}-{% endif %}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {% if r.batch_start_date %}{{ r.batch_start_date|date:"d-m-Y" }}{% else %}-{% endif %}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ r.first_doc_no }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7" class="px-3 py-10 text-center text-slate-500">No records found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

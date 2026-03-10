@@ -1,0 +1,294 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Edit Captive Consumption{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50 pb-24">
+  
+  <!-- =========================================================
+    HEADER
+  ========================================================== -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex flex-col md:flex-row md:items-center justify-between py-4 gap-4">
+        
+        <!-- Title & Status -->
+        <div class="flex items-center gap-4">
+          <div class="h-10 w-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+             </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-slate-900">Edit Captive Consumption</h1>
+            <div class="flex items-center gap-3 text-sm mt-0.5">
+              <span class="text-slate-500">Plan: <span class="font-semibold text-slate-800">{{ plan.fy }}</span></span>
+              {% if is_locked %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Locked</span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">Editable</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Grand Total Display & Back -->
+        <div class="flex items-center gap-4">
+          <div class="hidden sm:block text-right">
+             <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Grand Total</div>
+             <div class="text-2xl font-bold text-indigo-600 leading-none" id="header-grand-total">0.00</div>
+          </div>
+          <div class="h-8 w-px bg-slate-200 hidden sm:block"></div>
+          <a href="{% url 'accounts_budget:captive_consumption_home' %}" class="text-slate-500 hover:text-slate-800 font-medium text-sm flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+            Back
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    
+    <datalist id="fg_items">
+      {% for x in item_choices %}
+        <option value="{{ x }}"></option>
+      {% endfor %}
+    </datalist>
+
+    <form method="post" id="main-form" class="space-y-6">
+      {% csrf_token %}
+      {{ formset.management_form }}
+
+      <!-- Main Table Card -->
+      <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        
+        <!-- Mobile Total -->
+        <div class="sm:hidden px-4 py-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <span class="text-sm font-semibold text-slate-700">Total Amount</span>
+            <span class="text-lg font-bold text-indigo-600" id="mobile-grand-total">0.00</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold text-slate-600 w-[35%] min-w-[250px]">Item Description</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-600 w-[15%] min-w-[140px]">Type</th>
+                <th class="px-4 py-3 text-right font-semibold text-slate-600 w-[12%] min-w-[100px]">Qty</th>
+                <th class="px-4 py-3 text-right font-semibold text-slate-600 w-[12%] min-w-[100px]">Rate</th>
+                <th class="px-4 py-3 text-right font-semibold text-slate-600 w-[12%] min-w-[100px]">Amount</th>
+                <th class="px-4 py-3 text-center font-semibold text-slate-600 w-[8%]"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 bg-white">
+              {% for f in formset.forms %}
+                <!-- 
+                  We add 'js-row' for JS targeting. 
+                  We check if there are non-field errors (like 'This field is required') and highlight the row initially if so.
+                -->
+                <tr class="js-row group transition-colors hover:bg-slate-50/80 {% if f.errors %}bg-rose-50/50{% endif %}">
+                  
+                  <!-- Item Name -->
+                  <td class="px-4 py-2 align-top">
+                    {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+                    
+                    <!-- Display Field Errors -->
+                    {% if f.item_name.errors %}
+                      <div class="text-xs text-rose-600 mb-1 font-medium">{{ f.item_name.errors.0 }}</div>
+                    {% endif %}
+
+                    <div class="relative">
+                       <input type="text" 
+                              name="{{ f.item_name.html_name }}" 
+                              id="{{ f.item_name.id_for_label }}"
+                              value="{{ f.item_name.value|default_if_none:'' }}"
+                              list="fg_items"
+                              autocomplete="off"
+                              {% if is_locked %}disabled{% endif %}
+                              class="w-full rounded-lg border-slate-300 text-slate-900 text-sm focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-300"
+                              placeholder="Search item...">
+                    </div>
+                  </td>
+
+                  <!-- Type -->
+                  <td class="px-4 py-2 align-top">
+                    {% if f.captive_type.errors %}
+                      <div class="text-xs text-rose-600 mb-1">{{ f.captive_type.errors.0 }}</div>
+                    {% endif %}
+                    <select name="{{ f.captive_type.html_name }}" 
+                            id="{{ f.captive_type.id_for_label }}"
+                            {% if is_locked %}disabled{% endif %}
+                            class="w-full rounded-lg border-slate-300 text-slate-900 text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                      {% for val, lbl in f.captive_type.field.choices %}
+                        <option value="{{ val }}" {% if f.captive_type.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>
+                          {{ lbl }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </td>
+
+                  <!-- Qty -->
+                  <td class="px-4 py-2 align-top">
+                    {% if f.qty.errors %}
+                      <div class="text-xs text-right text-rose-600 mb-1">{{ f.qty.errors.0 }}</div>
+                    {% endif %}
+                    <input type="number" step="0.001" 
+                           name="{{ f.qty.html_name }}" 
+                           value="{{ f.qty.value|default_if_none:'' }}"
+                           {% if is_locked %}disabled{% endif %}
+                           class="js-qty w-full text-right rounded-lg border-slate-300 text-slate-900 text-sm focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-300"
+                           placeholder="0.000">
+                  </td>
+
+                  <!-- Rate -->
+                  <td class="px-4 py-2 align-top">
+                    {% if f.rate.errors %}
+                      <div class="text-xs text-right text-rose-600 mb-1">{{ f.rate.errors.0 }}</div>
+                    {% endif %}
+                    <input type="number" step="0.0001" 
+                           name="{{ f.rate.html_name }}" 
+                           value="{{ f.rate.value|default_if_none:'' }}"
+                           {% if is_locked %}disabled{% endif %}
+                           class="js-rate w-full text-right rounded-lg border-slate-300 text-slate-900 text-sm focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-300"
+                           placeholder="0.0000">
+                  </td>
+
+                  <!-- Amount (Calculated) -->
+                  <td class="px-4 py-2 align-top text-right">
+                    <div class="py-2 font-bold text-slate-700 js-amount">0.00</div>
+                  </td>
+
+                  <!-- Delete Button -->
+                  <td class="px-4 py-2 align-top text-center">
+                    <div class="flex items-center justify-center pt-1">
+                      <!-- 
+                          HIDDEN CHECKBOX: 
+                          This is the actual Django field. We hide it completely using 'hidden' class.
+                          We control it via the button below.
+                      -->
+                      <div class="hidden">
+                        {{ f.DELETE }} 
+                      </div>
+
+                      {% if not is_locked %}
+                        <button type="button" class="js-delete-btn p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all" title="Delete Row">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                          </svg>
+                        </button>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Footer Info -->
+        <div class="bg-slate-50 border-t border-slate-200 px-6 py-3">
+          <p class="text-xs text-slate-500">
+            * Rows with errors or blank rows can be removed using the <span class="text-rose-500 font-bold">Trash icon</span>.
+          </p>
+        </div>
+      </div>
+      
+      <!-- Error Summary (Optional) -->
+      {% if form.errors or formset.non_form_errors %}
+        <div class="rounded-lg bg-rose-50 border border-rose-200 p-4">
+           <div class="text-sm text-rose-700 font-medium">Please correct the errors above.</div>
+           {{ formset.non_form_errors }}
+        </div>
+      {% endif %}
+
+      <!-- Sticky Bottom Action Bar -->
+      <div class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] px-4 py-4">
+        <div class="max-w-[98rem] mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+           <div class="text-sm text-slate-500 hidden sm:block">
+              Ensure all data is correct before submitting.
+           </div>
+           <div class="flex items-center gap-3 w-full sm:w-auto">
+             <button type="submit" name="action" value="save"
+                     {% if is_locked %}disabled{% endif %}
+                     class="flex-1 sm:flex-none justify-center px-6 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 disabled:opacity-50">
+               Save Draft
+             </button>
+             <button type="submit" name="action" value="submit"
+                     {% if is_locked %}disabled{% endif %}
+                     class="flex-1 sm:flex-none justify-center px-6 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 shadow-md shadow-indigo-200 disabled:opacity-50">
+               Save & Submit
+             </button>
+           </div>
+        </div>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const numberFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function toNum(val) {
+      if (!val) return 0;
+      let clean = val.toString().replace(/,/g, '').trim();
+      let x = parseFloat(clean);
+      return isNaN(x) ? 0 : x;
+    }
+
+    function calculateTotals() {
+      let grandTotal = 0;
+      const rows = document.querySelectorAll(".js-row");
+
+      rows.forEach(row => {
+        // If row is hidden (deleted), skip calculation
+        if (row.style.display === 'none') return;
+
+        const qty = toNum(row.querySelector(".js-qty").value);
+        const rate = toNum(row.querySelector(".js-rate").value);
+        const amtEl = row.querySelector(".js-amount");
+        
+        const amount = qty * rate;
+        amtEl.textContent = numberFormat.format(amount);
+        grandTotal += amount;
+      });
+
+      const totalStr = numberFormat.format(grandTotal);
+      document.getElementById("header-grand-total").textContent = totalStr;
+      document.getElementById("mobile-grand-total").textContent = totalStr;
+    }
+
+    // --- 1. HANDLE DELETION ---
+    // Instead of just checking the box, we check the box AND hide the row.
+    document.body.addEventListener("click", function(e) {
+      const btn = e.target.closest(".js-delete-btn");
+      if (btn) {
+        const row = btn.closest(".js-row");
+        const deleteCheckbox = row.querySelector("input[name$='-DELETE']");
+        
+        if (deleteCheckbox) {
+          // Check the hidden Django DELETE field
+          deleteCheckbox.checked = true;
+          // Hide the row visually immediately
+          row.style.display = 'none';
+          // Recalculate totals excluding this row
+          calculateTotals();
+        }
+      }
+    });
+
+    // --- 2. HANDLE INPUT CALCULATION ---
+    document.body.addEventListener("input", function(e) {
+      if (e.target.matches(".js-qty") || e.target.matches(".js-rate")) {
+        calculateTotals();
+      }
+    });
+
+    // Initial calculation on load
+    calculateTotals();
+  });
+</script>
+{% endblock %}

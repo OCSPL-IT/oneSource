@@ -1,0 +1,162 @@
+{% extends 'main/index.html' %}
+{% block maincontent %}
+<div class="container mx-auto py-6 px-4">
+    <div class="flex items-center justify-between mb-6">
+        <a href="/" class="bg-blue-500 hover:bg-blue-600 text-xs text-white font-bold py-2 px-4 rounded shadow-md">
+          Back to Main Page
+        </a>
+        <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Effluent Plan vs Actual</h2>
+        <a href="{% url 'view_effluent_records' %}" class="bg-green-500 hover:bg-green-600 text-xs text-white font-bold py-2 px-4 rounded shadow-md">
+          View Records
+        </a>
+    </div>
+
+    <form method="get" class="flex gap-4 mb-6 items-center justify-center">
+        <div>
+          <label class="block font-medium text-center">FG Name</label>
+          <select name="fg_name" class="border rounded px-2 py-1">
+            <option value="">All</option>
+            {% for fg in fg_list %}
+              <option value="{{ fg }}" {% if fg == fg_filter %}selected{% endif %}>
+                {{ fg }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="date-fields" style="{% if period != 'daily' %}display:none{% endif %}">
+          <label class="block font-medium">From</label>
+          <input type="date" name="from_date" value="{{ from_date }}" class="border rounded px-2 py-1" />
+        </div>
+        <div class="date-fields" style="{% if period != 'daily' %}display:none{% endif %}">
+          <label class="block font-medium">To</label>
+          <input type="date" name="to_date" value="{{ to_date }}" class="border rounded px-2 py-1" />
+        </div>
+        <div>
+          <label class="block font-medium">Period</label>
+          <select name="period" class="border rounded px-2 py-1" id="period-select">
+            <option value="monthly" {% if period == "monthly" %}selected{% endif %}>Monthly</option>
+            <option value="weekly" {% if period == "weekly" %}selected{% endif %}>Weekly</option>
+            <option value="fortnightly" {% if period == "fortnightly" %}selected{% endif %}>Fortnightly</option>
+            <option value="daily" {% if period == "daily" %}selected{% endif %}>Daily</option>
+          </select>
+        </div>
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 mt-5 rounded-lg shadow text-sm">
+          <i class="fa-solid fa-filter"></i>
+        </button>
+        <a href="{% url 'effluent_plan_actual_report' %}"
+          class="bg-gray-400 hover:bg-gray-500 text-white px-3 py-2 rounded-lg shadow text-sm mt-5">
+          <i class="fa-solid fa-eraser"></i>
+        </a>
+      </form>
+      
+
+  <div class="overflow-x-auto bg-white shadow rounded-lg">
+    <table class="w-full border-collapse">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="sticky left-0 bg-gray-100 border px-3 py-2 z-20">FG / Stage</th>
+          {% for m, lbl in bucket_label_items %}
+            <th colspan="2" class="border px-3 py-2 text-center">{{ lbl }}</th>
+          {% endfor %}
+          <th colspan="2" class="border px-3 py-2 text-center">Total</th>
+        </tr>
+        <tr>
+          <th class="sticky left-0 bg-gray-100 border px-3 py-1 z-20"></th>
+          {% for m, lbl in bucket_label_items %}
+            <th class="border px-2 py-1 text-sm text-center whitespace-nowrap">Plan</th>
+            <th class="border px-2 py-1 text-sm text-center whitespace-nowrap">Act (batch/Avg Qty)</th>
+          {% endfor %}
+          <th class="border px-2 py-1 text-sm text-center whitespace-nowrap">Plan</th>
+          <th class="border px-2 py-1 text-sm text-center whitespace-nowrap">Act (batch/Avg Qty)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in fg_rows %}
+          <tr class="bg-indigo-50 font-semibold {% if row.stages %}cursor-pointer fg-toggle{% endif %}">
+            <td class="sticky left-0 bg-white border px-3 py-2 z-10 whitespace-nowrap">
+              {% if row.stages %}
+                <span class="toggle-icon mr-1">[+]</span>
+              {% endif %}
+              {{ row.fg }}
+            </td>
+            {% for pair in row.month_pairs %}
+              <td class="border px-3 py-2 text-right">{{ pair.0.display }}</td>
+
+              {% if pair.1.batch_count > pair.0.batch_count %}
+                <td class="border px-3 py-2 text-right whitespace-nowrap text-red-600 font-semibold">{{ pair.1.display }}</td>
+              {% else %}
+                <td class="border px-3 py-2 text-right whitespace-nowrap text-green-600 font-semibold">{{ pair.1.display }}</td>
+              {% endif %}
+            {% endfor %}
+            <td class="border px-3 py-2 text-right whitespace-nowrap">{{ row.total_plan }}</td>
+            <td class="border px-3 py-2 text-right  whitespace-nowrap">{{ row.total_act }}</td>
+          </tr>
+          {% for st in row.stages %}
+            <tr class="stage-row hidden bg-white">
+              <td class="sticky left-0 bg-white border px-3 py-2 pl-6 z-10">
+                {{ st.stage }}
+              </td>
+              {% for pair in st.month_pairs %}
+                <td class="border px-3 py-2 text-right whitespace-nowrap">{{ pair.0.display }}</td>
+                {% if pair.1.batch_count > pair.0.batch_count %}
+                  <td class="border px-3 py-2 text-right whitespace-nowrap text-red-600 font-semibold">{{ pair.1.display }}</td>
+                {% else %}
+                  <td class="border px-3 py-2 text-right whitespace-nowrap text-green-600 font-semibold">{{ pair.1.display }}</td>
+                {% endif %}
+              {% endfor %}
+              <td class="border px-3 py-2 text-right whitespace-nowrap">{{ st.total_plan }}</td>
+              <td class="border px-3 py-2 text-right whitespace-nowrap">{{ st.total_act }}</td>
+            </tr>
+          {% endfor %}
+        {% empty %}
+          <tr>
+            <td colspan="{{ bucket_label_items|length|add:'2' }}" class="text-center py-4">
+              No records.
+            </td>
+          </tr>
+        {% endfor %}
+      
+        <tr class="bg-gray-200 font-semibold">
+          <td class="sticky left-0 bg-white border px-3 py-2 z-10">Grand Total</td>
+          {% for pair in grand_totals.month_pairs %}
+            <td class="border px-3 py-2 text-right whitespace-nowrap">{{ pair.0 }}</td>
+            <td class="border px-3 py-2 text-right whitespace-nowrap">{{ pair.1 }}</td>
+          {% endfor %}
+          <td class="border px-3 py-2 text-right whitespace-nowrap">{{ grand_totals.total_plan }}</td>
+          <td class="border px-3 py-2 text-right whitespace-nowrap">{{ grand_totals.total_act }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded',()=>{
+    document.querySelectorAll('.fg-toggle').forEach(tr=>{
+      tr.addEventListener('click',()=>{
+        let icon = tr.querySelector('.toggle-icon'),
+            show = icon.textContent==='[+]';
+        icon.textContent = show ? '[-]' : '[+]';
+        let nxt = tr.nextElementSibling;
+        while(nxt && nxt.classList.contains('stage-row')){
+          nxt.classList.toggle('hidden', !show);
+          nxt = nxt.nextElementSibling;
+        }
+      });
+    });
+  });
+
+   // Hide/show date fields based on Period dropdown
+   document.addEventListener("DOMContentLoaded", function() {
+    function toggleDateFields() {
+      var period = document.getElementById("period-select").value;
+      var dateFields = document.querySelectorAll(".date-fields");
+      dateFields.forEach(function(div) {
+        div.style.display = (period === "daily") ? "block" : "none";
+      });
+    }
+    document.getElementById("period-select").addEventListener("change", toggleDateFields);
+    toggleDateFields();
+  });
+</script>
+{% endblock %}

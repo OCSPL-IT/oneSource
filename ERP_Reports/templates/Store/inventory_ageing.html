@@ -1,0 +1,1958 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block maincontent %}
+
+<style>
+  /* ===================== CUSTOM SCROLLBARS FOR ERP LOOK ===================== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  /* ===================== SORT UI (for ALL tables) ===================== */
+  .sort-th { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+  .sort-th:hover { background-color: #f1f5f9 !important; }
+  .sort-th .sort-wrap { display:inline-flex; align-items:center; gap:6px; }
+  .sort-th .sort-ic { font-size:10px; line-height:1; opacity:.3; transition: opacity 0.2s; }
+  .sort-th:hover .sort-ic { opacity: .6; }
+  .sort-th.sorted .sort-ic { opacity: 1; color: #4f46e5; }
+  .sort-th.sorted.asc .sort-ic::after { content:"▲"; }
+  .sort-th.sorted.desc .sort-ic::after { content:"▼"; }
+
+  /* Make numbers look aligned */
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  /* ===================== Professional Muted Pastels (Itemwise) ===================== */
+  .g-open  { background-color: #fdfbf7; border-top: 2px solid #fcd34d; } /* Amber accent */
+  .g-inw   { background-color: #f6fbf9; border-top: 2px solid #6ee7b7; } /* Emerald accent */
+  .g-stkin { background-color: #f4f9fc; border-top: 2px solid #7dd3fc; } /* Sky accent */
+  .g-cons  { background-color: #fff8f8; border-top: 2px solid #fda4af; } /* Rose accent */
+  .g-stkot { background-color: #faf8fc; border-top: 2px solid #c4b5fd; } /* Violet accent */
+  .g-close { background-color: #f5f7fa; border-top: 2px solid #818cf8; } /* Indigo accent */
+
+  /* FIXED: Sub-headers are now solid (opacity 1) and match their parent's background */
+  .g-open-sub  { background-color: #fdfbf7; border-bottom: 1px solid #e2e8f0; }
+  .g-inw-sub   { background-color: #f6fbf9; border-bottom: 1px solid #e2e8f0; }
+  .g-stkin-sub { background-color: #f4f9fc; border-bottom: 1px solid #e2e8f0; }
+  .g-cons-sub  { background-color: #fff8f8; border-bottom: 1px solid #e2e8f0; }
+  .g-stkot-sub { background-color: #faf8fc; border-bottom: 1px solid #e2e8f0; }
+  .g-close-sub { background-color: #f5f7fa; border-bottom: 1px solid #e2e8f0; }
+
+  /* Column backgrounds - ultra subtle */
+  .c-open  { background-color: rgba(254, 252, 232, 0.4); }
+  .c-inw   { background-color: rgba(236, 253, 245, 0.4); }
+  .c-stkin { background-color: rgba(224, 242, 254, 0.4); }
+  .c-cons  { background-color: rgba(255, 241, 242, 0.4); }
+  .c-stkot { background-color: rgba(245, 243, 255, 0.4); }
+  .c-close { background-color: rgba(238, 242, 255, 0.4); }
+
+  /* Sticky thead on scroll containers */
+  .sticky-head thead { position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+  /* Sticky TOTAL row */
+  .sticky-foot tfoot { position: sticky; bottom: 0; z-index: 9; }
+  .sticky-foot tfoot td,
+  .sticky-foot tfoot th {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: 0 -1px 2px rgba(0,0,0,0.02);
+  }
+
+  /* Table styling enhancements */
+  table { border-collapse: separate; border-spacing: 0; }
+  tbody tr { transition: background-color 0.15s ease; }
+  tbody tr:hover td { background-color: #f1f5f9; }
+  
+  /* ===================== RM/PM compact headers (ALL summary + itemwise) ===================== */
+  thead .thead-compact { display: none; }
+  .mode-closing-only thead .thead-full { display: none !important; }
+  .mode-closing-only thead .thead-compact { display: table-row !important; }
+
+  /* Hide non-closing KPI cards, chart buttons, and detail column config in RM/PM mode */
+  .mode-closing-only .kpi-card-non-closing { display: none !important; }
+  .mode-closing-only .chart-view-btn-group { display: none !important; }
+  .mode-closing-only #btn-column-toggle { display: none !important; }
+</style>
+
+<div id="inv-root" class="bg-[#f3f4f6] min-h-screen text-slate-800 font-sans pb-10">
+  
+  <header class="bg-white border-b border-slate-200 shadow-sm px-4 sm:px-6 lg:px-8 py-4 mb-6 sticky top-0 z-30">
+    <div class="w-full max-w-[1600px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <div class="h-6 w-1 bg-indigo-600 rounded-full"></div>
+          <h1 class="text-xl font-bold text-slate-900 tracking-tight">Inventory Ageing Material</h1>
+        </div>
+        <p class="text-xs text-slate-500 mt-1 ml-3">
+          Reporting period: <span class="font-semibold text-slate-700">{{ from_str }}</span> to <span class="font-semibold text-slate-700">{{ today_str }}</span>
+        </p>
+      </div>
+
+      <div class="flex flex-col items-end gap-1">
+        <div class="flex items-center gap-4 text-xs">
+          {% if show_results %}
+          <div class="flex items-center gap-1.5 text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            <span id="kpi-total-rows" class="font-bold text-slate-800">0</span> rows
+          </div>
+          <div class="flex items-center gap-1.5 text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200">
+            <span id="kpi-recon-status" class="font-bold text-emerald-600 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+              Balanced
+            </span>
+          </div>
+          {% endif %}
+        </div>
+
+        {% if snapshot_created_at_str or snapshot_max_doc_date_str %}
+        <div class="text-[10px] text-slate-400 mt-1 flex items-center gap-3">
+          {% if snapshot_created_at_str %}
+          <span>Snapshot: <span class="font-medium text-slate-600">{{ snapshot_created_at_str }}</span></span>
+          {% endif %}
+          {% if snapshot_max_doc_date_str %}
+          <span>Max Doc: <span class="font-medium text-slate-600">{{ snapshot_max_doc_date_str }}</span></span>
+          {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="mt-1">
+          <form method="post" action="{% url 'erp_reports:inventory_ageing_rebuild_snapshot' %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="inline-flex items-center rounded-full bg-amber-400/90 px-3 py-1 text-[11px] font-bold text-slate-900 shadow-sm hover:bg-amber-400 hover:shadow transition-all cursor-pointer">
+              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Sync Data (Rebuild)
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <div class="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+
+    {% if snapshot_created_at_str %}
+    <div id="snapshot-warning"
+         data-snapshot="{{ snapshot_created_at_str|escapejs }}"
+         class="hidden mb-6 rounded-lg border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-xs text-amber-800 shadow-sm flex items-start justify-between">
+      <div class="flex items-start gap-2">
+        <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <div>
+          <p class="font-bold text-amber-900">Database Snapshot may be outdated</p>
+          <p class="mt-0.5 opacity-90">The data being viewed was last refreshed at <span class="font-mono bg-amber-100 px-1 rounded">{{ snapshot_created_at_str }}</span>.</p>
+        </div>
+      </div>
+      <form method="post" action="{% url 'erp_reports:inventory_ageing_rebuild_snapshot' %}">
+        {% csrf_token %}
+        <button type="submit" class="bg-amber-400 hover:bg-amber-500 text-amber-900 text-[11px] font-bold px-3 py-1.5 rounded shadow-sm transition-colors cursor-pointer">
+          Rebuild Now
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+    {% if messages %}
+    <div class="mb-6 flex flex-col gap-2">
+      {% for message in messages %}
+        <div class="rounded-lg border-l-4 px-4 py-3 text-xs shadow-sm 
+              {% if message.tags == 'error' %}bg-red-50 border-red-500 text-red-800
+              {% else %}bg-emerald-50 border-emerald-500 text-emerald-800{% endif %}">
+          <span class="font-bold">{{ message.tags|title }}:</span> {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if error_msg %}
+    <div class="mb-6 rounded-lg border-l-4 border-red-500 bg-red-50 px-4 py-3 text-xs text-red-800 shadow-sm flex items-center gap-2">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span class="font-medium">{{ error_msg }}</span>
+    </div>
+    {% endif %}
+
+    <form id="filterForm" method="get" class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <input type="hidden" name="run" value="1">
+      <input type="hidden" name="material_group" id="material-group-hidden" value="{{ request.GET.material_group|default:'' }}">
+      <input type="hidden" name="item_type_ids" id="item-type-hidden" value="{{ request.GET.item_type_ids|default:'' }}">
+      <input type="hidden" name="location_type" id="location-type-hidden" value="{{ request.GET.location_type|default:'' }}">
+      <input type="hidden" name="item_code" id="item-code-hidden" value="{{ request.GET.item_code|default:'' }}">
+      <input type="hidden" name="stock_location" id="stock-location-hidden" value="{{ request.GET.stock_location|default:'' }}">
+      <input type="hidden" name="batch_no" id="batch-no-hidden" value="{{ request.GET.batch_no|default:'' }}">
+      <input type="hidden" name="transaction_type" id="transaction-type-hidden" value="{{ request.GET.transaction_type|default:'' }}">
+      <input type="hidden" name="item_name_mode" id="item-name-mode-hidden" value="exact">
+
+      <div class="flex flex-col md:flex-row gap-6 mb-4">
+        
+        <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">From Date <span class="text-red-500">*</span></label>
+            <input type="date" name="from" id="date-from" value="{{ request.GET.from|default:from_str }}"
+                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors">
+            <p id="date-from-error" class="mt-1 text-[10px] text-red-500 hidden"></p>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">To Date <span class="text-red-500">*</span></label>
+            <input type="date" name="to" id="date-to" value="{{ request.GET.to|default:today_str }}"
+                   class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors">
+            <p id="date-to-error" class="mt-1 text-[10px] text-red-500 hidden"></p>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Material Group <span class="text-red-500">*</span></label>
+            <select id="material-group-select"
+                    class="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors font-medium">
+              <option value="" {% if not request.GET.material_group %}selected{% endif %}>-- Select Group --</option>
+              <option value="rm_pm" {% if request.GET.material_group == 'rm_pm' %}selected{% endif %}>RM / PM (Closing Only)</option>
+              <option value="eng" {% if request.GET.material_group == 'eng' %}selected{% endif %}>Engineering (Full View)</option>
+            </select>
+            <p id="material-group-error" class="mt-1 text-[10px] text-red-500 hidden"></p>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Item Type</label>
+            <div class="relative">
+              <button type="button" id="item-type-toggle"
+                      class="flex w-full items-center justify-between rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors text-left">
+                <span id="item-type-toggle-label" class="truncate font-medium">All Types</span>
+                <svg class="ml-2 h-3 w-3 text-slate-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+
+              <div id="item-type-panel" class="absolute z-20 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-xl text-xs hidden">
+                <div class="max-h-56 overflow-auto p-1.5 space-y-0.5">
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="57"><span class="font-medium">Raw Material</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="60"><span class="font-medium">Finished Good</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="61"><span class="font-medium">Semi Finished Good</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="62"><span class="font-medium">WIP FR</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="66"><span class="font-medium">Packing Material</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="eng"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="68"><span class="font-medium">Engineering Material</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="76"><span class="font-medium">Work in Progress</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="77"><span class="font-medium">Key Raw Material</span></label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer hover:bg-slate-50" data-mgroup="rm_pm"><input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" data-item-type-id="81"><span class="font-medium">Intercut</span></label>
+                </div>
+                <div class="border-t border-slate-100 p-2 flex justify-between bg-slate-50 rounded-b-md">
+                  <button type="button" id="item-type-clear" class="text-[10px] font-bold text-slate-500 hover:text-indigo-600 transition-colors uppercase tracking-wide">Clear</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Item Code</label>
+            <div class="relative">
+              <input id="item-code-input" type="text" value="{{ request.GET.item_code|default:'' }}" placeholder="e.g. RM-101"
+                     class="w-full rounded-md border border-slate-300 px-3 py-2 pr-8 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors">
+              <button type="button" id="item-code-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Stock Loc</label>
+            <div class="relative">
+              <input id="stock-location-input" type="text" value="{{ request.GET.stock_location|default:'' }}" placeholder="e.g. RACK-01"
+                     class="w-full rounded-md border border-slate-300 px-3 py-2 pr-8 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors">
+              <button type="button" id="stock-location-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Batch No</label>
+            <div class="relative">
+              <input id="batch-no-input" type="text" value="{{ request.GET.batch_no|default:'' }}" placeholder="e.g. excess2023"
+                     class="w-full rounded-md border border-slate-300 px-3 py-2 pr-8 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors">
+              <button type="button" id="batch-no-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+          </div>
+          
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Txn Type</label>
+            <div class="relative">
+              <input id="transaction-type-input" type="text" value="{{ request.GET.transaction_type|default:'' }}" placeholder="e.g. CAPEX GRN"
+                     class="w-full rounded-md border border-slate-300 px-3 py-2 pr-8 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors">
+              <button type="button" id="transaction-type-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+          </div>
+
+          <div class="sm:col-span-4 lg:col-span-4">
+            <label class="mb-1.5 block text-[11px] font-bold text-slate-500 uppercase tracking-wider">Exact Item Name</label>
+            <div class="relative">
+              <input id="item-name-input" type="text" name="item_name" value="{{ request.GET.item_name|default:'' }}"
+                     placeholder='Search exactly (e.g. ERW)'
+                     class="w-full rounded-md border border-slate-300 px-3 py-2 pr-8 text-xs text-slate-800 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 bg-slate-50 hover:bg-white transition-colors">
+              <button type="button" id="item-name-clear" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex md:flex-col justify-end gap-2 shrink-0 md:w-32 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+          <button type="submit" class="w-full inline-flex justify-center items-center rounded-md bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-700 hover:shadow transition-all active:scale-95">
+            <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            Apply
+          </button>
+          
+          <a href="{{ request.path }}" class="w-full inline-flex justify-center items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900 transition-colors">
+            Reset
+          </a>
+
+          {% if show_results %}
+          <div class="w-full h-px bg-slate-100 my-1 hidden md:block"></div>
+          <button id="btn-download-xlsx" type="button" class="w-full inline-flex justify-center items-center gap-1.5 rounded-md bg-emerald-600 px-4 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-emerald-700 transition-all active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Excel
+          </button>
+          <button id="btn-download-csv" type="button" class="w-full inline-flex justify-center items-center gap-1.5 rounded-md bg-slate-800 px-4 py-2 text-[11px] font-bold text-white shadow-sm hover:bg-slate-900 transition-all active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            CSV
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <div id="active-chips" class="mt-2 flex flex-wrap gap-1.5"></div>
+      
+      {% if show_results %}
+      <div id="column-panel" class="hidden mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <h3 class="text-[11px] font-bold text-slate-800 uppercase tracking-wider mb-3">Detail Table Column Configuration</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2" id="column-checkboxes"></div>
+        <div class="mt-4 flex justify-end gap-3 pt-3 border-t border-slate-200">
+          <button type="button" id="btn-select-all-columns" class="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors">Select All</button>
+          <button type="button" id="btn-deselect-all-columns" class="text-xs font-medium text-slate-600 hover:text-indigo-600 transition-colors">Deselect All</button>
+          <button type="button" id="btn-apply-columns" class="text-xs font-bold bg-slate-800 text-white px-3 py-1 rounded hover:bg-slate-900 transition-colors shadow-sm">Apply Layout</button>
+        </div>
+      </div>
+      {% endif %}
+    </form>
+
+    {% if show_results %}
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-bold text-slate-800 tracking-tight">Executive Summary</h2>
+      <span class="text-[11px] font-medium text-slate-500 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        Click any table row to drill down
+      </span>
+    </div>
+
+    <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+      
+      <div class="kpi-card-non-closing bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group hover:border-blue-300 transition-colors">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-300"></div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Opening</p>
+        <p id="kpi-opening-value" class="mt-1 text-lg font-black text-slate-800 tabular">₹0.00</p>
+        <p class="mt-1 text-[10px] font-medium text-slate-400">Qty: <span id="kpi-opening-qty" class="text-slate-600 font-bold">0</span></p>
+      </div>
+
+      <div class="kpi-card-non-closing bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group hover:border-emerald-300 transition-colors">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-emerald-400"></div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Inward (GRN)</p>
+        <p id="kpi-inward-value" class="mt-1 text-lg font-black text-slate-800 tabular">₹0.00</p>
+        <p class="mt-1 text-[10px] font-medium text-slate-400">Qty: <span id="kpi-inward-qty" class="text-slate-600 font-bold">0</span></p>
+      </div>
+
+      <div class="kpi-card-non-closing bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group hover:border-sky-300 transition-colors">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-sky-400"></div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Stk Trf Inward</p>
+        <p id="kpi-stkinward-value" class="mt-1 text-lg font-black text-slate-800 tabular">₹0.00</p>
+        <p class="mt-1 text-[10px] font-medium text-slate-400">Qty: <span id="kpi-stkinward-qty" class="text-slate-600 font-bold">0</span></p>
+      </div>
+
+      <div class="kpi-card-non-closing bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group hover:border-rose-300 transition-colors">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-rose-400"></div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Consumption</p>
+        <p id="kpi-cons-val" class="mt-1 text-lg font-black text-slate-800 tabular">₹0.00</p>
+        <p class="mt-1 text-[10px] font-medium text-slate-400">Value tracking only</p>
+      </div>
+
+      <div class="kpi-card-non-closing bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden group hover:border-purple-300 transition-colors">
+        <div class="absolute left-0 top-0 bottom-0 w-1 bg-purple-400"></div>
+        <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Stk Trf Issue</p>
+        <p id="kpi-stkissue-value" class="mt-1 text-lg font-black text-slate-800 tabular">₹0.00</p>
+        <p class="mt-1 text-[10px] font-medium text-slate-400">Qty: <span id="kpi-stkissue-qty" class="text-slate-600 font-bold">0</span></p>
+      </div>
+
+      <div class="bg-white rounded-xl border border-indigo-200 p-4 shadow shadow-indigo-100/50 relative overflow-hidden group hover:border-indigo-400 transition-colors">
+        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-600"></div>
+        <div class="flex justify-between items-start">
+            <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Net Closing</p>
+            <div class="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+        </div>
+        <p id="kpi-closing-value" class="mt-1 text-xl font-black text-slate-900 tabular">₹0.00</p>
+        <p class="mt-1 text-[10px] font-medium text-slate-400">Qty: <span id="kpi-closing-qty" class="text-slate-600 font-bold">0</span></p>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <section id="loc-type-kpi-card" class="hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p class="text-[11px] font-bold text-slate-800 uppercase tracking-wider mb-3">Filter by Location Type</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <button type="button" id="loc-type-store-btn" data-loctype="Store"
+                  class="flex flex-col items-start rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 hover:bg-white hover:border-indigo-300 hover:shadow-sm transition-all">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Store Inventory</span>
+            <span id="kpi-lt-store-val" class="mt-1 text-base font-black text-slate-800">₹0.00</span>
+          </button>
+          <button type="button" id="loc-type-capex-btn" data-loctype="CAPEX"
+                  class="flex flex-col items-start rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-slate-600 hover:bg-white hover:border-indigo-300 hover:shadow-sm transition-all">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Capex Inventory</span>
+            <span id="kpi-lt-capex-val" class="mt-1 text-base font-black text-slate-800">₹0.00</span>
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <div class="mb-6">
+      <section class="flex flex-col rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800">Inventory Trend Analysis</h3>
+              <p class="text-[11px] font-medium text-slate-500 mt-0.5">Timeframe: <span id="chart-range-label" class="text-slate-700">—</span></p>
+            </div>
+            <div class="chart-view-btn-group bg-slate-200/60 p-1 rounded-lg flex items-center">
+              <button type="button" data-chart-view="all" class="chart-view-btn px-3 py-1.5 rounded-md text-[10px] font-bold transition-all bg-white text-indigo-700 shadow-sm">All Metrics</button>
+              <button type="button" data-chart-view="closing" class="chart-view-btn px-3 py-1.5 rounded-md text-[10px] font-bold text-slate-600 hover:text-slate-900 transition-all">Closing</button>
+              <button type="button" data-chart-view="inward" class="chart-view-btn px-3 py-1.5 rounded-md text-[10px] font-bold text-slate-600 hover:text-slate-900 transition-all">Inward</button>
+              <button type="button" data-chart-view="consumption" class="chart-view-btn px-3 py-1.5 rounded-md text-[10px] font-bold text-slate-600 hover:text-slate-900 transition-all">Cons</button>
+            </div>
+          </div>
+        </header>
+        <div class="p-4 h-72 w-full">
+          <canvas id="inv-fy-chart"></canvas>
+        </div>
+      </section>
+    </div>
+
+    <div class="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section class="flex flex-col h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <h3 class="text-sm font-bold text-slate-800">Ageing Analysis</h3>
+        </header>
+        <div class="flex-1 overflow-auto max-h-[400px]">
+          <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot">
+            <thead>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-full">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Bucket <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Inward <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk In <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Cons <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk Out <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              </tr>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-compact">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Bucket <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="number"><span class="sort-wrap">Close Qty <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              </tr>
+            </thead>
+            <tbody id="age-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            <tfoot id="age-summary-foot" class="text-slate-900"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section class="flex flex-col h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <h3 class="text-sm font-bold text-slate-800">Location Summary</h3>
+        </header>
+        <div class="flex-1 overflow-auto max-h-[400px]">
+          <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot">
+            <thead>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-full">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Location <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Inward <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk In <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Cons <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk Out <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              </tr>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-compact">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Location <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="number"><span class="sort-wrap">Close Qty <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              </tr>
+            </thead>
+            <tbody id="location-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            <tfoot id="location-summary-foot" class="text-slate-900"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section id="card-itemtype-summary" class="flex flex-col h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <h3 class="text-sm font-bold text-slate-800">Item Type Definition</h3>
+        </header>
+        <div class="flex-1 overflow-auto max-h-[400px]">
+          <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot">
+            <thead>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-full">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Type <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Inward <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk In <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Cons <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk Out <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              </tr>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-compact">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Type <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="number"><span class="sort-wrap">Close Qty <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              </tr>
+            </thead>
+            <tbody id="itemtype-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            <tfoot id="itemtype-summary-foot" class="text-slate-900"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section id="card-batch-summary" class="flex flex-col h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <h3 class="text-sm font-bold text-slate-800">Batch Control</h3>
+        </header>
+        <div class="flex-1 overflow-auto max-h-[400px]">
+          <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot">
+            <thead>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-full">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Batch <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Inward <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk In <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Cons <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk Out <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              </tr>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-compact">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Batch <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="number"><span class="sort-wrap">Close Qty <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              </tr>
+            </thead>
+            <tbody id="batch-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            <tfoot id="batch-summary-foot" class="text-slate-900"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section id="card-txntype-summary" class="flex flex-col h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <h3 class="text-sm font-bold text-slate-800">Transaction Type Summary</h3>
+        </header>
+        <div class="flex-1 overflow-auto max-h-[400px]">
+          <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot">
+            <thead>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-full">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Txn Type <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Inward <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk In <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Cons <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk Out <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              </tr>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-compact">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Txn Type <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="number"><span class="sort-wrap">Close Qty <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              </tr>
+            </thead>
+            <tbody id="txntype-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            <tfoot id="txntype-summary-foot" class="text-slate-900"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section id="card-invcat-summary" class="hidden flex flex-col h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <h3 class="text-sm font-bold text-slate-800">Inventory Category (Engineering)</h3>
+        </header>
+        <div class="flex-1 overflow-auto max-h-[400px]">
+          <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot">
+            <thead>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-full">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Category <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Inward <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk In <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Cons <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk Out <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              </tr>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-compact">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">Category <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="number"><span class="sort-wrap">Close Qty <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              </tr>
+            </thead>
+            <tbody id="invcat-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            <tfoot id="invcat-summary-foot" class="text-slate-900"></tfoot>
+          </table>
+        </div>
+      </section>
+
+      <section id="card-invsubcat-summary" class="hidden flex flex-col h-full rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+          <h3 class="text-sm font-bold text-slate-800">Inventory Subcategory (Engineering)</h3>
+        </header>
+        <div class="flex-1 overflow-auto max-h-[400px]">
+          <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot">
+            <thead>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-full">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">SubCat <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Inward <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk In <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Cons <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Stk Out <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              </tr>
+              <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px] thead-compact">
+                <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 sort-th" data-type="text"><span class="sort-wrap">SubCat <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="number"><span class="sort-wrap">Close Qty <span class="sort-ic"></span></span></th>
+                <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 sort-th" data-type="currency"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              </tr>
+            </thead>
+            <tbody id="invsubcat-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+            <tfoot id="invsubcat-summary-foot" class="text-slate-900"></tfoot>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <section class="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3 flex justify-between items-center">
+        <h3 class="text-sm font-bold text-slate-800">Item-wise Matrix (Qty &amp; Value)</h3>
+        <button type="button" id="btn-column-toggle" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 border border-indigo-200 bg-white px-3 py-1 rounded-md shadow-sm transition-colors">
+          Configure Detail Columns
+        </button>
+      </header>
+
+      <div class="max-h-[500px] overflow-auto">
+        <table class="min-w-full text-[11px] js-sort sticky-head sticky-foot" id="itemwise-table">
+          <thead class="border-b border-slate-300">
+            <tr class="text-[10px] uppercase tracking-wider text-slate-700 thead-full">
+              <th rowspan="2" class="px-3 py-2 text-left font-bold whitespace-nowrap bg-[#f8fafc] border-b border-slate-200 sort-th" data-type="text">
+                <span class="sort-wrap">Item Name <span class="sort-ic"></span></span>
+              </th>
+              <th colspan="2" class="px-2 py-2 text-center font-extrabold g-open text-amber-900">Opening</th>
+              <th colspan="2" class="px-2 py-2 text-center font-extrabold g-inw text-emerald-900">Inward</th>
+              <th colspan="2" class="px-2 py-2 text-center font-extrabold g-stkin text-sky-900">Stk In</th>
+              <th colspan="2" class="px-2 py-2 text-center font-extrabold g-cons text-rose-900">Cons</th>
+              <th colspan="2" class="px-2 py-2 text-center font-extrabold g-stkot text-violet-900">Stk Out</th>
+              <th colspan="2" class="px-2 py-2 text-center font-extrabold g-close text-indigo-900">Close</th>
+            </tr>
+
+            <tr class="text-[10px] uppercase tracking-wider text-slate-700 thead-full">
+              <th class="px-2 py-2 text-right font-bold g-open-sub border-b border-slate-200 sort-th tabular" data-type="number"><span class="sort-wrap">QTY <span class="sort-ic"></span></span></th>
+              <th class="px-2 py-2 text-right font-bold g-open-sub border-b border-slate-200 sort-th tabular" data-type="currency"><span class="sort-wrap">Value <span class="sort-ic"></span></span></th>
+
+              <th class="px-2 py-2 text-right font-bold g-inw-sub border-b border-slate-200 sort-th tabular" data-type="number"><span class="sort-wrap">QTY <span class="sort-ic"></span></span></th>
+              <th class="px-2 py-2 text-right font-bold g-inw-sub border-b border-slate-200 sort-th tabular" data-type="currency"><span class="sort-wrap">Value <span class="sort-ic"></span></span></th>
+
+              <th class="px-2 py-2 text-right font-bold g-stkin-sub border-b border-slate-200 sort-th tabular" data-type="number"><span class="sort-wrap">QTY <span class="sort-ic"></span></span></th>
+              <th class="px-2 py-2 text-right font-bold g-stkin-sub border-b border-slate-200 sort-th tabular" data-type="currency"><span class="sort-wrap">Value <span class="sort-ic"></span></span></th>
+
+              <th class="px-2 py-2 text-right font-bold g-cons-sub border-b border-slate-200 sort-th tabular" data-type="number"><span class="sort-wrap">QTY <span class="sort-ic"></span></span></th>
+              <th class="px-2 py-2 text-right font-bold g-cons-sub border-b border-slate-200 sort-th tabular" data-type="currency"><span class="sort-wrap">Value <span class="sort-ic"></span></span></th>
+
+              <th class="px-2 py-2 text-right font-bold g-stkot-sub border-b border-slate-200 sort-th tabular" data-type="number"><span class="sort-wrap">QTY <span class="sort-ic"></span></span></th>
+              <th class="px-2 py-2 text-right font-bold g-stkot-sub border-b border-slate-200 sort-th tabular" data-type="currency"><span class="sort-wrap">Value <span class="sort-ic"></span></span></th>
+
+              <th class="px-2 py-2 text-right font-bold g-close-sub border-b border-slate-200 sort-th tabular" data-type="number"><span class="sort-wrap">QTY <span class="sort-ic"></span></span></th>
+              <th class="px-2 py-2 text-right font-bold g-close-sub border-b border-slate-200 sort-th tabular" data-type="currency"><span class="sort-wrap">Value <span class="sort-ic"></span></span></th>
+            </tr>
+
+            <tr class="text-[10px] uppercase tracking-wider text-slate-700 thead-compact">
+              <th class="px-3 py-3 text-left font-bold whitespace-nowrap bg-[#f8fafc] border-b border-slate-200 sort-th" data-type="text">
+                <span class="sort-wrap">Item Name <span class="sort-ic"></span></span>
+              </th>
+              <th class="px-3 py-3 text-right font-bold g-close-sub text-indigo-900 border-b border-slate-200 sort-th tabular" data-type="number">
+                <span class="sort-wrap">Close Qty <span class="sort-ic"></span></span>
+              </th>
+              <th class="px-3 py-3 text-right font-bold g-close-sub text-indigo-900 border-b border-slate-200 sort-th tabular" data-type="currency">
+                <span class="sort-wrap">Close Value <span class="sort-ic"></span></span>
+              </th>
+            </tr>
+          </thead>
+
+          <tbody id="itemwise-summary-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+          <tfoot id="itemwise-summary-foot" class="text-slate-900 font-bold"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <section class="mb-10 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <header class="border-b border-slate-100 bg-slate-50/80 px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-800">Transaction Ledger <span class="text-slate-400 font-normal ml-1">(Top 500)</span></h3>
+            <span id="detail-table-info" class="text-[10px] text-slate-500 mt-0.5 block"></span>
+          </div>
+          <button type="button" id="btn-scroll-to-top" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 transition-colors hidden flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+            Scroll to Top
+          </button>
+        </div>
+      </header>
+
+      <div class="max-h-[600px] overflow-auto" id="detail-table-container">
+        <table class="min-w-full text-[11px] js-sort sticky-head" id="detail-table">
+          <thead>
+            <tr class="text-slate-600 bg-white uppercase tracking-wider text-[10px]">
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="DocNo"><span class="sort-wrap">Doc No <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="date" data-col="DocDate"><span class="sort-wrap">Doc Date <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="ItemType"><span class="sort-wrap">Item Type <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="ItemCode"><span class="sort-wrap">Item Code <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="ItemName"><span class="sort-wrap">Item Name <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="Unit"><span class="sort-wrap">Unit <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="Location"><span class="sort-wrap">Location <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="BatchNo"><span class="sort-wrap">Batch No <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-left font-bold border-b border-slate-200 whitespace-nowrap sort-th" data-type="text" data-col="TransactionType"><span class="sort-wrap">Txn Type <span class="sort-ic"></span></span></th>
+
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="Opening"><span class="sort-wrap">Opening <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="Receipt"><span class="sort-wrap">Receipt <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="Issue"><span class="sort-wrap">Issue <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="Closing"><span class="sort-wrap">Closing <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="currency" data-col="ClosingValue"><span class="sort-wrap">Close Val <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="UnitRate"><span class="sort-wrap">Rate <span class="sort-ic"></span></span></th>
+
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="ConsQty"><span class="sort-wrap">Cons Q <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="currency" data-col="ConsValue"><span class="sort-wrap">Cons V <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="InwardQty"><span class="sort-wrap">In Q <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="currency" data-col="InwardValue"><span class="sort-wrap">In V <span class="sort-ic"></span></span></th>
+
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="StkTrfIssueQty"><span class="sort-wrap">ST Iss Q <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="currency" data-col="StkTrfIssueValue"><span class="sort-wrap">ST Iss V <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="StkTrfInwardQty"><span class="sort-wrap">ST In Q <span class="sort-ic"></span></span></th>
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="currency" data-col="StkTrfInwardValue"><span class="sort-wrap">ST In V <span class="sort-ic"></span></span></th>
+
+              <th class="px-3 py-2.5 text-right font-bold border-b border-slate-200 whitespace-nowrap sort-th tabular" data-type="number" data-col="AgeDays"><span class="sort-wrap">Age <span class="sort-ic"></span></span></th>
+            </tr>
+          </thead>
+          <tbody id="detail-table-body" class="divide-y divide-slate-100 text-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    {% else %}
+    <section class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-12 text-center shadow-sm">
+      <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      <h2 class="mb-2 text-lg font-bold text-slate-800 tracking-tight">No data loaded</h2>
+      <p class="text-sm text-slate-500 max-w-md mx-auto">Select your desired filters from the toolbar above and click <span class="font-bold text-indigo-600">Apply</span> to generate the inventory report.</p>
+    </section>
+    {% endif %}
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
+<div id="inv-loading-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm hidden">
+  <div class="rounded-xl bg-white px-6 py-5 shadow-2xl border border-slate-200 flex flex-col items-center gap-4">
+    <svg class="w-8 h-8 animate-spin text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+    <div class="text-center">
+      <div class="text-sm font-bold text-slate-800 tracking-wide">Processing Data...</div>
+      <div id="loading-progress" class="text-[11px] text-slate-500 mt-1">Fetching snapshot ledger</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const API="{% url 'erp_reports:inventory_ageing_summary_api' %}";
+  const CSV_URL="{% url 'erp_reports:inventory_ageing_export_csv' %}";
+  const XLSX_URL="{% url 'erp_reports:inventory_ageing_export_xlsx' %}";
+  const SHOW={{ show_results|yesno:"true,false" }};
+
+  const ITEM_TYPES=[
+    {id:57,label:'Raw Material'},{id:60,label:'Finished Good'},{id:61,label:'Semi Finished Good'},
+    {id:62,label:'WIP FR'},{id:66,label:'Packing Material'},{id:68,label:'Engineering Material'},
+    {id:76,label:'Work in Progress'},{id:77,label:'Key Raw Material'},{id:81,label:'Intercut'}
+  ];
+  const itByLabel={}; ITEM_TYPES.forEach(t=>{itByLabel[t.label]=t.id;});
+  const initIds="{{ request.GET.item_type_ids|default:'' }}".split(',').map(s=>parseInt(s.trim(),10)).filter(n=>!isNaN(n));
+
+  const DETAIL_COLUMNS = [
+    {key:'DocNo', label:'Doc No', default:true, base:true},
+    {key:'DocDate', label:'Doc Date', default:true, base:true},
+    {key:'ItemType', label:'Item Type', default:true},
+    {key:'ItemCode', label:'Item Code', default:true, base:true},
+    {key:'ItemName', label:'Item Name', default:true, base:true},
+    {key:'Unit', label:'Unit', default:true}, 
+    {key:'Location', label:'Location', default:true},
+    {key:'BatchNo', label:'Batch No', default:true},
+    {key:'TransactionType', label:'Txn Type', default:true},
+    {key:'Opening', label:'Opening', default:true}, 
+    {key:'Receipt', label:'Receipt', default:true}, 
+    {key:'Issue', label:'Issue', default:true}, 
+    {key:'Closing', label:'Closing', default:true, forceRM:true},
+    {key:'ClosingValue', label:'Close Val', default:true, forceRM:true},
+    {key:'UnitRate', label:'Rate', default:true}, 
+    {key:'ConsQty', label:'Cons Q', default:true},
+    {key:'ConsValue', label:'Cons V', default:true},
+    {key:'InwardQty', label:'In Q', default:true},
+    {key:'InwardValue', label:'In V', default:true},
+    {key:'StkTrfIssueQty', label:'ST Iss Q', default:true}, 
+    {key:'StkTrfIssueValue', label:'ST Iss V', default:true}, 
+    {key:'StkTrfInwardQty', label:'ST In Q', default:true}, 
+    {key:'StkTrfInwardValue', label:'ST In V', default:true}, 
+    {key:'AgeDays', label:'Age', default:true}
+  ];
+
+  const sel = (id) => document.getElementById(id);
+  const hasSel = () => { const s = window.getSelection && window.getSelection(); return s && s.toString().trim().length > 0; };
+
+  const cleanName = (s) => {
+    let v = (s ?? '').toString().trim();
+    return v || null;
+  };
+
+  const FORCE_NAME_MODE = 'exact';
+
+  const showLoad = (on) => {
+    const o = sel('inv-loading-overlay'), st = sel('summary-status');
+    if (o) o.classList.toggle('hidden', !on);
+    if (st) st.innerHTML = on
+      ? '<span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span> Loading…'
+      : '<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></span> Live Data';
+  };
+
+  const fA = (v) => {
+    const n = Number(v || 0);
+    return isFinite(n) ? n.toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0}) : '0';
+  };
+  const fQ = (v) => {
+    const n = Number(v || 0);
+    return isFinite(n) ? n.toLocaleString('en-IN',{minimumFractionDigits:3,maximumFractionDigits:3}) : '0.000';
+  };
+  const esc = (s) => String(s ?? '')
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+
+  const F = {
+    from: "{{ request.GET.from|default:from_str }}",
+    to: "{{ request.GET.to|default:today_str }}",
+    age_bucket: null,
+    location: null,
+    inventory_category: null,
+    inventory_subcategory: null,
+    item_name_raw: "{{ request.GET.item_name|default:''|escapejs }}",
+    item_name_mode: FORCE_NAME_MODE,
+    item_code: ("{{ request.GET.item_code|default:''|escapejs }}".trim() || null),
+    stock_location: ("{{ request.GET.stock_location|default:''|escapejs }}".trim() || null),
+    batch_no: ("{{ request.GET.batch_no|default:''|escapejs }}".trim() || null), 
+    transaction_type: ("{{ request.GET.transaction_type|default:''|escapejs }}".trim() || null), 
+    item_type_ids: initIds,
+    material_group: "{{ request.GET.material_group|default:'' }}" || '',
+    location_type: "{{ request.GET.location_type|default:'' }}" || null,
+  };
+
+  let columnVisibility = {};
+  let engColSnapshot = null;
+
+  try {
+    const saved = localStorage.getItem('inventory_ageing_cols_v2');
+    if (saved) columnVisibility = JSON.parse(saved);
+    else DETAIL_COLUMNS.forEach(col => { columnVisibility[col.key] = col.default; });
+  } catch(e) {
+    DETAIL_COLUMNS.forEach(col => { columnVisibility[col.key] = col.default; });
+  }
+
+  const syncH = (id, v) => { const h = sel(id); if(h) h.value = v || ''; };
+  const syncITH = () => syncH('item-type-hidden', (F.item_type_ids || []).join(','));
+  const syncMGH = () => syncH('material-group-hidden', F.material_group);
+  const syncLTH = () => syncH('location-type-hidden', F.location_type);
+  const syncICH = () => syncH('item-code-hidden', F.item_code);
+  const syncSLH = () => syncH('stock-location-hidden', F.stock_location);
+  const syncBNH = () => syncH('batch-no-hidden', F.batch_no); 
+  const syncTTH = () => syncH('transaction-type-hidden', F.transaction_type); 
+  const syncINH = () => syncH('item-name-mode-hidden', FORCE_NAME_MODE);
+
+  const applyModeClass = () => {
+    const root = sel('inv-root');
+    if (!root) return;
+    const closingOnly = (F.material_group === 'rm_pm');
+    root.classList.toggle('mode-closing-only', closingOnly);
+
+    if (closingOnly) {
+      if (!engColSnapshot) engColSnapshot = JSON.stringify(columnVisibility);
+      DETAIL_COLUMNS.forEach(c => {
+        columnVisibility[c.key] = !!(c.base || c.forceRM);
+      });
+    } else if (engColSnapshot) {
+      columnVisibility = JSON.parse(engColSnapshot);
+      engColSnapshot = null;
+    }
+    renderColumnPanel();
+    applyColumnVisibility();
+  };
+
+  const updateChartRangeLabel = () => {
+    const el = sel('chart-range-label');
+    if (!el) return;
+    el.textContent = `${F.from || '—'} → ${F.to || '—'}`;
+  };
+
+  const updateVis = () => {
+    const mg = F.material_group || '';
+    const sh = (id, v) => { const e = sel(id); if (e) e.classList.toggle('hidden', !v); };
+    sh('card-itemtype-summary', mg !== 'eng');
+    sh('card-batch-summary', true); 
+    sh('card-txntype-summary', true); 
+    sh('card-invcat-summary', mg === 'eng');
+    sh('card-invsubcat-summary', mg === 'eng');
+    sh('loc-type-kpi-card', mg === 'eng');
+    if (mg !== 'eng') { F.location_type = null; syncLTH(); }
+    applyModeClass();
+  };
+
+  const applyMG = () => {
+    document.querySelectorAll('#item-type-panel [data-mgroup]').forEach(r => {
+      const g = r.getAttribute('data-mgroup');
+      if (F.material_group === 'rm_pm') r.classList.toggle('hidden', g === 'eng');
+      else if (F.material_group === 'eng') r.classList.toggle('hidden', g === 'rm_pm');
+      else r.classList.remove('hidden');
+    });
+
+    if (F.material_group === 'eng') {
+      F.item_type_ids = F.item_type_ids.filter(i => i === 68);
+      if (!F.item_type_ids.length) F.item_type_ids = [68];
+    }
+    if (F.material_group === 'rm_pm') F.item_type_ids = F.item_type_ids.filter(i => i !== 68);
+
+    syncMGH(); syncITH(); syncLTH(); syncINH();
+    const s = sel('material-group-select');
+    if (s) s.value = F.material_group || '';
+    updateVis();
+    syncITDropdown();
+  };
+
+  const syncITDropdown = () => {
+    const lbl = sel('item-type-toggle-label');
+    const set = new Set((F.item_type_ids || []).map(Number));
+    document.querySelectorAll('input[data-item-type-id]').forEach(cb => {
+      cb.checked = set.has(Number(cb.getAttribute('data-item-type-id')));
+    });
+    if (lbl) {
+      lbl.textContent = set.size
+        ? ITEM_TYPES.filter(t => set.has(t.id)).map(t => t.label).join(', ')
+        : 'All Types';
+    }
+    syncITH();
+  };
+
+  const syncAllUI = () => {
+    syncITH(); syncMGH(); syncLTH(); syncICH(); syncSLH(); syncBNH(); syncTTH(); syncINH();
+    syncITDropdown(); updateVis();
+
+    const fromInp = sel('date-from'); if(fromInp) fromInp.value = F.from || '';
+    const toInp   = sel('date-to');   if(toInp)   toInp.value = F.to || '';
+    const mgSel   = sel('material-group-select'); if(mgSel) mgSel.value = F.material_group || '';
+
+    const nameInp = sel('item-name-input'); if(nameInp) nameInp.value = F.item_name_raw || '';
+    const codeInp = sel('item-code-input'); if(codeInp) codeInp.value = F.item_code || '';
+    const locInp  = sel('stock-location-input'); if(locInp) locInp.value = F.stock_location || '';
+    const bnInp   = sel('batch-no-input'); if(bnInp) bnInp.value = F.batch_no || ''; 
+    const txnInp  = sel('transaction-type-input'); if(txnInp) txnInp.value = F.transaction_type || ''; 
+  };
+
+  const buildQS = () => {
+    const p = new URLSearchParams();
+    if (F.from) p.set('from', F.from);
+    if (F.to) p.set('to', F.to);
+    if (F.age_bucket) p.set('age_bucket', F.age_bucket);
+    if (F.location) p.set('location', F.location);
+    if (F.inventory_category) p.set('inventory_category', F.inventory_category);
+    if (F.inventory_subcategory) p.set('inventory_subcategory', F.inventory_subcategory);
+
+    const cleanedName = cleanName(F.item_name_raw);
+    if (cleanedName) p.set('item_name', cleanedName);
+
+    p.set('item_name_mode', FORCE_NAME_MODE);
+
+    if (F.item_code) p.set('item_code', F.item_code);
+    if (F.stock_location) p.set('stock_location', F.stock_location);
+    if (F.batch_no) p.set('batch_no', F.batch_no); 
+    if (F.transaction_type) p.set('transaction_type', F.transaction_type); 
+    if (F.material_group) p.set('material_group', F.material_group);
+    if (F.location_type) p.set('location_type', F.location_type);
+    if (F.item_type_ids && F.item_type_ids.length) p.set('item_type_ids', F.item_type_ids.join(','));
+    return p.toString();
+  };
+
+  const validateDates = () => {
+    let valid = true;
+    const fromErr = sel('date-from-error');
+    const toErr = sel('date-to-error');
+    const mgErr = sel('material-group-error');
+
+    if (fromErr) fromErr.classList.add('hidden');
+    if (toErr) toErr.classList.add('hidden');
+    if (mgErr) mgErr.classList.add('hidden');
+
+    if (!F.material_group) {
+      if (mgErr) {
+        mgErr.textContent = 'Please select a material group';
+        mgErr.classList.remove('hidden');
+      }
+      valid = false;
+    }
+
+    if (F.from && F.to) {
+      const fromDt = new Date(F.from);
+      const toDt = new Date(F.to);
+      if (fromDt > toDt) {
+        if (toErr) {
+          toErr.textContent = '"To" date must be after "From" date';
+          toErr.classList.remove('hidden');
+        }
+        valid = false;
+      }
+    }
+    return valid;
+  };
+
+  const renderChips = () => {
+    const c = sel('active-chips'); if (!c) return;
+    const chips = [];
+    if (F.age_bucket) chips.push({l:'Age',k:'age_bucket',v:F.age_bucket});
+    if (F.location) chips.push({l:'Location',k:'location',v:F.location});
+    if (F.inventory_category) chips.push({l:'Inv Cat',k:'inventory_category',v:F.inventory_category});
+    if (F.inventory_subcategory) chips.push({l:'Inv SubCat',k:'inventory_subcategory',v:F.inventory_subcategory});
+
+    const cleanedName = cleanName(F.item_name_raw);
+    if (cleanedName) chips.push({l:'Item Name',k:'item_name_raw',v:cleanedName});
+    if (F.item_code) chips.push({l:'Item Code',k:'item_code',v:F.item_code});
+    if (F.stock_location) chips.push({l:'Stock Loc',k:'stock_location',v:F.stock_location});
+    if (F.batch_no) chips.push({l:'Batch',k:'batch_no',v:F.batch_no}); 
+    if (F.transaction_type) chips.push({l:'Txn Type',k:'transaction_type',v:F.transaction_type}); 
+    if (F.material_group) chips.push({l:'Mat Group',k:'material_group',v:(F.material_group==='eng'?'Engineering':'RM/PM')});
+    if (F.location_type) chips.push({l:'Loc Type',k:'location_type',v:F.location_type});
+    if (F.item_type_ids && F.item_type_ids.length) {
+      chips.push({
+        l:'Mat Type',
+        k:'item_type_ids',
+        v: ITEM_TYPES.filter(t => F.item_type_ids.includes(t.id)).map(t => t.label).join(', ')
+      });
+    }
+
+    if (!chips.length) { c.innerHTML=''; return; }
+
+    c.innerHTML = chips.map(x => `
+      <button type="button" data-ck="${x.k}"
+              class="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-colors shadow-sm">
+        <span>${esc(x.l)}: ${esc(x.v)}</span>
+        <span class="text-[9px] font-black opacity-60 hover:opacity-100 ml-1">✕</span>
+      </button>
+    `).join('');
+
+    c.querySelectorAll('[data-ck]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const k = btn.getAttribute('data-ck');
+        if (k === 'item_type_ids') {
+          F.item_type_ids = (F.material_group === 'eng') ? [68] : [];
+          syncITDropdown();
+        } else if (k === 'material_group') {
+          F.material_group = '';
+          F.item_type_ids = [];
+          applyMG();
+        } else if (k === 'location_type') {
+          F.location_type = null; syncLTH();
+        } else if (k === 'item_name_raw') {
+          F.item_name_raw = '';
+          const i = sel('item-name-input'); if(i) i.value='';
+        } else if (k === 'item_code') {
+          F.item_code = null;
+          const i = sel('item-code-input'); if(i) i.value='';
+          syncICH();
+        } else if (k === 'stock_location') {
+          F.stock_location = null;
+          const i = sel('stock-location-input'); if(i) i.value='';
+          syncSLH();
+        } else if (k === 'batch_no') { 
+          F.batch_no = null;
+          const i = sel('batch-no-input'); if(i) i.value='';
+          syncBNH();
+        } else if (k === 'transaction_type') { 
+          F.transaction_type = null;
+          const i = sel('transaction-type-input'); if(i) i.value='';
+          syncTTH();
+        } else {
+          F[k] = null;
+        }
+        applyModeClass();
+        renderChips();
+        if (SHOW) loadSummary();
+      });
+    });
+  };
+
+  const renderKpi = (kpi, lt) => {
+    const s = (id,v) => { const e = sel(id); if(e) e.textContent = v; };
+    s('kpi-opening-value','₹'+fA(kpi.opening_value)); s('kpi-opening-qty',fQ(kpi.opening_qty));
+    s('kpi-inward-value','₹'+fA(kpi.inward_value)); s('kpi-inward-qty',fQ(kpi.inward_qty));
+    s('kpi-stkinward-value','₹'+fA(kpi.stk_trf_inward_value)); s('kpi-stkinward-qty',fQ(kpi.stk_trf_inward_qty));
+    s('kpi-cons-val','₹'+fA(kpi.consumption_value));
+    s('kpi-stkissue-value','₹'+fA(kpi.stk_trf_issue_value)); s('kpi-stkissue-qty',fQ(kpi.stk_trf_issue_qty));
+    s('kpi-closing-value','₹'+fA(kpi.closing_value)); s('kpi-closing-qty',fQ(kpi.closing_qty));
+    s('kpi-total-rows', (kpi.total_rows || 0).toLocaleString('en-IN'));
+
+    const recon = sel('kpi-recon-status');
+    if (recon) {
+      const expected =
+        (kpi.opening_value || 0) +
+        (kpi.inward_value || 0) +
+        (kpi.stk_trf_inward_value || 0) -
+        (kpi.consumption_value || 0) -
+        (kpi.stk_trf_issue_value || 0);
+
+      const actual = kpi.closing_value || 0;
+      const diff = Math.abs(expected - actual);
+      const tolerance = 0.01;
+
+      if (diff <= tolerance) {
+        recon.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Balanced`;
+        recon.className = 'font-bold text-emerald-600 flex items-center gap-1';
+      } else {
+        recon.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> Diff: ₹${fA(diff)}`;
+        recon.className = 'font-bold text-amber-600 flex items-center gap-1';
+      }
+    }
+
+    let sv=0, cv=0;
+    (lt || []).forEach(r => {
+      const n = (r.name || '').toUpperCase();
+      if (n === 'STORE') sv = Number(r.closing_value || 0);
+      if (n === 'CAPEX') cv = Number(r.closing_value || 0);
+    });
+    s('kpi-lt-store-val','₹'+fA(sv));
+    s('kpi-lt-capex-val','₹'+fA(cv));
+
+    ['loc-type-store-btn','loc-type-capex-btn'].forEach(id => {
+      const b = sel(id); if(!b) return;
+      const t = b.getAttribute('data-loctype');
+      const a = F.location_type === t;
+      b.classList.toggle('ring-1', a);
+      b.classList.toggle('ring-indigo-500', a);
+      b.classList.toggle('bg-indigo-50', a);
+      b.classList.toggle('bg-slate-50', !a);
+    });
+  };
+
+  const renderST = (list, tbId, footId, opts) => {
+    const tb = sel(tbId);
+    const tf = sel(footId);
+    if(!tb || !tf) return;
+
+    const closingOnly = (F.material_group === 'rm_pm');
+
+    const gn = opts.gn || (r => r.name || r.batch_no || r.transaction_type || '(Blank)');
+    const gv = opts.gv || (r => gn(r));
+    const ia = opts.ia || (() => false);
+    const oc = opts.oc || (() => {});
+    const rc = opts.rc || (() => '');
+
+    tb.innerHTML = '';
+    tf.innerHTML = '';
+
+    if(!list || !list.length){
+      tb.innerHTML = `<tr><td colspan="${closingOnly ? 3 : 7}" class="px-4 py-8 text-center text-slate-400 font-medium">No records found</td></tr>`;
+      return;
+    }
+
+    let tO=0,tI=0,tSI=0,tC=0,tSO=0,tCl=0,tClQ=0;
+
+    tb.innerHTML = list.map(r => {
+      const n = gn(r), cv = gv(r);
+      const ov=Number(r.opening_value||0), iv=Number(r.inward_value||0), si=Number(r.stk_trf_inward_value||0);
+      const co=Number(r.consumption_value||0), so=Number(r.stk_trf_issue_value||0);
+      const cl=Number(r.closing_value||0), clq=Number(r.closing_qty||0);
+      
+      tO+=ov; tI+=iv; tSI+=si; tC+=co; tSO+=so; tCl+=cl; tClQ+=clq;
+      const act = ia(r);
+
+      if (closingOnly) {
+        return `<tr class="cursor-pointer ${act?'bg-indigo-50/70':'hover:bg-slate-50'} ${rc(r)} transition-colors" data-cv="${esc(cv)}">
+          <td class="px-3 py-2 text-left font-medium text-indigo-700 border-b border-slate-100 truncate max-w-[200px]" title="${esc(n)}">${esc(n)}</td>
+          <td class="px-3 py-2 text-right tabular border-b border-slate-100" data-sort="${clq}">${fQ(clq)}</td>
+          <td class="px-3 py-2 text-right tabular font-bold text-slate-800 border-b border-slate-100" data-sort="${cl}">₹${fA(cl)}</td>
+        </tr>`;
+      }
+
+      return `<tr class="cursor-pointer ${act?'bg-indigo-50/70':'hover:bg-slate-50'} ${rc(r)} transition-colors" data-cv="${esc(cv)}">
+        <td class="px-3 py-2 text-left font-medium text-indigo-700 border-b border-slate-100 truncate max-w-[150px]" title="${esc(n)}">${esc(n)}</td>
+        <td class="px-3 py-2 text-right tabular border-b border-slate-100" data-sort="${ov}">₹${fA(ov)}</td>
+        <td class="px-3 py-2 text-right tabular border-b border-slate-100" data-sort="${iv}">₹${fA(iv)}</td>
+        <td class="px-3 py-2 text-right tabular border-b border-slate-100" data-sort="${si}">₹${fA(si)}</td>
+        <td class="px-3 py-2 text-right tabular border-b border-slate-100" data-sort="${co}">₹${fA(co)}</td>
+        <td class="px-3 py-2 text-right tabular border-b border-slate-100" data-sort="${so}">₹${fA(so)}</td>
+        <td class="px-3 py-2 text-right tabular font-bold text-slate-800 border-b border-slate-100" data-sort="${cl}">₹${fA(cl)}</td>
+      </tr>`;
+    }).join('');
+
+    if (closingOnly) {
+      tf.innerHTML = `<tr>
+        <td class="px-3 py-2.5 font-bold uppercase tracking-wider text-[10px]">Total</td>
+        <td class="px-3 py-2.5 text-right tabular font-bold" data-sort="${tClQ}">${fQ(tClQ)}</td>
+        <td class="px-3 py-2.5 text-right tabular font-black text-slate-900" data-sort="${tCl}">₹${fA(tCl)}</td>
+      </tr>`;
+    } else {
+      tf.innerHTML = `<tr>
+        <td class="px-3 py-2.5 font-bold uppercase tracking-wider text-[10px]">Total</td>
+        <td class="px-3 py-2.5 text-right tabular font-bold" data-sort="${tO}">₹${fA(tO)}</td>
+        <td class="px-3 py-2.5 text-right tabular font-bold" data-sort="${tI}">₹${fA(tI)}</td>
+        <td class="px-3 py-2.5 text-right tabular font-bold" data-sort="${tSI}">₹${fA(tSI)}</td>
+        <td class="px-3 py-2.5 text-right tabular font-bold" data-sort="${tC}">₹${fA(tC)}</td>
+        <td class="px-3 py-2.5 text-right tabular font-bold" data-sort="${tSO}">₹${fA(tSO)}</td>
+        <td class="px-3 py-2.5 text-right tabular font-black text-slate-900" data-sort="${tCl}">₹${fA(tCl)}</td>
+      </tr>`;
+    }
+
+    tb.querySelectorAll('tr[data-cv]').forEach(tr => {
+      tr.addEventListener('click', () => {
+        if (hasSel()) return;
+        oc(tr.getAttribute('data-cv'));
+      });
+    });
+  };
+
+  const cmap={'0-60':'border-l-4 border-emerald-400','61-90':'border-l-4 border-lime-400','91-160':'border-l-4 border-amber-400','161-360':'border-l-4 border-orange-400','361-720':'border-l-4 border-rose-400','>720':'border-l-4 border-red-500'};
+
+  const renderAge = (list) => renderST(list, 'age-summary-body', 'age-summary-foot', {
+    gn:b=>b.label||b.slug, gv:b=>b.slug||'',
+    ia:b=>F.age_bucket===(b.slug||''), rc:b=>cmap[b.slug]||'',
+    oc:s=>{ F.age_bucket=(F.age_bucket===s)?null:(s||null); renderChips(); if(SHOW)loadSummary(); }
+  });
+
+  const renderGT = (list, tbId, footId, fk) => renderST(list, tbId, footId, {
+    ia:r=>{ const n=r.name||r.batch_no||r.transaction_type||'(Blank)'; return F[fk]===n; },
+    oc:n=>{ F[fk]=(F[fk]===n)?null:n; renderChips(); if(SHOW)loadSummary(); }
+  });
+
+  const renderIT = (list) => {
+    const set = new Set((F.item_type_ids||[]).map(Number));
+    let d = list || [];
+    if (set.size) d = d.filter(i => { const id = itByLabel[i.name]; return id && set.has(id); });
+
+    renderST(d, 'itemtype-summary-body', 'itemtype-summary-foot', {
+      ia:i=>{ const id=itByLabel[i.name]; return !!(id && set.has(id)); },
+      oc:l=>{
+        const id = itByLabel[l]; if(!id) return;
+        if (F.material_group==='eng') { F.item_type_ids=[68]; }
+        else {
+          const ex = F.item_type_ids.includes(id);
+          F.item_type_ids = ex ? F.item_type_ids.filter(x=>x!==id) : [...F.item_type_ids, id];
+        }
+        syncITDropdown(); renderChips(); if(SHOW)loadSummary();
+      }
+    });
+  };
+
+  const renderIW = (list) => {
+    const tb = sel('itemwise-summary-body');
+    const tf = sel('itemwise-summary-foot');
+    if(!tb || !tf) return;
+
+    const closingOnly = (F.material_group === 'rm_pm');
+
+    tb.innerHTML = '';
+    tf.innerHTML = '';
+
+    if(!list||!list.length){
+      tb.innerHTML = `<tr><td colspan="${closingOnly ? 3 : 13}" class="py-8 text-center text-slate-400 font-medium border-b border-slate-100">No matching items found</td></tr>`;
+      return;
+    }
+
+    let gOQ=0,gOV=0,gIQ=0,gIV=0,gSIQ=0,gSIV=0,gCQ=0,gCV=0,gSOQ=0,gSOV=0,gCLQ=0,gCLV=0;
+    const cleanedName = cleanName(F.item_name_raw);
+
+    tb.innerHTML = list.map(r=>{
+      const n=r.item_name||'(Blank)';
+
+      const oq=Number(r.opening_qty||0),ov=Number(r.opening_value||0);
+      const iq=Number(r.inward_qty||0),iv=Number(r.inward_value||0);
+      const siq=Number(r.stk_trf_inward_qty||0),siv=Number(r.stk_trf_inward_value||0);
+      const cq=Number(r.consumption_qty||0),cv=Number(r.consumption_value||0);
+      const soq=Number(r.stk_trf_issue_qty||0),sov=Number(r.stk_trf_issue_value||0);
+      const clq=Number(r.closing_qty||0),clv=Number(r.closing_value||0);
+
+      gOQ+=oq;gOV+=ov;gIQ+=iq;gIV+=iv;gSIQ+=siq;gSIV+=siv;gCQ+=cq;gCV+=cv;gSOQ+=soq;gSOV+=sov;gCLQ+=clq;gCLV+=clv;
+
+      const act = cleanedName === n;
+
+      if (closingOnly) {
+        return `<tr class="cursor-pointer ${act?'bg-indigo-50/80':'hover:bg-slate-50'}" data-fv="${esc(n)}">
+          <td class="px-3 py-2 text-left whitespace-normal break-words max-w-[260px] border-b border-slate-100 ${act?'text-indigo-800 font-bold':'text-indigo-600 font-medium'}">${esc(n)}</td>
+          <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-close" data-sort="${clq}">${fQ(clq)}</td>
+          <td class="px-2 py-2 text-right tabular border-b border-slate-100 font-bold text-slate-800 c-close" data-sort="${clv}">₹${fA(clv)}</td>
+        </tr>`;
+      }
+
+      return `<tr class="cursor-pointer ${act?'bg-indigo-50/80':'hover:bg-slate-50'}" data-fv="${esc(n)}">
+        <td class="px-3 py-2 text-left whitespace-normal break-words max-w-[220px] border-b border-slate-100 ${act?'text-indigo-800 font-bold':'text-indigo-600 font-medium'}">
+          ${esc(n)}
+        </td>
+
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-open" data-sort="${oq}">${fQ(oq)}</td>
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-open" data-sort="${ov}">₹${fA(ov)}</td>
+
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-inw" data-sort="${iq}">${fQ(iq)}</td>
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-inw" data-sort="${iv}">₹${fA(iv)}</td>
+
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-stkin" data-sort="${siq}">${fQ(siq)}</td>
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-stkin" data-sort="${siv}">₹${fA(siv)}</td>
+
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-cons" data-sort="${cq}">${fQ(cq)}</td>
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-cons" data-sort="${cv}">₹${fA(cv)}</td>
+
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-stkot" data-sort="${soq}">${fQ(soq)}</td>
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-stkot" data-sort="${sov}">₹${fA(sov)}</td>
+
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 c-close" data-sort="${clq}">${fQ(clq)}</td>
+        <td class="px-2 py-2 text-right tabular border-b border-slate-100 font-bold text-slate-800 c-close" data-sort="${clv}">₹${fA(clv)}</td>
+      </tr>`;
+    }).join('');
+
+    if (closingOnly) {
+      tf.innerHTML = `<tr>
+        <td class="px-3 py-2.5 font-bold uppercase tracking-wider text-[10px]">Total</td>
+        <td class="px-2 py-2.5 text-right tabular c-close font-bold" data-sort="${gCLQ}">${fQ(gCLQ)}</td>
+        <td class="px-2 py-2.5 text-right tabular c-close font-black text-slate-900" data-sort="${gCLV}">₹${fA(gCLV)}</td>
+      </tr>`;
+    } else {
+      tf.innerHTML = `<tr>
+        <td class="px-3 py-2.5 font-bold uppercase tracking-wider text-[10px]">Total</td>
+
+        <td class="px-2 py-2.5 text-right tabular c-open font-bold" data-sort="${gOQ}">${fQ(gOQ)}</td>
+        <td class="px-2 py-2.5 text-right tabular c-open font-bold" data-sort="${gOV}">₹${fA(gOV)}</td>
+
+        <td class="px-2 py-2.5 text-right tabular c-inw font-bold" data-sort="${gIQ}">${fQ(gIQ)}</td>
+        <td class="px-2 py-2.5 text-right tabular c-inw font-bold" data-sort="${gIV}">₹${fA(gIV)}</td>
+
+        <td class="px-2 py-2.5 text-right tabular c-stkin font-bold" data-sort="${gSIQ}">${fQ(gSIQ)}</td>
+        <td class="px-2 py-2.5 text-right tabular c-stkin font-bold" data-sort="${gSIV}">₹${fA(gSIV)}</td>
+
+        <td class="px-2 py-2.5 text-right tabular c-cons font-bold" data-sort="${gCQ}">${fQ(gCQ)}</td>
+        <td class="px-2 py-2.5 text-right tabular c-cons font-bold" data-sort="${gCV}">₹${fA(gCV)}</td>
+
+        <td class="px-2 py-2.5 text-right tabular c-stkot font-bold" data-sort="${gSOQ}">${fQ(gSOQ)}</td>
+        <td class="px-2 py-2.5 text-right tabular c-stkot font-bold" data-sort="${gSOV}">₹${fA(gSOV)}</td>
+
+        <td class="px-2 py-2.5 text-right tabular c-close font-bold" data-sort="${gCLQ}">${fQ(gCLQ)}</td>
+        <td class="px-2 py-2.5 text-right tabular c-close font-black text-slate-900" data-sort="${gCLV}">₹${fA(gCLV)}</td>
+      </tr>`;
+    }
+
+    tb.querySelectorAll('tr[data-fv]').forEach(r=>{
+      r.addEventListener('click',()=>{
+        if(hasSel())return;
+        const v=r.getAttribute('data-fv') || '';
+        const inp=sel('item-name-input'); if(inp) inp.value=v;
+        F.item_name_raw = v;
+        renderChips();
+        if(SHOW) loadSummary();
+      });
+    });
+  };
+
+  const applyColumnVisibility = () => {
+    DETAIL_COLUMNS.forEach((col) => {
+      const th = document.querySelector(`#detail-table th[data-col="${col.key}"]`);
+      if (th) th.style.display = columnVisibility[col.key] ? '' : 'none';
+    });
+
+    document.querySelectorAll('#detail-table-body tr').forEach(tr => {
+      DETAIL_COLUMNS.forEach((col, idx) => {
+        const td = tr.children[idx];
+        if (td) td.style.display = columnVisibility[col.key] ? '' : 'none';
+      });
+    });
+
+    localStorage.setItem('inventory_ageing_cols_v2', JSON.stringify(columnVisibility));
+  };
+
+  const renderColumnPanel = () => {
+    const container = sel('column-checkboxes');
+    if (!container) return;
+    
+    container.innerHTML = DETAIL_COLUMNS.map(col => `
+      <label class="flex items-center gap-2.5 px-3 py-2 bg-white border border-slate-200 rounded-md cursor-pointer hover:border-indigo-300 transition-colors shadow-sm">
+        <input type="checkbox" data-col="${col.key}" ${columnVisibility[col.key] ? 'checked' : ''}
+               class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5">
+        <span class="text-[11px] font-bold text-slate-700">${col.label}</span>
+      </label>
+    `).join('');
+
+    container.querySelectorAll('input[data-col]').forEach(cb => {
+      cb.addEventListener('change', () => {
+        columnVisibility[cb.getAttribute('data-col')] = cb.checked;
+      });
+    });
+  };
+
+  const renderDetail = (rows) => {
+    const tb=sel('detail-table-body'), info=sel('detail-table-info');
+    if(!tb) return;
+
+    if(!rows || !rows.length){
+      tb.innerHTML='<tr><td colspan="25" class="py-8 text-center text-slate-400 font-medium">No ledger entries found</td></tr>';
+      if(info) info.textContent='';
+      applyColumnVisibility();
+      return;
+    }
+
+    if(info) info.textContent=`Showing ${rows.length} rows (capped at 500)`;
+
+    tb.innerHTML = rows.map(r => `
+      <tr class="hover:bg-slate-50 transition-colors">
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.DocNo)}</td>
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.DocDate)}</td>
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.ItemType)}</td>
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.ItemCode)}</td>
+        <td class="px-3 py-1.5 whitespace-normal break-words max-w-[200px] border-b border-slate-100">${esc(r.ItemName)}</td>
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.Unit)}</td>
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.Location)}</td>
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.BatchNo)}</td>
+        <td class="px-3 py-1.5 whitespace-nowrap border-b border-slate-100">${esc(r.TransactionType)}</td>
+
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.Opening||0)}">${fQ(r.Opening)}</td>
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.Receipt||0)}">${fQ(r.Receipt)}</td>
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.Issue||0)}">${fQ(r.Issue)}</td>
+        <td class="px-3 py-1.5 text-right tabular font-bold border-b border-slate-100" data-sort="${Number(r.Closing||0)}">${fQ(r.Closing)}</td>
+
+        <td class="px-3 py-1.5 text-right tabular font-bold text-slate-800 border-b border-slate-100" data-sort="${Number(r.ClosingValue||0)}">₹${fA(r.ClosingValue)}</td>
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.UnitRate||0)}">${Number(r.UnitRate||0).toFixed(2)}</td>
+
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.ConsQty||0)}">${fQ(r.ConsQty)}</td>
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.ConsValue||0)}">₹${fA(r.ConsValue)}</td>
+
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.InwardQty||0)}">${fQ(r.InwardQty)}</td>
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.InwardValue||0)}">₹${fA(r.InwardValue)}</td>
+
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.StkTrfIssueQty||0)}">${fQ(r.StkTrfIssueQty)}</td>
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.StkTrfIssueValue||0)}">₹${fA(r.StkTrfIssueValue)}</td>
+
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.StkTrfInwardQty||0)}">${fQ(r.StkTrfInwardQty)}</td>
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100" data-sort="${Number(r.StkTrfInwardValue||0)}">₹${fA(r.StkTrfInwardValue)}</td>
+
+        <td class="px-3 py-1.5 text-right tabular border-b border-slate-100 font-bold text-slate-500" data-sort="${Number(r.AgeDays||0)}">${r.AgeDays!=null?Number(r.AgeDays):''}</td>
+      </tr>
+    `).join('');
+
+    applyColumnVisibility();
+  };
+
+  let fyChart=null;
+  let currentChartView = 'all';
+
+  const setChartViewButtons = (v) => {
+    currentChartView = v || 'all';
+    document.querySelectorAll('.chart-view-btn').forEach(b=>{
+      const on = (b.getAttribute('data-chart-view') === currentChartView);
+      b.classList.toggle('bg-white', on);
+      b.classList.toggle('text-indigo-700', on);
+      b.classList.toggle('shadow-sm', on);
+      b.classList.toggle('text-slate-600', !on);
+      b.classList.toggle('bg-transparent', !on);
+    });
+
+    if (!fyChart) return;
+    
+    const closingOnly = (F.material_group === 'rm_pm');
+
+    if (closingOnly) {
+      if (fyChart.data.datasets[0]) fyChart.data.datasets[0].hidden = false;
+    } else {
+      if (currentChartView === 'all') {
+        if(fyChart.data.datasets[0]) fyChart.data.datasets[0].hidden = false;
+        if(fyChart.data.datasets[1]) fyChart.data.datasets[1].hidden = false;
+        if(fyChart.data.datasets[2]) fyChart.data.datasets[2].hidden = false;
+      } else if (currentChartView === 'closing') {
+        if(fyChart.data.datasets[0]) fyChart.data.datasets[0].hidden = false;
+        if(fyChart.data.datasets[1]) fyChart.data.datasets[1].hidden = true;
+        if(fyChart.data.datasets[2]) fyChart.data.datasets[2].hidden = true;
+      } else if (currentChartView === 'inward') {
+        if(fyChart.data.datasets[0]) fyChart.data.datasets[0].hidden = true;
+        if(fyChart.data.datasets[1]) fyChart.data.datasets[1].hidden = false;
+        if(fyChart.data.datasets[2]) fyChart.data.datasets[2].hidden = true;
+      } else if (currentChartView === 'consumption') {
+        if(fyChart.data.datasets[0]) fyChart.data.datasets[0].hidden = true;
+        if(fyChart.data.datasets[1]) fyChart.data.datasets[1].hidden = true;
+        if(fyChart.data.datasets[2]) fyChart.data.datasets[2].hidden = false;
+      }
+    }
+    
+    fyChart.update();
+  };
+
+  const renderChart = (m) => {
+    updateChartRangeLabel();
+    const cv = sel('inv-fy-chart');
+    if(!cv || typeof Chart === 'undefined') return;
+
+    if(window.ChartDataLabels) { try { Chart.register(window.ChartDataLabels); } catch(e){} }
+
+    const labels=(m&&m.labels)||[];
+    const closingVals = (m && (m.closing_values || m.values)) || [];
+    const inwardVals  = (m && m.inward_values) || [];
+    const consVals    = (m && m.consumption_values) || [];
+
+    const clVals = labels.map((_,i)=>Number(closingVals[i]||0));
+    const inwVals = labels.map((_,i)=>Number(inwardVals[i]||0));
+    const conVals = labels.map((_,i)=>Number(consVals[i]||0));
+    
+    const closingOnly = (F.material_group === 'rm_pm');
+
+    const yFmt=(v)=>{
+      v=Number(v);
+      const sign = v < 0 ? '-' : '';
+      const a = Math.abs(v);
+      if(a>=1e7) return sign+(a/1e7).toFixed(1)+' Cr';
+      if(a>=1e5) return sign+(a/1e5).toFixed(1)+' L';
+      return sign+a.toLocaleString('en-IN',{maximumFractionDigits:0});
+    };
+    
+    const datasets = [
+      { label:'Closing (₹)', data:clVals, type:'bar', backgroundColor: '#6366f1', borderWidth:0, borderRadius:4, barPercentage:0.85, categoryPercentage:0.8 }
+    ];
+    
+    if (!closingOnly) {
+      datasets.push({ label:'Monthly Inward (₹)', data:inwVals, type:'bar', backgroundColor: '#34d399', borderWidth:0, borderRadius:4, barPercentage:0.85, categoryPercentage:0.8 });
+      datasets.push({ label:'Monthly Consumption (₹)', data:conVals, type:'bar', backgroundColor: '#fb7185', borderWidth:0, borderRadius:4, barPercentage:0.85, categoryPercentage:0.8 });
+    }
+
+    const cfg={
+      type:'bar',
+      data:{ labels, datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction: { mode: 'index', intersect: false },
+        scales:{ 
+            y:{ 
+                ticks:{ callback:yFmt, font: {family: 'Inter, sans-serif', size: 10}, color: '#64748b' },
+                grid: { color: '#f1f5f9', drawBorder: false }
+            },
+            x:{
+                ticks:{ font: {family: 'Inter, sans-serif', size: 10}, color: '#64748b' },
+                grid: { display: false, drawBorder: false }
+            } 
+        },
+        plugins:{
+          legend:{ display:true, labels: { boxWidth: 12, usePointStyle: true, font: {family: 'Inter, sans-serif', size: 11, weight: 'bold'}, color: '#475569' } },
+          tooltip:{ 
+              backgroundColor: 'rgba(15, 23, 42, 0.9)', titleFont: {family: 'Inter, sans-serif'}, bodyFont: {family: 'Inter, sans-serif'},
+              callbacks:{ label:ctx=>{
+            const v=ctx.parsed.y ?? ctx.parsed;
+            return (ctx.dataset.label||'')+': ₹ '+Number(v||0).toLocaleString('en-IN',{maximumFractionDigits:0});
+          }}} ,
+          datalabels:{
+            anchor:'end',align:'top',clamp:true,padding:2,
+            formatter:(v,ctx)=>{
+              const n=Number(v||0);
+              if(!isFinite(n) || n === 0) return '';
+              return yFmt(n);
+            },
+            font:{family: 'Inter, sans-serif', size: 9, weight: 'bold'}, color: '#64748b'
+          }
+        }
+      }
+    };
+
+    if(!fyChart) fyChart=new Chart(cv,cfg);
+    else {
+      fyChart.data.labels=labels;
+      fyChart.data.datasets=datasets;
+      fyChart.update();
+    }
+    setChartViewButtons(currentChartView);
+  };
+
+  function initSortForTables(tables){
+    (tables || []).forEach(table=>{
+      if(!table || table.dataset.sortInit === '1') return;
+
+      const thead = table.querySelector('thead');
+      const tbody = table.querySelector('tbody');
+      if(!thead || !tbody) return;
+
+      const rows = Array.from(thead.querySelectorAll('tr'));
+      const grid = [];
+      const thToColIndex = new Map();
+
+      rows.forEach((tr, rIdx)=>{
+        grid[rIdx] = grid[rIdx] || [];
+        let c = 0;
+        Array.from(tr.children).forEach(cell=>{
+          const rs = parseInt(cell.getAttribute('rowspan')||'1',10);
+          const cs = parseInt(cell.getAttribute('colspan')||'1',10);
+          while(grid[rIdx][c]) c++;
+
+          for(let rr=0; rr<rs; rr++){
+            for(let cc=0; cc<cs; cc++){
+              grid[rIdx+rr] = grid[rIdx+rr] || [];
+              grid[rIdx+rr][c+cc] = cell;
+            }
+          }
+
+          if(cell.classList.contains('sort-th')){
+            thToColIndex.set(cell, c);
+          }
+          c += cs;
+        });
+      });
+
+      const headers = Array.from(thead.querySelectorAll('th.sort-th'));
+      headers.forEach(th=>{
+        th.addEventListener('click', ()=>{
+          const colIndex = thToColIndex.get(th);
+          if(colIndex == null) return;
+
+          const type = (th.dataset.type || 'text').toLowerCase();
+          const dir = (th.dataset.dir === 'asc') ? 'desc' : 'asc';
+
+          headers.forEach(h=>{
+            if(h !== th){
+              h.dataset.dir = '';
+              h.classList.remove('sorted','asc','desc');
+            }
+          });
+
+          th.dataset.dir = dir;
+          th.classList.add('sorted');
+          th.classList.toggle('asc', dir === 'asc');
+          th.classList.toggle('desc', dir === 'desc');
+
+          const trList = Array.from(tbody.querySelectorAll('tr'));
+
+          const getVal = (tr)=>{
+            const td = tr.children[colIndex];
+            if(!td) return '';
+            const raw = td.getAttribute('data-sort');
+            const txt = (raw !== null) ? String(raw) : td.textContent.trim();
+
+            if(type === 'number'){
+              const n = parseFloat(String(txt).replace(/,/g,''));
+              return isFinite(n) ? n : 0;
+            }
+            if(type === 'currency'){
+              const cleaned = String(txt).replace(/[^\d.\-]/g,'');
+              const n = parseFloat(cleaned);
+              return isFinite(n) ? n : 0;
+            }
+            if(type === 'date'){
+              const d = new Date(txt);
+              const t = d.getTime();
+              return isFinite(t) ? t : 0;
+            }
+            return String(txt).toLowerCase();
+          };
+
+          trList.sort((a,b)=>{
+            const va = getVal(a), vb = getVal(b);
+            if(typeof va === 'number' && typeof vb === 'number'){
+              return dir === 'asc' ? (va - vb) : (vb - va);
+            }
+            if(va < vb) return dir === 'asc' ? -1 : 1;
+            if(va > vb) return dir === 'asc' ? 1 : -1;
+            return 0;
+          });
+
+          const frag = document.createDocumentFragment();
+          trList.forEach(r=>frag.appendChild(r));
+          tbody.appendChild(frag);
+        });
+      });
+
+      table.dataset.sortInit = '1';
+    });
+  }
+
+  const renderAll = (d) => {
+    applyModeClass();
+
+    renderKpi(d.kpi||{}, d.location_type_summary||[]);
+    renderAge(d.age_summary||[]);
+    renderGT(d.location_summary||[],'location-summary-body','location-summary-foot','location');
+    renderIT(d.item_type_summary||[]);
+
+    const bl = (d.batch_summary||[]).map(i=>({
+      name:i.batch_no,
+      opening_value:i.opening_value,inward_value:i.inward_value,stk_trf_inward_value:i.stk_trf_inward_value,
+      consumption_value:i.consumption_value,stk_trf_issue_value:i.stk_trf_issue_value,
+      closing_qty:i.closing_qty,closing_value:i.closing_value
+    }));
+    renderGT(bl,'batch-summary-body','batch-summary-foot','batch_no');
+
+    const tl = (d.txntype_summary||[]).map(i=>({
+      name:i.transaction_type,
+      opening_value:i.opening_value,inward_value:i.inward_value,stk_trf_inward_value:i.stk_trf_inward_value,
+      consumption_value:i.consumption_value,stk_trf_issue_value:i.stk_trf_issue_value,
+      closing_qty:i.closing_qty,closing_value:i.closing_value
+    }));
+    renderGT(tl,'txntype-summary-body','txntype-summary-foot','transaction_type');
+
+    renderGT(d.invcat_summary||[],'invcat-summary-body','invcat-summary-foot','inventory_category');
+    renderGT(d.invsubcat_summary||[],'invsubcat-summary-body','invsubcat-summary-foot','inventory_subcategory');
+
+    renderIW(d.itemwise_summary||[]);
+    renderChart(d.monthly_chart||{labels:[],values:[]});
+    renderDetail(d.detail_rows||[]);
+    renderChips();
+  };
+
+  const loadSummary = () => {
+    if (!validateDates()) { showLoad(false); return; }
+    showLoad(true);
+
+    fetch(`${API}?${buildQS()}`, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(r => { if(!r.ok) throw new Error('Fetch failed'); return r.json(); })
+      .then(d => renderAll(d))
+      .catch(e => {
+        console.error(e);
+        const s=sel('summary-status');
+        if(s) s.innerHTML='<span class="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse shadow-sm shadow-red-200"></span> Error';
+      })
+      .finally(()=>showLoad(false));
+  };
+
+  const setupTF = (iId, cId, key, syncHiddenFn) => {
+    const inp=sel(iId), clr=sel(cId);
+    if(!inp) return;
+
+    if(key==='item_name_raw') inp.value = F.item_name_raw || '';
+    else inp.value = F[key] || '';
+
+    inp.addEventListener('input', () => {
+      const v = (inp.value ?? '').toString();
+      if(key==='item_name_raw') F.item_name_raw = v;
+      else F[key] = (v.trim() || null);
+      if(syncHiddenFn) syncHiddenFn();
+      renderChips();
+    });
+
+    inp.addEventListener('keydown', (e) => {
+      if(e.key==='Enter' && SHOW){
+        e.preventDefault();
+        const v = (inp.value ?? '').toString();
+        if(key==='item_name_raw') F.item_name_raw = v;
+        else F[key] = (v.trim() || null);
+        if(syncHiddenFn) syncHiddenFn();
+        renderChips();
+        loadSummary();
+      }
+    });
+
+    if(clr) clr.addEventListener('click', () => {
+      inp.value='';
+      if(key==='item_name_raw') F.item_name_raw='';
+      else F[key]=null;
+      if(syncHiddenFn) syncHiddenFn();
+      renderChips();
+      if(SHOW) loadSummary();
+    });
+  };
+
+  const parseSnapshotDate = (s) => {
+    if (!s) return null;
+    const isoTry = new Date(s);
+    if (!isNaN(isoTry.getTime())) return isoTry;
+    const tTry = new Date(String(s).replace(' ', 'T'));
+    if (!isNaN(tTry.getTime())) return tTry;
+    return null;
+  };
+
+  const checkSnapshotFreshness = () => {
+    const warning = sel('snapshot-warning');
+    if (!warning) return;
+    const raw = warning.getAttribute('data-snapshot');
+    if (!raw) return;
+
+    const snapshotDate = parseSnapshotDate(raw);
+    if (!snapshotDate) return;
+
+    const now = new Date();
+    const hoursDiff = (now - snapshotDate) / (1000 * 60 * 60);
+    if (hoursDiff > 24) warning.classList.remove('hidden');
+  };
+
+  const init = () => {
+    checkSnapshotFreshness();
+    renderColumnPanel();
+
+    initSortForTables(document.querySelectorAll('table.js-sort'));
+
+    const tog=sel('item-type-toggle'), pan=sel('item-type-panel'), clrIT=sel('item-type-clear');
+    if(tog && pan){
+      tog.addEventListener('click', e => { e.stopPropagation(); pan.classList.toggle('hidden'); });
+      document.addEventListener('click', e => {
+        if(!pan.classList.contains('hidden') && !pan.contains(e.target) && !tog.contains(e.target)) pan.classList.add('hidden');
+      });
+
+      document.querySelectorAll('input[data-item-type-id]').forEach(cb=>{
+        cb.addEventListener('change', ()=>{
+          const id = Number(cb.getAttribute('data-item-type-id'));
+          if(F.material_group==='eng' && id!==68){ cb.checked=false; return; }
+          const ex = F.item_type_ids.includes(id);
+          if(cb.checked && !ex) F.item_type_ids.push(id);
+          else if(!cb.checked && ex) F.item_type_ids = F.item_type_ids.filter(x=>x!==id);
+          if(F.material_group==='eng' && !F.item_type_ids.length) F.item_type_ids=[68];
+          syncITDropdown(); renderChips();
+        });
+      });
+
+      if(clrIT) clrIT.addEventListener('click', ()=>{
+        F.item_type_ids = (F.material_group==='eng') ? [68] : [];
+        syncITDropdown(); renderChips();
+      });
+
+      syncITDropdown();
+    }
+
+    const mgSel=sel('material-group-select');
+    if(mgSel){
+      if(F.material_group) mgSel.value = F.material_group;
+      applyMG();
+      mgSel.addEventListener('change', ()=>{
+        F.material_group = mgSel.value || '';
+        applyMG();
+        renderChips();
+        if(SHOW) loadSummary();
+      });
+    }
+
+    const fromInp = sel('date-from'), toInp = sel('date-to');
+    if (fromInp) {
+      fromInp.value = F.from || '';
+      fromInp.addEventListener('change', () => { F.from = fromInp.value || ''; validateDates(); });
+    }
+    if (toInp) {
+      toInp.value = F.to || '';
+      toInp.addEventListener('change', () => { F.to = toInp.value || ''; validateDates(); });
+    }
+
+    syncINH();
+    setupTF('item-name-input','item-name-clear','item_name_raw', syncINH);
+    setupTF('item-code-input','item-code-clear','item_code', syncICH);
+    setupTF('stock-location-input','stock-location-clear','stock_location', syncSLH);
+    setupTF('batch-no-input','batch-no-clear','batch_no', syncBNH); 
+    setupTF('transaction-type-input','transaction-type-clear','transaction_type', syncTTH); 
+
+    ['loc-type-store-btn','loc-type-capex-btn'].forEach(id=>{
+      const b=sel(id);
+      if(b) b.addEventListener('click', ()=>{
+        const t=b.getAttribute('data-loctype');
+        F.location_type = (F.location_type===t ? null : t);
+        syncLTH();
+        renderChips();
+        if(SHOW) loadSummary();
+      });
+    });
+
+    document.querySelectorAll('.chart-view-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        setChartViewButtons(btn.getAttribute('data-chart-view'));
+      });
+    });
+    setChartViewButtons('all');
+
+    const colToggle = sel('btn-column-toggle'), colPanel = sel('column-panel');
+    if (colToggle && colPanel) {
+      colToggle.addEventListener('click', () => colPanel.classList.toggle('hidden'));
+      sel('btn-select-all-columns')?.addEventListener('click', () => {
+        DETAIL_COLUMNS.forEach(col => { columnVisibility[col.key] = true; });
+        renderColumnPanel();
+      });
+      sel('btn-deselect-all-columns')?.addEventListener('click', () => {
+        DETAIL_COLUMNS.forEach(col => { columnVisibility[col.key] = false; });
+        renderColumnPanel();
+      });
+      sel('btn-apply-columns')?.addEventListener('click', () => {
+        applyColumnVisibility();
+        colPanel.classList.add('hidden');
+      });
+    }
+
+    const detailContainer = sel('detail-table-container');
+    const scrollBtn = sel('btn-scroll-to-top');
+    if (detailContainer && scrollBtn) {
+      detailContainer.addEventListener('scroll', () => {
+        scrollBtn.classList.toggle('hidden', detailContainer.scrollTop < 200);
+      });
+      scrollBtn.addEventListener('click', () => {
+        detailContainer.scrollTo({top: 0, behavior: 'smooth'});
+      });
+    }
+
+    const expBtn=sel('btn-download-csv'), xBtn=sel('btn-download-xlsx'), expSt=sel('export-status');
+    if(expBtn) expBtn.addEventListener('click', ()=>{
+      if (!validateDates()) return;
+      expBtn.disabled=true; expBtn.classList.add('opacity-70');
+      if(expSt) expSt.classList.remove('hidden');
+      window.location.href = `${CSV_URL}?${buildQS()}`;
+      setTimeout(()=>{
+        expBtn.disabled=false; expBtn.classList.remove('opacity-70');
+        if(expSt) expSt.classList.add('hidden');
+      }, 1500);
+    });
+    if(xBtn) xBtn.addEventListener('click', ()=>{
+      if (!validateDates()) return;
+      xBtn.disabled=true; xBtn.classList.add('opacity-70');
+      if(expSt) expSt.classList.remove('hidden');
+      window.location.href = `${XLSX_URL}?${buildQS()}`;
+      setTimeout(()=>{
+        xBtn.disabled=false; xBtn.classList.remove('opacity-70');
+        if(expSt) expSt.classList.add('hidden');
+      }, 1500);
+    });
+
+    const form=sel('filterForm');
+    if(form) form.addEventListener('submit', (e)=>{
+      if (!validateDates()) { e.preventDefault(); return; }
+
+      const mg = sel('material-group-select');
+      F.material_group = (mg ? mg.value : '') || '';
+      syncMGH();
+
+      F.item_name_mode = FORCE_NAME_MODE;
+      syncINH();
+
+      const ic = sel('item-code-input'); if(ic){ F.item_code = (ic.value||'').trim() || null; syncICH(); }
+      const sl = sel('stock-location-input'); if(sl){ F.stock_location = (sl.value||'').trim() || null; syncSLH(); }
+      const bn = sel('batch-no-input'); if(bn){ F.batch_no = (bn.value||'').trim() || null; syncBNH(); } 
+      const txn = sel('transaction-type-input'); if(txn){ F.transaction_type = (txn.value||'').trim() || null; syncTTH(); } 
+      const inn = sel('item-name-input'); if(inn){ F.item_name_raw = (inn.value||''); }
+
+      if(!F.material_group){ e.preventDefault(); alert('Please select Material Group.'); return; }
+      if(F.material_group==='eng'){ F.item_type_ids=[68]; syncITH(); }
+      applyModeClass();
+    });
+
+    updateVis();
+    renderChips();
+    updateChartRangeLabel();
+    applyModeClass();
+
+    if(SHOW && F.material_group) loadSummary();
+  };
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+{% endblock maincontent %}

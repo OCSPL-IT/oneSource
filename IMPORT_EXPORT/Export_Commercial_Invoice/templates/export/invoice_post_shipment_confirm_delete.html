@@ -1,0 +1,38 @@
+{% extends "main/index.html" %}
+{% block maincontent %}
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-xl mx-auto px-4 py-10">
+
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div class="px-5 py-4 border-b border-slate-200">
+        <h1 class="text-lg font-semibold text-slate-800">Delete Invoice</h1>
+        <p class="text-xs text-slate-500 mt-1">This action cannot be undone.</p>
+      </div>
+
+      <div class="px-5 py-4 text-sm text-slate-700 space-y-2">
+        <div><span class="font-semibold">Invoice No:</span> {{ obj.invoice_number }}</div>
+        <div><span class="font-semibold">Invoice Date:</span> {{ obj.invoice_date|date:"d-M-Y" }}</div>
+        <div><span class="font-semibold">Consignee:</span> {{ obj.consignee_name }}</div>
+        <div><span class="font-semibold">Destination:</span> {{ obj.country_destination }}</div>
+        <div><span class="font-semibold">Amount (US$):</span> {{ obj.amount_usd }}</div>
+      </div>
+
+      <form method="post" class="px-5 py-4 border-t border-slate-200 flex items-center justify-end gap-2">
+        {% csrf_token %}
+        <a href="{% url 'invoice_post_shipment_list' %}"
+           class="px-4 py-2 rounded-md text-sm bg-slate-200 text-slate-800 hover:bg-slate-300 border border-slate-300">
+          Cancel
+        </a>
+        {% if perms.Export_Commercial_Invoice.delete_invoicepostshipment  %}
+        <button type="submit"
+                class="px-4 py-2 rounded-md text-sm bg-rose-600 text-white hover:bg-rose-700">
+          <i class=" fa-solid fa-trash-can mr-1"></i>
+          Delete
+        </button>
+        {% endif %}
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "main/index.html" %}
+
+{% block title %}Edit BOM - {{ bom.fg_name }}{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50 pb-10">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Edit BOM</h1>
+        <p class="text-sm text-slate-500 mt-1">{{ bom.fg_name }}{% if bom.fg_alpha_name %} ({{ bom.fg_alpha_name }}){% endif %}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{% url 'accounts_budget:production_bom_list' %}"
+           class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm">Back</a>
+      </div>
+    </div>
+
+    <!-- Master -->
+    <form method="post" class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
+      {% csrf_token %}
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-medium text-slate-700">FG Name</label>
+          <input name="fg_name" value="{{ bom.fg_name }}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700">FG Alpha Name</label>
+          <input name="fg_alpha_name" value="{{ bom.fg_alpha_name }}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700">QTY 1 (MT)</label>
+          <input name="qty_1_mt" value="{{ bom.qty_1_mt }}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700">QTY 2 (MT)</label>
+          <input name="qty_2_mt" value="{{ bom.qty_2_mt }}" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button class="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm">Save Master</button>
+      </div>
+    </form>
+
+    <!-- Add line -->
+    <form method="post" class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_line"/>
+
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-semibold text-slate-700">Add / Update Material</div>
+        <div class="text-xs text-slate-500">Material + Norm + Mat Qty (MT)</div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <div>
+          <label class="text-xs font-medium text-slate-600">Sr No</label>
+          <input name="sr_no" value="1" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-xs font-medium text-slate-600">Material Name *</label>
+          <input name="material_name" required class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-600">Norm</label>
+          <input name="norm" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-600">Mat Qty (MT)</label>
+          <input name="mat_qty_mt" class="mt-1 w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"/>
+        </div>
+      </div>
+
+      <button class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm">Save Line</button>
+    </form>
+
+    <!-- Lines -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div class="text-sm font-semibold text-slate-700">BOM Lines</div>
+        <div class="text-xs text-slate-500">{{ lines|length }} line(s)</div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left">
+              <th class="px-4 py-3 font-semibold text-slate-700">Sr</th>
+              <th class="px-4 py-3 font-semibold text-slate-700">Material Name</th>
+              <th class="px-4 py-3 font-semibold text-slate-700 text-right">Norm</th>
+              <th class="px-4 py-3 font-semibold text-slate-700 text-right">Mat Qty (MT)</th>
+              <th class="px-4 py-3 font-semibold text-slate-700">Delete</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for l in lines %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-3 text-slate-700">{{ l.sr_no }}</td>
+              <td class="px-4 py-3 font-medium text-slate-900">{{ l.material_name }}</td>
+              <td class="px-4 py-3 text-right text-slate-700">{{ l.norm }}</td>
+              <td class="px-4 py-3 text-right text-slate-700">{{ l.mat_qty_mt }}</td>
+              <td class="px-4 py-3">
+                <form method="post" style="display:inline;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_line"/>
+                  <input type="hidden" name="line_id" value="{{ l.id }}"/>
+                  <button class="text-red-600 hover:underline text-sm"
+                          onclick="return confirm('Delete this line?');">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="px-4 py-6 text-center text-slate-500">No lines yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

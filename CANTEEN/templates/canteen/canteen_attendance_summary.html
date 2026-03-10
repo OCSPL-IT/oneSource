@@ -1,0 +1,192 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto py-6 px-4">
+    <header class="relative">
+        <div class="relative">
+            <h2 class="text-2xl md:text-3xl font-semibold text-center">Canteen Report</h2>
+            <a href="{% url 'canteen_dashboard' %}"
+               class="absolute right-0 top-1/2 -translate-y-1/2 bg-indigo-500 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded shadow-md">
+                Go to dashboard
+            </a>
+        </div>
+    </header>
+
+    {# --------------------------- FILTERS -------------------------------- #}
+    <form method="get"
+          class="mb-6 bg-white shadow-md rounded-lg p-4 flex flex-wrap items-end gap-4">
+
+        {# month #}
+        <div class="flex-1 min-w-[150px]">
+            <label for="month" class="block text-sm font-medium text-gray-700">Month</label>
+            <select name="month" id="month"
+                    class="w-full p-2 border border-gray-300 rounded-lg text-gray-700">
+                {% for value, name in months %}
+                    <option value="{{ value }}"
+                            {% if value == selected_month %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# year #}
+        <div class="flex-1 min-w-[150px]">
+            <label for="year" class="block text-sm font-medium text-gray-700">Year</label>
+            <select name="year" id="year"
+                    class="w-full p-2 border border-gray-300 rounded-lg text-gray-700">
+                {% for year in years %}
+                    <option value="{{ year }}"
+                            {% if year == selected_year %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {# view type #}
+        <div class="flex-1 min-w-[150px]">
+            <label for="filter_type" class="block text-sm font-medium text-gray-700">View Type</label>
+            <select name="filter_type" id="filter_type"
+                    class="w-full p-2 border border-gray-300 rounded-lg text-gray-700">
+                <option value="daily"    {% if filter_type == "daily" %}selected{% endif %}>Daily</option>
+                <option value="monthly"  {% if filter_type == "monthly" %}selected{% endif %}>Monthly</option>
+            </select>
+        </div>
+
+        {# employee-type group filter #}
+        <div class="flex-1 min-w-[180px]">
+            <label for="emp_group" class="block text-sm font-medium text-gray-700">Employee Type</label>
+            <select name="emp_group" id="emp_group"
+                class="w-full p-2 border border-gray-300 rounded-lg text-gray-700">
+                <option value="all"     {% if emp_group == "all" %}selected{% endif %}>All</option>
+                <option value="regular" {% if emp_group == "regular" %}selected{% endif %}>Company / Trainee / Guest</option>
+                <option value="casual"  {% if emp_group == "casual" %}selected{% endif %}>Casual</option>
+            </select>
+        </div>
+
+        {# buttons #}
+        <div class="flex space-x-2">
+            <button type="submit"
+                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">
+                Filter
+            </button>
+            <a href="{% url 'canteen_attendance_summary_report' %}"
+               class="bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 transition">
+                Clear
+            </a>
+        </div>
+
+        {# export + overall report #}
+        <a href="{% url 'download_canteen_excel' %}?month={{ selected_month }}&year={{ selected_year }}&filter_type={{ filter_type }}&emp_group={{ emp_group }}"
+           class="text-green-800 hover:text-green-900">
+            <i class="fa-solid fa-file-excel fa-2xl"></i>
+        </a>
+        <a href="{% url 'attendance_list' %}"
+           class="bg-yellow-300 px-2 py-1 rounded-lg hover:bg-yellow-400 transition">
+            Attendance report
+        </a>
+    </form>
+
+    {# --------------------------- TABLES --------------------------------- #}
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+
+    {% if filter_type == "monthly" %}
+    {# ---------------- MONTHLY SUMMARY ---------------- #}
+    <table class="min-w-full text-sm text-left border border-gray-300">
+      <thead class="bg-gray-100 font-semibold text-gray-700">
+        <tr>
+          <th class="py-2 px-4 border">ID</th>
+          <th class="py-2 px-4 border">Employee Name</th>
+          <th class="py-2 px-4 border">Employee Type</th>
+          <th class="py-2 px-4 border text-center">Total Meals</th>
+          <th class="py-2 px-4 border text-center">Employee Contribution ₹</th>
+          <th class="py-2 px-4 border text-center">Company Contribution ₹</th>
+          <th class="py-2 px-4 border text-center">Total ₹</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in monthly_data %}
+          <tr class="hover:bg-gray-50 border-b">
+            <td class="py-2 px-4 font-medium">
+              {% if row.id|stringformat:"s"|first in "Tt" %}{{ row.id }}{% else %}
+                {{ "00000"|add:row.id|stringformat:"05d" }}{% endif %}
+            </td>
+            <td class="py-2 px-4">{{ row.employee_name }}</td>
+            <td class="py-2 px-4">{{ row.employee_type }}</td>
+            <td class="py-2 px-4 text-center font-medium">{{ row.meal_count }}</td>
+            <td class="py-2 px-4 text-center text-green-700">
+              {{ row.contrib_40|floatformat:2 }}
+            </td>
+            <td class="py-2 px-4 text-center text-blue-700">
+              {{ row.contrib_60|floatformat:2 }}
+            </td>
+            <td class="py-2 px-4 text-center font-semibold">{{ row.total }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" class="py-4 text-center text-gray-500">No records found.</td></tr>
+        {% endfor %}
+        <tr class="font-bold bg-gray-100 border-t">
+          <td colspan="3" class="py-2 px-4 text-center">Grand Total</td>
+          <td class="py-2 px-4 text-center">{{ monthly_grand_meals }}</td>
+          <td class="py-2 px-4 text-center text-green-800">{{ monthly_grand_contrib_40|floatformat:2 }}</td>
+          <td class="py-2 px-4 text-center text-blue-800">{{ monthly_grand_contrib_60|floatformat:2 }}</td>
+          <td class="py-2 px-4 text-center">{{ monthly_grand_total }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {% else %}
+        {# ========== DAILY TABLE ========== #}
+        <table class="min-w-full text-sm text-left border border-gray-300">
+            <thead class="bg-gray-100 font-semibold text-gray-700">
+                <tr>
+                  <th class="sticky left-0 top-0 z-20 bg-gray-100 py-2 px-4 border">ID</th>
+                  <th class="sticky left-[60px] top-0 z-20 bg-gray-100 py-2 px-4 border">Employee Name</th>
+                  <th class="sticky top-0 z-10 bg-gray-100 py-2 px-4 border">Employee Type</th>
+                  {% for date in date_headers %}
+                    <th class="sticky top-0 z-10 bg-gray-100 py-2 px-4 border text-center">{{ date.day }}</th>
+                  {% endfor %}
+                  <th class="sticky top-0 z-10 bg-gray-100 py-2 px-4 border text-center">Meals</th>
+                  <th class="sticky top-0 z-10 bg-gray-100 py-2 px-4 border text-center">Employee Contribution ₹</th>
+                  <th class="sticky top-0 z-10 bg-gray-100 py-2 px-4 border text-center">Company Contribution ₹</th>
+                  <th class="sticky top-0 z-10 bg-gray-100 py-2 px-4 border text-center">Total ₹</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in report_data %}
+                  <tr class="hover:bg-gray-50 border-b">
+                    <td class="sticky left-0 bg-white border z-10 py-2 px-4">
+                      {% if row.id|stringformat:"s"|first in "Tt" %}{{ row.id }}{% else %}
+                        {{ "00000"|add:row.id|stringformat:"05d" }}{% endif %}
+                    </td>
+                    <td class="sticky left-[60px] bg-white border-2 z-10 py-2 px-4">{{ row.employee_name }}</td>
+                    <td class="py-2 px-4 border text-center">{{ row.employee_type }}</td>
+                    {% for value in row.date_strings %}
+                      <td class="py-2 px-4 border text-center">{{ value }}</td>
+                    {% endfor %}
+                    <td class="py-2 px-4 border text-center font-medium">{{ row.meal_count }}</td>
+                    <td class="py-2 px-4 border text-center text-green-700">
+                      {{ row.contrib_40|floatformat:2 }}
+                    </td>
+                    <td class="py-2 px-4 border text-center text-blue-700">
+                      {{ row.contrib_60|floatformat:2 }}
+                    </td>
+                    <td class="py-2 px-4 border text-center font-semibold">{{ row.total }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="100%" class="py-4 text-center text-gray-500">No records found.</td></tr>
+                {% endfor %}
+                <tr class="font-bold bg-gray-100 border-t">
+                  <td class="sticky left-0 bg-gray-100 border-2 z-10 py-2 px-4 text-center" colspan="3">Grand Total</td>
+                  {% for count in grand_day_counts %}
+                    <td class="py-2 px-4 border text-center">{{ count }}</td>
+                  {% endfor %}
+                  <td class="py-2 px-4 border text-center">{{ grand_meals }}</td>
+                  <td class="py-2 px-4 border text-center text-green-800">{{ grand_contrib_40|floatformat:2 }}</td>
+                  <td class="py-2 px-4 border text-center text-blue-800">{{ grand_contrib_60|floatformat:2 }}</td>
+                  <td class="py-2 px-4 border text-center">{{ grand_total }}</td>
+                </tr>
+              </tbody>
+        </table>
+    {% endif %}
+    </div>
+</div>
+{% endblock %}

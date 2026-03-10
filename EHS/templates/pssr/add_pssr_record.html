@@ -1,0 +1,237 @@
+{% extends 'main/index.html' %}
+{% load static %}
+{% block maincontent %}
+
+<div class="flex justify-center items-start min-h-screen bg-gray-100 py-6">
+  <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-6">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-4">
+      <a href="{% url 'pssr_record_list' %}"
+         class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-sm">
+        Back
+      </a>
+
+      <h2 class="text-2xl font-bold text-gray-700">PSSR Record Entry</h2>
+
+      <span class="w-32"></span>
+    </div>
+
+    <hr class="mb-6">
+
+    <form method="post" novalidate class="space-y-6">
+      {% csrf_token %}
+
+      <!-- Job Header -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-medium mb-1">Date</label>
+          <div class="border border-gray-300 rounded-lg p-1">
+            {{ job_form.date }}
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium mb-1">MOC No</label>
+          <div class="border border-gray-300 rounded-lg p-1">
+            {{ job_form.moc_no }}
+          </div>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block font-medium mb-1">Job Description</label>
+          <div class="border border-gray-300 rounded-lg">
+            <textarea name="{{ job_form.job_description.name }}"
+                      id="{{ job_form.job_description.id_for_label }}"
+                      class="w-full h-20 px-3 py-2 border-0 focus:ring-0 resize-y"
+                      rows="3">{{ job_form.job_description.value|default_if_none:"" }}</textarea>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4">
+      <h3 class="font-semibold text-lg">Observations</h3>
+
+      {{ observation_formset.management_form }}
+
+      <div id="observation-container" class="space-y-4">
+        {% for form in observation_formset %}
+        <div class="observation-entry bg-gray-50 p-4 rounded shadow-sm relative">
+          {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium">Observer</label>
+              {{ form.observar }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Observation</label>
+              {{ form.observation }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium">FPR</label>
+              {{ form.fpr }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Target Date</label>
+              {{ form.target_date }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+            <div>
+              <label class="block text-sm font-medium">RPN Category</label>
+              <div class="w-28">{{ form.rpn_category }}</div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Compliance Status</label>
+              <div class="w-36">{{ form.compliance_status }}</div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Compliance Date</label>
+              {{ form.compliance_date }}
+            </div>
+            <div>
+              <div class="remark-field mt-2" style="display:none">
+                <label class="block text-sm font-medium">Remark (Pending/Omitted)</label>
+                {{ form.remark }}
+              </div>
+            </div>
+            <div class="text-right">
+              <button type="button" class="remove-entry bg-red-500 hover:bg-red-600 text-white w-9 h-9 rounded-full text-lg font-bold">-</button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Template for New Observation -->
+      <div id="observation-template" class="hidden">
+        <div class="observation-entry bg-gray-50 p-4 rounded shadow-sm mb-4 relative">
+          {% for hidden in observation_formset.empty_form.hidden_fields %}{{ hidden }}{% endfor %}
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium">Observer</label>
+              {{ observation_formset.empty_form.observar }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Observation</label>
+              {{ observation_formset.empty_form.observation }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium">FPR</label>
+              {{ observation_formset.empty_form.fpr }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Target Date</label>
+              {{ observation_formset.empty_form.target_date }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+            <div>
+              <label class="block text-sm font-medium">RPN Category</label>
+              <div class="w-28">{{ observation_formset.empty_form.rpn_category }}</div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Compliance Status</label>
+              <div class="w-36">{{ observation_formset.empty_form.compliance_status }}</div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium">Compliance Date</label>
+              {{ observation_formset.empty_form.compliance_date }}
+            </div>
+            <div>
+              <div class="remark-field mt-2" style="display:none">
+                <label class="block text-sm font-medium">Remark (Pending/Omitted)</label>
+                {{ observation_formset.empty_form.remark }}
+              </div>
+            </div>
+            <div class="text-right">
+              <button type="button" class="remove-entry bg-red-500 hover:bg-red-600 text-white w-9 h-9 rounded-full text-lg font-bold">-</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Observation Button -->
+      <div class="flex justify-start items-center mt-4">
+        <button type="button" id="add-observation"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded shadow">
+          + Add Observation
+        </button>
+      </div>
+
+      <!-- Submit -->
+      <button type="submit"
+              class="w-full mt-4 bg-blue-600 text-white py-3 rounded hover:bg-blue-700 font-semibold">
+        Submit
+      </button>
+
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const totalForms = document.querySelector('#id_observations-TOTAL_FORMS');
+  const container  = document.getElementById('observation-container');
+  const addBtn     = document.getElementById('add-observation');
+  const template   = document.getElementById('observation-template').innerHTML.trim();
+
+  // Wire remove button
+  function wireRemove(card){
+    const deleteCheckbox = card.querySelector('input[type="checkbox"][name$="-DELETE"]');
+    card.querySelector('.remove-entry').onclick = () => {
+      if(deleteCheckbox){
+        deleteCheckbox.checked = true;
+        card.style.display = 'none';
+      } else {
+        card.remove();
+        totalForms.value = container.querySelectorAll('.observation-entry').length;
+      }
+    };
+  }
+
+  // Toggle remark field for Pending/Omitted
+  function toggleRemark(card){
+    const statusField = card.querySelector('select[name$="compliance_status"]');
+    const remarkDiv   = card.querySelector('.remark-field');
+    if(!statusField || !remarkDiv) return;
+
+    function updateRemark(){
+      if(statusField.value === 'Pending' || statusField.value === 'Omitted'){
+        remarkDiv.style.display = 'block';
+      } else {
+        remarkDiv.style.display = 'none';
+        const input = remarkDiv.querySelector('input, textarea');
+        if(input) input.value = '';
+      }
+    }
+
+    statusField.addEventListener('change', updateRemark);
+    updateRemark(); // initialize on page load
+  }
+
+  // Apply to existing observation entries
+  container.querySelectorAll('.observation-entry').forEach(card => {
+    wireRemove(card);
+    toggleRemark(card);
+  });
+
+  // Add new observation
+  addBtn.addEventListener('click', () => {
+    const idx = totalForms.value;
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = template.replace(/__prefix__/g, idx);
+    const newCard = tempDiv.firstElementChild;
+    container.appendChild(newCard);
+    totalForms.value = parseInt(idx)+1;
+    wireRemove(newCard);
+    toggleRemark(newCard);
+  });
+});
+</script>
+
+{% endblock %}

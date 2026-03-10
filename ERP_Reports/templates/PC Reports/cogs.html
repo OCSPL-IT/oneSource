@@ -1,0 +1,198 @@
+{# ERP_Reports/templates/PC Reports/cogs.html #}
+{% extends "main/index.html" %}
+{% load dict_extras %}
+
+{% block maincontent %}
+  <div class="p-4 sm:p-6 bg-slate-100 min-h-screen">
+    <div class="max-w-screen-2xl mx-auto">
+
+      <!-- Header + Rows/page -->
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">COGS Report</h1>
+          <p class="text-sm text-slate-500">Cost of goods sold with gross profit per invoice/item.</p>
+        </div>
+
+        <!-- Rows/page selector (preserves filters) -->
+        <form method="get" class="flex items-center gap-2">
+          {% for k, v in request.GET.items %}
+            {% if k != "page" and k != "page_size" %}
+              <input type="hidden" name="{{ k }}" value="{{ v }}">
+            {% endif %}
+          {% endfor %}
+          <label class="text-sm text-slate-600">Rows/page</label>
+          <select name="page_size" onchange="this.form.submit()"
+                  class="border rounded-md px-2 py-1 text-sm bg-white">
+            {% for size in sizes %}
+              <option value="{{ size }}" {% if page_size == size %}selected{% endif %}>{{ size }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+
+      <!-- Card -->
+      <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+
+        <!-- Filters -->
+        <div class="px-4 py-3 border-b border-slate-200 bg-white">
+          <form method="get" class="grid gap-3 md:grid-cols-12 items-end">
+            {# Preserve any existing params except the filter fields, paging, and actions #}
+            {% for k, v in request.GET.items %}
+              {% if k not in 'page page_size from_date to_date txn_name customer_name item_name export send_mail to' %}
+                <input type="hidden" name="{{ k }}" value="{{ v }}">
+              {% endif %}
+            {% endfor %}
+            <input type="hidden" name="page_size" value="{{ page_size }}">
+
+            <div class="md:col-span-2">
+              <label class="block text-xs text-slate-500 mb-1">From date</label>
+              <input type="date" name="from_date" value="{{ filters.from_date|default:request.GET.from_date }}"
+                     class="w-full border rounded px-2 py-1.5">
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-xs text-slate-500 mb-1">To date</label>
+              <input type="date" name="to_date" value="{{ filters.to_date|default:request.GET.to_date }}"
+                     class="w-full border rounded px-2 py-1.5">
+            </div>
+
+            <div class="md:col-span-3">
+              <label class="block text-xs text-slate-500 mb-1">Transaction Name</label>
+              <input type="text" name="txn_name" value="{{ filters.txn_name|default:request.GET.txn_name }}" placeholder="e.g. Domestic…"
+                     class="w-full border rounded px-2 py-1.5">
+            </div>
+
+            <div class="md:col-span-3">
+              <label class="block text-xs text-slate-500 mb-1">Customer Name</label>
+              <input type="text" name="customer_name" value="{{ filters.customer_name|default:request.GET.customer_name }}" placeholder="Customer…"
+                     class="w-full border rounded px-2 py-1.5">
+            </div>
+
+            <div class="md:col-span-3">
+              <label class="block text-xs text-slate-500 mb-1">Item Name</label>
+              <input type="text" name="item_name" value="{{ filters.item_name|default:request.GET.item_name }}" placeholder="Item…"
+                     class="w-full border rounded px-2 py-1.5">
+            </div>
+
+            <!-- Optional email recipients -->
+            <div class="md:col-span-3">
+              <label class="block text-xs text-slate-500 mb-1">Email To (comma separated)</label>
+              <input type="text" name="to" value="{{ request.GET.to }}" placeholder="eg: a@b.com, c@d.com"
+                     class="w-full border rounded px-2 py-1.5">
+            </div>
+
+            <div class="md:col-span-3 flex flex-wrap gap-2">
+              <button type="submit"
+                      class="px-3 py-2 rounded-md bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+                Search
+              </button>
+
+              <button type="submit" name="export" value="xlsx"
+                      class="px-3 py-2 rounded-md border border-slate-300 bg-white text-slate-700 text-sm hover:bg-slate-50">
+                Export
+              </button>
+
+              <button type="submit" name="send_mail" value="1"
+                      class="px-3 py-2 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+                Send Mail
+              </button>
+
+              <a href="{{ request.path }}"
+                 class="px-3 py-2 rounded-md border border-slate-300 bg-white text-slate-700 text-sm hover:bg-slate-50">
+                Reset
+              </a>
+            </div>
+          </form>
+        </div>
+
+        <!-- Scrollable table area -->
+        <div class="table-container">
+          <table class="w-full text-sm leading-5 min-w-[1200px]">
+            <thead class="text-[11px] uppercase tracking-wide text-slate-600 bg-slate-50">
+              <tr>
+                {% for col in columns %}
+                  <th class="px-4 py-2 text-left font-semibold whitespace-nowrap border-b border-slate-200">
+                    {{ col }}
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              {% for row in table_data %}
+                <tr class="odd:bg-white even:bg-slate-50 hover:bg-indigo-50/40 transition-colors">
+                  {% for col in columns %}
+                    {% if 'Rate' in col or 'Value' in col or 'Quantity' in col or 'GrossProfit' in col or col == 'Percent' %}
+                      <td class="px-4 py-2 text-right tabular-nums whitespace-nowrap" title="{{ row|get_item:col }}">
+                        {% if col == 'Percent' %}
+                          {{ row|get_item:col|floatformat:2 }}%
+                        {% else %}
+                          {{ row|get_item:col|floatformat:2 }}
+                        {% endif %}
+                      </td>
+                    {% else %}
+                      <td class="px-4 py-2 text-slate-800 whitespace-nowrap" title="{{ row|get_item:col }}">
+                        {{ row|get_item:col }}
+                      </td>
+                    {% endif %}
+                  {% endfor %}
+                </tr>
+              {% empty %}
+                <tr>
+                  <td class="px-4 py-14 text-center text-slate-500" colspan="{{ columns|length }}">
+                    No data found.
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Footer / pagination -->
+        <div class="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-t border-slate-200">
+          <div class="text-sm text-slate-600">
+            Page <span class="font-semibold text-slate-800">{{ page }}</span> of
+            <span class="font-semibold text-slate-800">{{ num_pages }}</span>
+            {% if total_rows %} • Showing {{ start_row }}–{{ end_row }} of {{ total_rows }}{% endif %}
+          </div>
+          <div class="flex items-center gap-2">
+            {% if prev_url %}
+              <a href="{{ prev_url }}"
+                 class="inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2
+                        text-sm font-medium text-slate-700 hover:bg-slate-100">Previous</a>
+            {% else %}
+              <span class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2
+                           text-sm font-medium text-slate-400 cursor-not-allowed">Previous</span>
+            {% endif %}
+
+            {% if next_url %}
+              <a href="{{ next_url }}"
+                 class="inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2
+                        text-sm font-medium text-slate-700 hover:bg-slate-100">Next</a>
+            {% else %}
+              <span class="inline-flex items-center rounded-md border border-slate-300 px-4 py-2
+                           text-sm font-medium text-slate-400 cursor-not-allowed">Next</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    html, body { overflow-x: hidden; }
+    .table-container{
+      max-height: calc(100vh - 16rem);
+      overflow: auto;
+      background: #fff;
+      border-top: 1px solid #e2e8f0;
+      overscroll-behavior: contain;
+    }
+    .table-container thead th{
+      position: sticky; top: 0; background: #fff; z-index: 30;
+    }
+    .table-container::-webkit-scrollbar{height:10px;width:10px}
+    .table-container::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px}
+    .table-container::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+  </style>
+{% endblock %}

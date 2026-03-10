@@ -1,0 +1,525 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-6xl mx-auto bg-white shadow-xl rounded-3xl p-6 sm:p-8 mt-6">
+
+ <!-- Messages Section -->
+    {% if messages %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+        <div
+            class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                            {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+            <span class="flex-1">{{ message }}</span>
+            <!-- Close Button -->
+            <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">
+                ✖
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+  <!-- Top bar: Back + Title + View Records -->
+  <div class="flex items-center justify-between mb-4">
+    <a href="{% url 'indexpage' %}"
+       class="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+      Back to Main Page
+    </a>
+
+    <h1 class="text-xl sm:text-2xl font-semibold text-gray-800 text-center">
+      MEE Entry Form
+    </h1>
+
+    <a href="{% url 'mee:mee_reading_list' %}"
+       class="inline-flex items-center px-4 py-2 rounded-lg bg-green-500 text-white text-sm font-semibold hover:bg-green-600">
+      View Records
+    </a>
+  </div>
+
+  <hr class="my-3">
+
+  <form method="post" class="space-y-6" id="meeForm">
+    {% csrf_token %}
+
+    <!-- Reading Date -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 mt-2">
+      <label class="font-medium text-gray-700 w-full sm:w-40 mb-2 sm:mb-0">
+        Reading Date:
+      </label>
+      <input type="date" name="reading_date"
+       class="border border-gray-300 rounded-xl px-4 py-2 w-full sm:w-60 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+       required
+       value="{% if selected_date %}{{ selected_date|date:'Y-m-d' }}{% endif %}">
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-200">
+      <nav class="-mb-px flex space-x-6 overflow-x-auto text-sm font-medium">
+        {% for cat in categories %}
+          <button type="button"
+                  class="mee-tab whitespace-nowrap pb-2 px-1 border-b-2
+                         {% if forloop.first %}
+                           border-indigo-500 text-indigo-600
+                         {% else %}
+                           border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300
+                         {% endif %}"
+                  data-tab-target="cat-{{ cat.id }}">
+            {{ cat.name|upper }}
+          </button>
+        {% endfor %}
+      </nav>
+    </div>
+
+    <!-- Tab Panels (Category Cards) -->
+    <div class="mt-4">
+      {% for cat in categories %}
+        <div id="cat-{{ cat.id }}"
+             class="mee-panel {% if forloop.first %}block{% else %}hidden{% endif %}">
+          <div class="bg-gray-50 rounded-2xl p-5 border border-gray-200">
+            <h2 class="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
+              {{ cat.name|upper }}
+              {% if cat.unit %}
+                <span class="text-sm font-normal text-gray-500">({{ cat.unit }})</span>
+              {% endif %}
+            </h2>
+
+            <div class="border-t border-gray-200 pt-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {% for sub in cat.subcategories.all %}
+                  <div>
+                    <label class="block text-gray-700 text-sm mb-1">
+                      {{ sub.name }}
+                    </label>
+                    <input
+                        type="number"
+                        step="0.001"
+                        name="value_{{ sub.id }}"
+                        data-cat="{{ cat.name }}"
+                        data-sub="{{ sub.name }}"
+                        class="border border-gray-300 rounded-xl px-3 py-2 w-full text-sm
+                                focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        placeholder="Enter value"
+                        value="{% if edit_mode %}{{ sub.initial_value }}{% endif %}">
+
+                  </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+<hr class="my-6">
+
+<!-- Downtimes: multiple rows -->
+<div class="mt-4">
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="text-base font-semibold text-gray-800">Downtimes</h2>
+    <button type="button"
+            id="btn-add-dt"
+            class="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium
+                   bg-indigo-600 text-white hover:bg-indigo-700">
+      + Add Downtime
+    </button>
+  </div>
+
+  <div class="border border-gray-200 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs">
+      <thead class="bg-gray-50 text-gray-600">
+        <tr>
+          <th class="px-3 py-2 text-left">Start time</th>
+          <th class="px-3 py-2 text-left">End time</th>
+          <th class="px-3 py-2 text-left">Total (hrs)</th>
+          <th class="px-3 py-2 text-left">Reason</th>
+          <th class="px-3 py-2"></th>
+        </tr>
+      </thead>
+      <tbody id="dt-rows">
+  {% if edit_mode and existing_downtimes %}
+    {% for dt in existing_downtimes %}
+      <tr class="dt-row">
+        <td class="px-3 py-2">
+          <input type="datetime-local"
+                 name="dt_start[]"
+                 class="dt-start border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                 value="{{ dt.downtime_start|date:'Y-m-d\\TH:i' }}">
+        </td>
+        <td class="px-3 py-2">
+          <input type="datetime-local"
+                 name="dt_end[]"
+                 class="dt-end border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                 value="{{ dt.downtime_end|date:'Y-m-d\\TH:i' }}">
+        </td>
+        <td class="px-3 py-2">
+          <input type="number"
+                 step="0.01"
+                 name="dt_total[]"
+                 class="dt-total border border-gray-300 bg-slate-100 rounded-lg px-2 py-1 w-full text-xs"
+                 readonly
+                 value="{{ dt.downtime_hours }}">
+        </td>
+        <td class="px-3 py-2">
+          <input type="text"
+                 name="dt_reason[]"
+                 class="dt-reason border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                 value="{{ dt.reason }}">
+        </td>
+        <td class="px-3 py-2 text-right">
+          <button type="button"
+                  class="btn-remove-dt text-red-500 hover:text-red-700 text-sm">
+            ✕
+          </button>
+        </td>
+      </tr>
+    {% endfor %}
+  {% else %}
+    <!-- initial empty row (create mode or no existing downtimes) -->
+    <tr class="dt-row">
+      <td class="px-3 py-2">
+        <input type="datetime-local"
+               name="dt_start[]"
+               class="dt-start border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </td>
+      <td class="px-3 py-2">
+        <input type="datetime-local"
+               name="dt_end[]"
+               class="dt-end border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </td>
+      <td class="px-3 py-2">
+        <input type="number"
+               step="0.01"
+               name="dt_total[]"
+               class="dt-total border border-gray-300 bg-slate-100 rounded-lg px-2 py-1 w-full text-xs"
+               readonly>
+      </td>
+      <td class="px-3 py-2">
+        <input type="text"
+               name="dt_reason[]"
+               class="dt-reason border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      </td>
+      <td class="px-3 py-2 text-right">
+        <button type="button"
+                class="btn-remove-dt text-red-500 hover:text-red-700 text-sm">
+          ✕
+        </button>
+      </td>
+    </tr>
+  {% endif %}
+</tbody>
+
+    </table>
+  </div>
+
+  <!-- common error for any row -->
+  <div id="dt-error" class="mt-2 text-sm text-red-600 hidden"></div>
+</div>
+
+
+    <!-- Save button -->
+    <div class="pt-4 flex justify-end">
+      <button type="submit"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-8 rounded-xl text-sm sm:text-base">
+        Save Readings
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Tab switcher + auto calculations -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // ----- TAB HANDLING -----
+    const tabs = document.querySelectorAll(".mee-tab");
+    const panels = document.querySelectorAll(".mee-panel");
+
+    tabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const targetId = tab.getAttribute("data-tab-target");
+
+        tabs.forEach(t => {
+          t.classList.remove("border-indigo-500", "text-indigo-600");
+          t.classList.add("border-transparent", "text-gray-500");
+        });
+        tab.classList.remove("border-transparent", "text-gray-500");
+        tab.classList.add("border-indigo-500", "text-indigo-600");
+
+        panels.forEach(panel => {
+          if (panel.id === targetId) {
+            panel.classList.remove("hidden");
+            panel.classList.add("block");
+          } else {
+            panel.classList.remove("block");
+            panel.classList.add("hidden");
+          }
+        });
+      });
+    });
+
+    // ----- STEAM CALCULATIONS -----
+    // Robust lookup: match data-cat / data-sub case-insensitively
+    function findInput(cat, sub) {
+      const inputs = document.querySelectorAll('input[data-cat][data-sub]');
+      const wantCat = String(cat || "").toLowerCase();
+      const wantSub = String(sub || "").toLowerCase();
+
+      for (const el of inputs) {
+        const c = (el.getAttribute("data-cat") || "").toLowerCase();
+        const s = (el.getAttribute("data-sub") || "").toLowerCase();
+        // allow cat to be exact or contain the phrase (handles "STEAM ECONOMY", "Steam Economy", etc.)
+        if ((c === wantCat || c.indexOf(wantCat) !== -1) && s === wantSub) {
+          return el;
+        }
+      }
+      return null;
+    }
+
+    function getVal(el) {
+      if (!el) return 0;
+      const v = parseFloat(el.value);
+      return isNaN(v) ? 0 : v;
+    }
+
+    // Effluent Feed inputs
+    const efStripper = findInput("Effluent Feed", "Stripper");
+    const efMEE      = findInput("Effluent Feed", "MEE");
+    const efATFD     = findInput("Effluent Feed", "ATFD");
+
+    // Steam Consume inputs
+    const scATFD     = findInput("Steam Consume", "ATFD");
+    const scMEE      = findInput("Steam Consume", "MEE");
+    const scStripper = findInput("Steam Consume", "Stripper");
+    const scTotal    = findInput("Steam Consume", "Total");
+
+    // Steam Economy outputs
+    const sePlant    = findInput("Steam Economy", "Plant");
+    const seMEE      = findInput("Steam Economy", "MEE");
+    const seATFD     = findInput("Steam Economy", "ATFD");
+
+    // mark auto fields readonly + placeholder
+    [scTotal, sePlant, seMEE, seATFD].forEach(el => {
+      if (el) {
+        el.readOnly = true;
+        el.placeholder = "Auto-calculated";
+      }
+    });
+
+    function recalcSteamConsumeTotal() {
+      const total = getVal(scATFD) + getVal(scMEE) + getVal(scStripper);
+      if (scTotal) {
+        scTotal.value = total ? total.toFixed(2) : "";
+      }
+    }
+
+    function recalcSteamEconomy() {
+      const effStrip = getVal(efStripper);
+      const effMee   = getVal(efMEE);
+      const effAtfd  = getVal(efATFD);
+
+      const totalSC  = getVal(scTotal);
+      const scMee    = getVal(scMEE);
+      const scAtfd   = getVal(scATFD);
+
+      if (sePlant) {
+        sePlant.value = (totalSC > 0 && effStrip)
+          ? (effStrip / totalSC).toFixed(2)
+          : "";
+      }
+      if (seMEE) {
+        seMEE.value = (scMee > 0 && effMee)
+          ? (effMee / scMee).toFixed(2)
+          : "";
+      }
+      if (seATFD) {
+        seATFD.value = (scAtfd > 0 && effAtfd)
+          ? (effAtfd / scAtfd).toFixed(2)
+          : "";
+      }
+    }
+
+    function recalcAll() {
+      recalcSteamConsumeTotal();
+      recalcSteamEconomy();
+    }
+
+    // Attach listeners on base fields
+    [efStripper, efMEE, efATFD, scATFD, scMEE, scStripper].forEach(el => {
+      if (el) {
+        el.addEventListener("input", recalcAll);
+      }
+    });
+
+    // Run once on load (helps when editing existing records)
+    recalcAll();
+
+      // ----- DOWNTIME (multiple rows, datetime-local: YYYY-MM-DDTHH:MM) -----
+    const dtRowsBody = document.getElementById("dt-rows");
+    const btnAddDt   = document.getElementById("btn-add-dt");
+    const dtError    = document.getElementById("dt-error");
+    const form       = document.getElementById("meeForm");
+
+    function setDtError(msg) {
+      if (!dtError) return;
+      if (msg) {
+        dtError.textContent = msg;
+        dtError.classList.remove("hidden");
+      } else {
+        dtError.textContent = "";
+        dtError.classList.add("hidden");
+      }
+    }
+
+    // parse "YYYY-MM-DDTHH:MM" → Date object
+    function parseDt(str) {
+      if (!str) return null;
+      const d = new Date(str);
+      if (Number.isNaN(d.getTime())) return null;
+      return d;
+    }
+
+    function recalcRow(tr) {
+      const startInput = tr.querySelector(".dt-start");
+      const endInput   = tr.querySelector(".dt-end");
+      const totalInput = tr.querySelector(".dt-total");
+      if (!startInput || !endInput || !totalInput) return;
+
+      const sVal = startInput.value;
+      const eVal = endInput.value;
+
+      if (!sVal || !eVal) {
+        totalInput.value = "";
+        return;
+      }
+
+      const sDt = parseDt(sVal);
+      const eDt = parseDt(eVal);
+
+      if (!sDt || !eDt || eDt <= sDt) {
+        totalInput.value = "";
+        setDtError("Start date/time should be less than end date/time for all downtime rows.");
+        return;
+      }
+
+      const diffMs = eDt - sDt;        // milliseconds
+      const hours  = diffMs / 3600000; // 1000 * 60 * 60
+      totalInput.value = hours.toFixed(2);
+      setDtError("");
+    }
+
+    // ✅ NEW: recalc totals for rows rendered from existing_downtimes
+    document.querySelectorAll("#dt-rows .dt-row").forEach(function (tr) {
+      recalcRow(tr);
+    });
+
+    function createDtRow() {
+      const tr = document.createElement("tr");
+      tr.className = "dt-row";
+      tr.innerHTML = `
+        <td class="px-3 py-2">
+          <input type="datetime-local"
+                 name="dt_start[]"
+                 class="dt-start border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </td>
+        <td class="px-3 py-2">
+          <input type="datetime-local"
+                 name="dt_end[]"
+                 class="dt-end border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </td>
+        <td class="px-3 py-2">
+          <input type="number"
+                 step="0.01"
+                 name="dt_total[]"
+                 class="dt-total border border-gray-300 bg-slate-100 rounded-lg px-2 py-1 w-full text-xs"
+                 readonly>
+        </td>
+        <td class="px-3 py-2">
+          <input type="text"
+                 name="dt_reason[]"
+                 class="dt-reason border border-gray-300 rounded-lg px-2 py-1 w-full text-xs
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </td>
+        <td class="px-3 py-2 text-right">
+          <button type="button"
+                  class="btn-remove-dt text-red-500 hover:text-red-700 text-sm">
+            ✕
+          </button>
+        </td>
+      `;
+      return tr;
+    }
+
+    if (btnAddDt && dtRowsBody) {
+      btnAddDt.addEventListener("click", () => {
+        dtRowsBody.appendChild(createDtRow());
+      });
+    }
+
+    if (dtRowsBody) {
+      dtRowsBody.addEventListener("input", function (e) {
+        if (e.target.classList.contains("dt-start") ||
+            e.target.classList.contains("dt-end")) {
+          const tr = e.target.closest(".dt-row");
+          if (tr) recalcRow(tr);
+        }
+      });
+
+      dtRowsBody.addEventListener("click", function (e) {
+        if (e.target.classList.contains("btn-remove-dt")) {
+          const tr = e.target.closest(".dt-row");
+          if (!tr) return;
+          if (dtRowsBody.querySelectorAll(".dt-row").length > 1) {
+            tr.remove();
+          } else {
+            tr.querySelectorAll("input").forEach(inp => inp.value = "");
+          }
+        }
+      });
+    }
+
+    // validate all rows on submit
+    if (form && dtRowsBody) {
+      form.addEventListener("submit", function (e) {
+        let hasError = false;
+        const rows = dtRowsBody.querySelectorAll(".dt-row");
+        rows.forEach(tr => {
+          const startInput = tr.querySelector(".dt-start");
+          const endInput   = tr.querySelector(".dt-end");
+          if (!startInput || !endInput) return;
+
+          const sVal = startInput.value;
+          const eVal = endInput.value;
+
+          // allow completely empty row
+          if (!sVal && !eVal) return;
+
+          const sDt = parseDt(sVal);
+          const eDt = parseDt(eVal);
+
+          if (!sDt || !eDt || eDt <= sDt) {
+            hasError = true;
+          }
+        });
+
+        if (hasError) {
+          e.preventDefault();
+          setDtError("Please ensure all filled downtime rows have valid start < end date/time.");
+        }
+      });
+    }
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,205 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-gray-50 py-6">
+  <div class="max-w-5xl mx-auto bg-white shadow rounded-xl p-6 sm:p-8">
+    {% if messages %}
+      <div class="max-w-5xl mx-auto mt-4 space-y-2">
+        {% for message in messages %}
+          <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                      {% if message.tags == 'success' %}bg-green-600{% else %}bg-red-600{% endif %}">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()">✖</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-semibold text-gray-800">
+          Employee Joining Details
+        </h1>
+        <p class="text-xs text-gray-500 mt-1">
+          Full profile & IT / infra requirements for:
+          <span class="font-semibold text-gray-700">
+            {{ object.employee_name }} ({{ object.employee_id }})
+          </span>
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="{% url 'employee_joining_list' %}"
+           class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                  border border-gray-300 text-gray-700 bg-white hover:bg-gray-50">
+          ← Back to List
+        </a>
+        {% if perms.HR.change_employeejoining %}
+        <a href="{% url 'employee_joining_edit' object.pk %}"
+           class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                  bg-indigo-600 text-white hover:bg-indigo-700">
+          ✏️ Edit
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- BASIC DETAILS -->
+    <div class="border border-gray-200 rounded-lg mb-6">
+      <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+        <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+          Basic Details
+        </h2>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div>
+          <p class="text-gray-500">Employee Name</p>
+          <p class="font-medium text-gray-900">{{ object.employee_name }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Employee ID</p>
+          <p class="font-medium text-gray-900">{{ object.employee_id }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Gender</p>
+          <p class="font-medium text-gray-900">{{ object.gender|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">Date of Birth</p>
+          <p class="font-medium text-gray-900">
+            {{ object.date_of_birth|date:"d-M-Y"|default:"-" }}
+          </p>
+        </div>
+        <div>
+          <p class="text-gray-500">Company</p>
+          <p class="font-medium text-gray-900">{{ object.company }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Location</p>
+          <p class="font-medium text-gray-900">{{ object.location }}</p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">Department</p>
+          <p class="font-medium text-gray-900">{{ object.department|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Designation</p>
+          <p class="font-medium text-gray-900">{{ object.designation|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Date of Joining</p>
+          <p class="font-medium text-gray-900">
+            {{ object.date_of_joining|date:"d-M-Y" }}
+          </p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">Date of Confirmation</p>
+          <p class="font-medium text-gray-900">
+            {{ object.date_of_confirmation|date:"d-M-Y"|default:"-" }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCESS & IT / INFRA -->
+    <div class="border border-gray-200 rounded-lg mb-6">
+      <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+        <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+          Access & IT / infra requirements
+        </h2>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+        <div>
+          <p class="text-gray-500">Biometric Enrollment</p>
+          <p class="font-medium text-gray-900">{{ object.Biomatric_enrollment|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Attendance Card</p>
+          <p class="font-medium text-gray-900">{{ object.attendance_card|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Smart Office Entry</p>
+          <p class="font-medium text-gray-900">{{ object.smart_office_entry|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Mobile Phone</p>
+          <p class="font-medium text-gray-900">{{ object.mobile_phone|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">SIM Card</p>
+          <p class="font-medium text-gray-900">{{ object.sim_card|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Telephone Extension</p>
+          <p class="font-medium text-gray-900">{{ object.telephone_extension|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Device</p>
+          <p class="font-medium text-gray-900">{{ object.computer|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">ERP Login</p>
+          <p class="font-medium text-gray-900">{{ object.erp_login|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Office 365 ID</p>
+          <p class="font-medium text-gray-900">{{ object.office_365_id|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Email ID</p>
+          <p class="font-medium text-gray-900">{{ object.email_id|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">SharePoint Site</p>
+          <p class="font-medium text-gray-900">{{ object.sharepoint_site|default:"-" }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- OTHER INFO -->
+    <div class="border border-gray-200 rounded-lg mb-6">
+      <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+        <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+          Additional Information
+        </h2>
+      </div>
+      <div class="p-4 space-y-4 text-sm">
+        <div>
+          <p class="text-gray-500 mb-1">Specific Folder Rights</p>
+          <div class="px-3 py-2 rounded-md bg-gray-50 border border-gray-200 min-h-[40px]">
+            <p class="text-gray-800 whitespace-pre-line">
+              {{ object.specific_folder_rights|default:"-" }}
+            </p>
+          </div>
+        </div>
+        <div>
+          <p class="text-gray-500 mb-1">Remark</p>
+          <div class="px-3 py-2 rounded-md bg-gray-50 border border-gray-200 min-h-[40px]">
+            <p class="text-gray-800 whitespace-pre-line">
+              {{ object.remark|default:"-" }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <div>
+            <span class="font-medium text-gray-600">Created at:</span>
+            <span class="ml-1">{{ object.created_at|date:"d-M-Y H:i" }}</span>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Last updated:</span>
+            <span class="ml-1">{{ object.updated_at|date:"d-M-Y H:i" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

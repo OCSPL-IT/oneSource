@@ -1,0 +1,1331 @@
+{# templates/main/sidebar.html #}
+{% load static %}
+
+{# ───────────────────────── Pre-resolve URLs ───────────────────────── #}
+{% url 'indexpage' as url_index %}
+{% url 'plan_vs_actual_daily' as url_plan_vs_actual_daily %}
+
+{# ───────────────────────── DISPATCH URL ───────────────────────── #}
+{% url 'dispatch_plan_vs_actual' as url_dispatch_analysis %}
+
+{# HR #}
+{% url 'attendance_pivot_report' as url_attendance_pivot_report %}
+{% url 'canteen_dashboard' as url_canteen_dashboard %}
+{% url 'attendance_list' as url_canteen_record %}
+{% url 'monthly_hr_budget_summary' as url_monthly_hr_budget_summary %}
+{% url 'contract_employee_matched_report' as url_contract_attendance %}
+{% url 'daily_assignment' as url_casual_employee_assign %}
+{% url 'assignment_dashboard_page' as url_casual_employee_dashboard %}
+{% url 'employee_joining_list' as url_employee_joining_list %}
+{% url 'ch_count_dashboard' as url_ch_count_dashboard %}
+
+{# PRODUCTION #}
+{% url 'add_downtime'   as url_production_downtime_form %}
+{% url 'view_downtime' as url_production_downtime_list %}
+{% url 'daily_checks:entry_new' as url_dc_entry_new %}
+{% url 'daily_checks:daily_block_list' as url_daily_block_list %}
+{% url 'daily_checks:daily_block_dashboard' as url_daily_block_dashboard %}
+
+{# EHS #}
+{% url 'hse_dashboard_page' as url_hse_dashboard_page %}
+{% url 'add_lagging_indicator' as url_ehs_add_lagging %}
+{% url 'view_lagging' as url_ehs_view_lagging %}
+{% url 'add_leading_record' as url_ehs_add_leading %}
+{% url 'view_leading' as url_ehs_view_leading %}
+{% url 'add_pssr_record' as url_ehs_add_pssr %}
+{% url 'pssr_record_list' as url_ehs_pssr_list %}
+{% url 'permit_list' as url_permit_list %}
+
+{# STORE #}
+{% url 'add_vehicle' as url_store_add_vehicle %}
+{% url 'vehicle_list' as url_store_vehicle_list %}
+{% url 'erp_reports:rgp_issue_grn_report' as url_rgp_issue_grn_report %}
+{% url 'erp_reports:inventory_ageing_report' as url_inventory_ageing_report %}
+{% url 'erp_reports:retest_dashboard' as url_retest_dashboard %}
+{% url 'material_issue_capex:capex_mi_dashboard' as url_capex_mi_dashboard %}
+{% url 'pending_grn_report' as url_pending_grn_report %}
+
+{# Rack Allocation #}
+{% url 'rack_dashboard' as url_store_rack_dashboard %}
+{% url 'rack_sync' as url_store_rack_sync %}
+{% url 'grn_allocate_date' as url_store_grn_allocate %}
+
+{# ETP #}
+{% url 'effluent_dashboard' as effluent_dashboard %}
+{% url 'add_effluent_record' as url_etp_add_effluent %}
+{% url 'view_effluent_records' as url_etp_view_effluent %}
+{% url 'add_general_effluent' as url_etp_add_general_effluent %}
+{% url 'view_general_effluent' as url_etp_view_general_effluent %}
+{% url 'pte_create' as pte_create %}
+{% url 'pte_list' as pte_list %}
+{% url 'hazardous_waste_create' as url_h_waste_create %}
+{% url 'hazardous_waste_list' as url_h_waste_list %}
+{% url 'etp_storage_tank_report' as url_effluent_tank_report %}
+{% url 'mee:mee_reading_list' as url_mee_reading_list %}
+{% url 'mee:atfd_reading_list' as url_atfd_reading_list %}
+{% url 'bioreactor_daily_reading_list' as url_bioreactor_daily_reading_list %}
+
+{# UTILITY #}
+{% url 'utility_entry' as url_utility_entry %}
+{% url 'utility_readings_report' as url_utility_report %}
+{% url 'power_entry' as power_entry %}
+{% url 'power_readings_report' as power_readings_report %}
+
+{# QC #}
+{% url 'qc:qc_home' as url_qc_home %}
+{% url 'qc:qc_powerbi_dashboard' as url_qc_dashboard %}
+{% url 'qc:product_list' as url_qc_products %}
+{% url 'qc:product_create' as url_qc_products_create %}
+{% url 'qc:product_create_fg' as url_qc_product_create_fg %}
+{% url 'qc:mis_report' as url_qc_mis %}
+{% url 'qc:qc_list' as url_qc_entries %}
+{% url 'qc:qc_create' as url_qc_new %}
+{% url 'qc:fgqc_create' as url_qc_fg_new %}
+{% url 'qc:sfgqc_create' as url_qc_sfg_new %}
+{% url 'qc:import_appearance' as url_qc_import_appearance %}
+{% url 'qc:item_master' as url_qc_item_master %}
+{% url 'qc:equipment_master' as url_qc_equipment_master %}
+{% url 'qc:sample_description_options' as url_qc_sample_description %}
+{% url 'qc:qc_test_parameter_list' as url_qc_test_parameter %}
+{% url 'qc:qc_product_report' as url_qc_monitoring_report %}
+{% url 'qc:coa_list' as url_qc_coa_list %}
+{% url 'qc:calibration_list' as url_calibration_list %}
+
+{# QC Extras #}
+{% url 'qc:daily_report_create' as url_qc_daily_report_create %}
+{% url 'qc:daily_report_list'   as url_qc_daily_report_list %}
+{% url 'qc:pdl_entries'         as url_qc_pdl_entries %}
+{% url 'qc:pdl_list'            as url_qc_pdl_list %}
+{% url 'qc:complaint_create'    as url_qc_complaint_create %}
+{% url 'qc:complaint_list'      as url_qc_complaint_list %}
+{% url 'qc:complaint_report'    as url_qc_complaint_report %}
+{% url 'qc:downtime_create'     as url_qc_downtime_create %}
+{% url 'qc:downtime_list'       as url_qc_downtime_list %}
+{% url 'qc:downtime_report'     as url_qc_downtime_report %}
+{% url 'qc:fg_qc_status_list'     as url_fg_qc_status_list %}
+{% url 'qc:instrument_occupancy_list'     as url_instrument_occupancy_list %}
+
+
+{# QC Deviation #}
+{% url 'qc:deviation_create' as url_qc_deviation_create %}
+{% url 'qc:deviation_list'   as url_qc_deviation_list %}
+{% url 'qc:deviation_report' as url_qc_deviation_report %}
+
+{# QC Analytical Mistake #}
+{% url 'qc:analytical_mistake_create' as url_qc_am_create %}
+{% url 'qc:analytical_mistake_list'   as url_qc_am_list %}
+{% url 'qc:analytical_mistake_report' as url_qc_am_report %}
+{% url 'qc:analytical_mistake_export' as url_qc_am_export %}
+
+{# R&D #}
+{% url 'add_r_and_d_moisture' as url_rd_add_moisture %}
+{% url 'r_and_d_moisture_list' as url_rd_moisture_list %}
+{% url 'add_r_and_d_kf_factor' as add_kf_factor_entry %}
+{% url 'r_and_d_kf_factor_list' as kf_factor_entry_list %}
+{% url 'add_r_and_d_melting_point' as add_melting_point_record %}
+{% url 'r_and_d_melting_point_list' as melting_point_record_list %}
+
+{# MAINTENANCE #}
+{% url 'maintenance:dashboard' as url_maint_dashboard %}
+{% url 'maintenance:upload_excel' as url_maint_upload %}
+{% url 'maintenance:calendar' as url_maint_calendar %}
+{% now "Y-m-d" as today_str %}
+
+{# ACCOUNTS / RECEIVABLE (support both namespaces) #}
+{% url 'receivable:receivable_dashboard' as url_rcv_dashboard_ns %}
+{% url 'accounts:receivable_dashboard'  as url_rcv_dashboard_acc %}
+{% url 'receivable:receivable_new'      as url_rcv_new_ns %}
+{% url 'accounts:receivable_new'        as url_rcv_new_acc %}
+{% url 'receivable:receivable_list'     as url_rcv_list_ns %}
+{% url 'accounts:receivable_list'       as url_rcv_list_acc %}
+
+{# Payment Targets #}
+{% url 'receivable:payment_target_list'   as url_rcv_target_list_ns %}
+{% url 'accounts:payment_target_list'     as url_rcv_target_list_acc %}
+{% url 'receivable:payment_target_create' as url_rcv_target_create_ns %}
+{% url 'accounts:payment_target_create'   as url_rcv_target_create_acc %}
+
+{# Masters #}
+{% url 'receivable:party_master_list'   as url_rcv_party_master_ns %}
+{% url 'accounts:party_master_list'     as url_rcv_party_master_acc %}
+{% url 'party_master_list'             as url_rcv_party_master_plain %}
+{% url 'receivable:email_account_list'  as url_rcv_email_accounts_ns %}
+{% url 'accounts:email_account_list'    as url_rcv_email_accounts_acc %}
+
+{# ✅ Outstanding Bills (All) + PDC Status (NEW) #}
+{% url 'receivable:receivable_outstanding_all_pdc' as url_rcv_outstanding_all_pdc_ns %}
+{% url 'accounts:receivable_outstanding_all_pdc'  as url_rcv_outstanding_all_pdc_acc %}
+
+{# ───────────────────────── ACCOUNTS / BUDGET (NEW) ───────────────────────── #}
+{% url 'accounts_budget:budget_home' as url_budget_home %}
+{% url 'accounts_budget:budget_plan_create' as url_budget_plan_create %}
+{% url 'accounts_budget:budget_summary' as url_budget_summary %}
+
+{# Sales Budget #}
+{% url 'accounts_budget:sales_budget_home' as url_budget_sales_home %}
+{% url 'accounts_budget:sales_budget_edit' as url_budget_sales_edit %}
+
+{# Captive Consumption #}
+{% url 'accounts_budget:captive_consumption_home' as url_captive_consumption_home %}
+
+{# RMC Budget #}
+{% url 'accounts_budget:rmc_budget_home' as url_budget_rmc_home %}
+{% url 'accounts_budget:rmc_budget_edit' as url_budget_rmc_edit %}
+{% url 'accounts_budget:rmc_budget_report_excel' as url_budget_rmc_report %}
+
+{# Production BOM / Production Budget #}
+{% url 'accounts_budget:production_bom_list' as url_budget_bom_list %}
+{% url 'accounts_budget:production_bom_create' as url_budget_bom_create %}
+{% url 'accounts_budget:production_budget_home' as url_budget_production_home %}
+{% url 'accounts_budget:production_budget_create' as url_budget_production_create %}
+
+{# Packing Budget (NEW) #}
+{% url 'accounts_budget:packing_budget_home' as url_packing_budget_home %}
+{% url 'accounts_budget:packing_products' as url_packing_products %}
+{% url 'accounts_budget:packing_inputs' as url_packing_inputs %}
+{% url 'accounts_budget:packing_summary' as url_packing_summary %}
+{% url 'accounts_budget:packing_master_list' as url_packing_master_list %}
+{% url 'accounts_budget:packing_form' as url_packing_form %}
+
+
+{# Department Category (current FY auto) #}
+{% url 'accounts_budget:budget_category_current' category='safety'       as url_budget_safety %}
+{% url 'accounts_budget:budget_category_current' category='environment'  as url_budget_environment %}
+{% url 'accounts_budget:budget_category_current' category='qaqc'         as url_budget_qaqc %}
+{% url 'accounts_budget:budget_category_current' category='engineering'  as url_budget_engineering %}
+{% url 'accounts_budget:budget_category_current' category='utility'      as url_budget_utility %}
+{% url 'accounts_budget:budget_category_current' category='admin'        as url_budget_admin %}
+{% url 'accounts_budget:budget_category_current' category='hr'           as url_budget_hr %}
+{% url 'accounts_budget:budget_category_current' category='rd'           as url_budget_rd %}
+{% url 'accounts_budget:budget_category_current' category='logistic'     as url_budget_logistic %}
+{% url 'accounts_budget:budget_category_current' category='fin_accounts' as url_budget_fin_accts %}
+
+{# Extra categories #}
+{% url 'accounts_budget:budget_category_current' category='steam'        as url_budget_steam %}
+{% url 'accounts_budget:budget_category_current' category='electricity'  as url_budget_electricity %}
+{% url 'accounts_budget:budget_category_current' category='rm'           as url_budget_rm %}
+{% url 'accounts_budget:budget_category_current' category='emp_oc'       as url_budget_emp_oc %}
+{% url 'accounts_budget:budget_category_current' category='emp_contract' as url_budget_emp_contract %}
+
+{# COA / GL #}
+{% url 'accounts_budget:gl_account_list' as url_budget_gl_list %}
+{% url 'accounts_budget:gl_account_create' as url_budget_gl_create %}
+
+{# Budget Approvals Inbox #}
+{% url 'accounts_budget:budget_approvals_inbox' as url_budget_approvals_inbox %}
+
+{# IMPORT_EXPORT #}
+{% url 'invoice_post_shipment_list' as url_invoice_post_shipment_list %}
+
+{# PURCHASE #}
+{% url 'domestic_eta:domestic_eta_list' as url_domestic_eta_list %}
+{% url 'domestic_eta:domestic_eta_create' as url_domestic_eta_create %}
+{% url 'domestic_eta:eta_dashboard' as url_eta_dashboard %}
+{% url 'sales_crm:customer_visit_list' as url_customer_visit_list %}
+
+{# PERSONAL_CARE #}
+{% url 'pc_customer_dashboard' as url_pc_customer_dashboard %}
+{% url 'pc_customer_list' as url_pc_customer_list %}
+{% url 'pc_customer_create' as url_pc_customer_create %}
+{% url 'pc_sample_request_create' as url_pc_sample_request_create %}
+{% url 'pc_sample_request_list' as url_pc_sample_request_list %}
+{% url 'pc_task_create' as url_pc_task_create %}
+{% url 'pc_task_list' as url_pc_task_list %}
+{% url 'pc_other_customer_list' as url_pc_other_customer_list %}
+{% url 'pc_other_customer_create' as url_pc_other_customer_create %}
+
+{% with dead_class="pointer-events-none opacity-40 grayscale select-none" %}
+
+<aside
+  id="app-sidebar"
+  x-cloak
+  @keydown.escape.window="isSidebarOpen = false"
+  class="fixed inset-y-0 left-0 z-50 w-64 shrink-0 bg-white border-r border-slate-200
+         transform transition-transform duration-200 overflow-x-hidden overflow-y-auto pointer-events-auto"
+  :class="{ 'translate-x-0': isSidebarOpen, '-translate-x-full': !isSidebarOpen }"
+  aria-label="Sidebar">
+
+  <div class="flex flex-col min-h-full">
+
+    <!-- Header -->
+    <a href="{{ url_index }}"
+       class="group flex items-center gap-3 h-16 px-4 border-b border-slate-200 bg-white">
+      <img src="{% static 'main/images/Get_Started.png' %}" class="h-8 w-auto" alt="OC Logo">
+      <div class="min-w-0">
+        <div class="font-semibold text-base text-slate-900 leading-tight whitespace-nowrap">oneSource</div>
+        <div class="text-[11px] text-slate-500 leading-tight whitespace-nowrap">Applications</div>
+      </div>
+      <i class="fa-solid fa-angles-left ml-auto text-slate-300 group-hover:text-slate-400 hidden lg:inline"></i>
+    </a>
+
+    <!-- Nav -->
+    <nav class="relative z-10 flex-1 px-2 py-4 pb-16 text-sm"
+         @click="if ($event.target.closest('a') && window.matchMedia('(max-width:1023.5px)').matches) { isSidebarOpen = false }">
+
+      <ul class="space-y-1">
+
+        <!-- 1) Daily Operation Plant (TOP) -->
+        {% if 'Daily_Operation_Plant' in user_groups and user_groups or is_superuser %}
+        <li>
+          <a href="{{ url_plan_vs_actual_daily }}"
+             class="flex items-center gap-3 px-3 py-2 rounded-lg transition
+                    hover:bg-slate-100
+                    {% if request.path == url_plan_vs_actual_daily %}bg-slate-100 text-slate-900 font-semibold ring-1 ring-slate-200{% else %}text-slate-700{% endif %}"
+             data-active="{% if request.path == url_plan_vs_actual_daily %}true{% else %}false{% endif %}"
+             {% if request.path == url_plan_vs_actual_daily %}aria-current="page"{% endif %}>
+            <i class="fa-solid fa-table-columns w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap">Daily Operation Plant</span>
+          </a>
+        </li>
+        <li class="px-3 py-2">
+          <div class="h-px bg-slate-200"></div>
+        </li>
+        {% endif %}
+
+        <!-- 2) Accounts -->
+        {% if 'ACCOUNTS' in user_groups or 'Accounts' in user_groups or 'CashFlow' in user_groups or 'cashflow' in user_groups or is_superuser %}
+        <li
+          x-data="{ open:false, rcv:false, bgt:false }"
+          x-init="
+            open = $el.querySelector('[data-active=true]') !== null
+                || $el.querySelector('[data-rcv-active=true]') !== null
+                || $el.querySelector('[data-bgt-active=true]') !== null;
+            rcv  = $el.querySelector('[data-rcv-active=true]') !== null;
+            bgt  = $el.querySelector('[data-bgt-active=true]') !== null;
+          "
+        >
+          <button @click="open = !open"
+                  class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700"
+                  :aria-expanded="open.toString()">
+            <i class="fa-solid fa-indian-rupee-sign w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">Accounts</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform"
+               :class="{ 'rotate-180' : open }"></i>
+          </button>
+
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-2">
+
+            {% if 'CashFlow' in user_groups or 'cashflow' in user_groups or is_superuser %}
+            <li>
+              <a href="http://192.168.1.253:55/accounts/payables-cashflow/"
+                 class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                        {% if '/accounts/payables-cashflow/' in request.path %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if '/accounts/payables-cashflow/' in request.path %}true{% else %}false{% endif %}">
+                <i class="fa-solid fa-wave-square w-4 text-slate-400"></i>
+                <span>Cashflow</span>
+              </a>
+            </li>
+            {% endif %}
+
+            {% if perms.receivable.view_receivable %}
+            <li class="mt-1">
+              <button @click="rcv = !rcv"
+                      class="flex w-full items-center px-3 py-1.5 rounded-md transition hover:bg-slate-100 text-slate-700"
+                      :aria-expanded="rcv.toString()">
+                <span class="whitespace-nowrap font-medium">Receivable</span>
+                <i class="fa-solid fa-chevron-right w-3 ml-auto transition-transform"
+                   :class="{ 'rotate-90' : rcv }"></i>
+              </button>
+
+              <ul x-show="rcv" x-transition class="mt-1 space-y-1 pl-5 text-sm">
+
+                <li>
+                  <a href="{{ url_rcv_dashboard_ns|default:url_rcv_dashboard_acc|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_rcv_dashboard_ns or request.path == url_rcv_dashboard_acc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                     data-rcv-active="{% if request.path == url_rcv_dashboard_ns or request.path == url_rcv_dashboard_acc %}true{% else %}false{% endif %}">
+                    Receivables Dashboard
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_rcv_new_ns|default:url_rcv_new_acc|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_rcv_new_ns or request.path == url_rcv_new_acc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                     data-rcv-active="{% if request.path == url_rcv_new_ns or request.path == url_rcv_new_acc %}true{% else %}false{% endif %}">
+                    New Receivable Entry
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_rcv_list_ns|default:url_rcv_list_acc|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_rcv_list_ns or request.path == url_rcv_list_acc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                     data-rcv-active="{% if request.path == url_rcv_list_ns or request.path == url_rcv_list_acc %}true{% else %}false{% endif %}">
+                    Receivables List
+                  </a>
+                </li>
+
+                <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">Outstanding Review</li>
+
+                <li>
+                  <a href="{{ url_rcv_outstanding_all_pdc_ns|default:url_rcv_outstanding_all_pdc_acc|default:'#' }}"
+                    class="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-slate-100
+                            {% if request.path == url_rcv_outstanding_all_pdc_ns or request.path == url_rcv_outstanding_all_pdc_acc %}bg-slate-100 font-medium{% endif %}
+                            {% if not url_rcv_outstanding_all_pdc_ns and not url_rcv_outstanding_all_pdc_acc %}{{ dead_class }}{% endif %}"
+                    data-active="{% if request.path == url_rcv_outstanding_all_pdc_ns or request.path == url_rcv_outstanding_all_pdc_acc %}true{% else %}false{% endif %}"
+                    data-rcv-active="{% if request.path == url_rcv_outstanding_all_pdc_ns or request.path == url_rcv_outstanding_all_pdc_acc %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-receipt w-4 text-slate-400"></i>
+                    <span>Outstanding (All) + PDC</span>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_rcv_target_list_ns|default:url_rcv_target_list_acc|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_rcv_target_list_ns or request.path == url_rcv_target_list_acc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                     data-rcv-active="{% if request.path == url_rcv_target_list_ns or request.path == url_rcv_target_list_acc %}true{% else %}false{% endif %}">
+                    Payment Targets (Weekly)
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_rcv_target_create_ns|default:url_rcv_target_create_acc|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_rcv_target_create_ns or request.path == url_rcv_target_create_acc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                     data-rcv-active="{% if request.path == url_rcv_target_create_ns or request.path == url_rcv_target_create_acc %}true{% else %}false{% endif %}">
+                    New Payment Target
+                  </a>
+                </li>
+
+                <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">Reminder Masters</li>
+
+                <li>
+                  <a href="{{ url_rcv_party_master_ns|default:url_rcv_party_master_acc|default:url_rcv_party_master_plain|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_rcv_party_master_ns or request.path == url_rcv_party_master_acc or request.path == url_rcv_party_master_plain %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                     data-rcv-active="{% if request.path == url_rcv_party_master_ns or request.path == url_rcv_party_master_acc or request.path == url_rcv_party_master_plain %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-address-book w-4 text-slate-400"></i>
+                    <span>Party Master</span>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_rcv_email_accounts_ns|default:url_rcv_email_accounts_acc|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_rcv_email_accounts_ns or request.path == url_rcv_email_accounts_acc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                     data-rcv-active="{% if request.path == url_rcv_email_accounts_ns or request.path == url_rcv_email_accounts_acc %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-envelope-circle-check w-4 text-slate-400"></i>
+                    <span>Outgoing Email Accounts</span>
+                  </a>
+                </li>
+
+              </ul>
+            </li>
+            {% endif %}
+
+            <!-- Budget -->
+          
+            <li class="mt-1">
+              <button @click="bgt = !bgt"
+                      class="flex w-full items-center px-3 py-1.5 rounded-md transition hover:bg-slate-100 text-slate-700"
+                      :aria-expanded="bgt.toString()">
+                <span class="whitespace-nowrap font-medium">Budget</span>
+                <i class="fa-solid fa-chevron-right w-3 ml-auto transition-transform"
+                   :class="{ 'rotate-90' : bgt }"></i>
+              </button>
+
+              <ul x-show="bgt" x-transition class="mt-1 space-y-1 pl-5 text-sm">
+
+                <li>
+                  <a href="{{ url_budget_home|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-slate-100
+                            {% if request.path == url_budget_home %}bg-slate-100 font-medium{% endif %}
+                            {% if not url_budget_home %}{{ dead_class }}{% endif %}"
+                     data-active="{% if request.path == url_budget_home %}true{% else %}false{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_home %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-chart-line w-4 text-slate-400"></i>
+                    <span>Budget Home</span>
+                  </a>
+                </li>
+
+                <!-- Shortcut cards -->
+                <li class="px-3 pt-2">
+                  <div class="grid grid-cols-2 gap-2">
+                    <a href="{{ url_budget_summary|default:'#' }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition
+                              {% if request.path == url_budget_summary %}ring-1 ring-slate-200{% endif %}
+                              {% if not url_budget_summary %}{{ dead_class }}{% endif %}"
+                       data-bgt-active="{% if request.path == url_budget_summary %}true{% else %}false{% endif %}">
+                      <i class="fa-solid fa-list-check text-slate-400"></i>
+                      <span>Summary</span>
+                    </a>
+                    {% if can_view_budget_rm or is_superuser %}
+                    <a href="{{ url_budget_rmc_report|default:'#' }}"
+                       class="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition
+                              {% if not url_budget_rmc_report %}{{ dead_class }}{% endif %}"
+                       {% if url_budget_rmc_report %}target="_blank" rel="noopener"{% endif %}
+                       data-bgt-active="false">
+                      <i class="fa-solid fa-file-arrow-down text-slate-400"></i>
+                      <span>RMC Excel</span>
+                    </a>
+                    {% endif %}
+                  </div>
+                </li>
+
+                <!-- Approvals shortcut -->
+
+                <li class="px-3 pt-2">
+                  <a href="{{ url_budget_approvals_inbox|default:'#' }}"
+                     class="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition
+                            {% if request.path == url_budget_approvals_inbox %}ring-1 ring-amber-300{% endif %}
+                            {% if not url_budget_approvals_inbox %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_approvals_inbox %}true{% else %}false{% endif %}">
+                    <span class="inline-flex items-center gap-2">
+                      <i class="fa-solid fa-circle-check text-amber-600"></i>
+                      <span>Approvals Inbox</span>
+                    </span>
+                    <i class="fa-solid fa-arrow-right-long text-amber-600"></i>
+                  </a>
+                </li>
+  
+
+                <!-- Captive Consumption shortcut -->
+                {% if can_view_budget_production or is_superuser %}
+                <li class="px-3 pt-2">
+                  <a href="{{ url_captive_consumption_home|default:'#' }}"
+                     class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition
+                            {% if request.path == url_captive_consumption_home %}ring-1 ring-slate-200{% endif %}
+                            {% if not url_captive_consumption_home %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_captive_consumption_home %}true{% else %}false{% endif %}">
+                    <span class="inline-flex items-center gap-2">
+                      <i class="fa-solid fa-recycle text-slate-400"></i>
+                      <span>Captive Consumption</span>
+                    </span>
+                    <i class="fa-solid fa-arrow-right-long text-slate-400"></i>
+                  </a>
+                </li>
+                {% endif %}
+                <li class="pt-1"></li>
+
+                <li>
+                  <a href="{{ url_budget_plan_create|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_plan_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_plan_create %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_plan_create %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-plus w-4 text-slate-400"></i>
+                    <span>Create Budget Plan</span>
+                  </a>
+                </li>
+                {% if can_view_budget_sales or is_superuser %}
+                <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">Sales</li>
+
+                <li>
+                  <a href="{{ url_budget_sales_home|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_sales_home %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_sales_home %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_sales_home %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-chart-column w-4 text-slate-400"></i>
+                    <span>Sales Budget (Summary)</span>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_budget_sales_edit|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_sales_edit %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_sales_edit %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_sales_edit %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-pen-to-square w-4 text-slate-400"></i>
+                    <span>Sales Budget (Edit)</span>
+                  </a>
+                </li> 
+                {% endif %}
+                {% if can_view_budget_production or is_superuser or perms.Budget.view_productionbom %}
+                <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">Production</li>
+
+                <li>
+                  <a href="{{ url_budget_production_home|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_production_home %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_production_home %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_production_home %}true{% else %}false{% endif %}">
+                    Production Budget
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_budget_production_create|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_production_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_production_create %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_production_create %}true{% else %}false{% endif %}">
+                    New FG Budget
+                  </a>
+                </li>
+                {% endif %}
+                {% if perms.Budget.view_productionbom %}
+                <li>
+                  <a href="{{ url_budget_bom_list|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_bom_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_bom_list %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_bom_list %}true{% else %}false{% endif %}">
+                    Budget Norm Master
+                  </a>
+                </li>
+                {% endif %}
+                {% if perms.Budget.add_productionbom %}
+                <li>
+                  <a href="{{ url_budget_bom_create|default:'#' }}"
+                     class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_bom_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_bom_create %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_bom_create %}true{% else %}false{% endif %}">
+                    Budget Norm
+                  </a>
+                </li>
+                {% endif %}
+
+                {# -------------------- PACKING (NEW) -------------------- #}
+              {% if can_view_budget_production or is_superuser %}
+              <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">Packing</li>
+
+              <li>
+                <a href="{{ url_packing_budget_home|default:'#' }}"
+                  class="flex items-center gap-2 px-3 py-2 rounded-md transition hover:bg-slate-100
+                          {% if request.path == url_packing_budget_home %}bg-slate-100 font-semibold text-slate-900{% else %}text-slate-700{% endif %}"
+                  data-bgt-active="{% if request.path == url_packing_budget_home %}true{% else %}false{% endif %}">
+                  <i class="fa-solid fa-box-open w-4 text-slate-400"></i>
+                  <span>Packing Budget (Home)</span>
+                </a>
+              </li>
+
+              <li>
+                <a href="{{ url_packing_form|default:'#' }}"
+                  class="flex items-center gap-2 px-3 py-2 rounded-md transition hover:bg-slate-100
+                          {% if request.path == url_packing_form or '/packing/form/' in request.path %}bg-slate-100 font-semibold text-slate-900{% else %}text-slate-700{% endif %}"
+                  data-bgt-active="{% if request.path == url_packing_form or '/packing/form/' in request.path %}true{% else %}false{% endif %}">
+                  <i class="fa-solid fa-pen-to-square w-4 text-slate-400"></i>
+                  <span>Packing Form</span>
+                </a>
+              </li>
+
+              <li>
+                <a href="{{ url_packing_products|default:'#' }}"
+                  class="flex items-center gap-2 px-3 py-2 rounded-md transition hover:bg-slate-100
+                          {% if request.path == url_packing_products or '/packing/products/' in request.path %}bg-slate-100 font-semibold text-slate-900{% else %}text-slate-700{% endif %}"
+                  data-bgt-active="{% if request.path == url_packing_products or '/packing/products/' in request.path %}true{% else %}false{% endif %}">
+                  <i class="fa-solid fa-cubes w-4 text-slate-400"></i>
+                  <span>Packing Products</span>
+                </a>
+              </li>
+
+              <li>
+                <a href="{{ url_packing_inputs|default:'#' }}"
+                  class="flex items-center gap-2 px-3 py-2 rounded-md transition hover:bg-slate-100
+                          {% if request.path == url_packing_inputs or '/packing/inputs/' in request.path %}bg-slate-100 font-semibold text-slate-900{% else %}text-slate-700{% endif %}"
+                  data-bgt-active="{% if request.path == url_packing_inputs or '/packing/inputs/' in request.path %}true{% else %}false{% endif %}">
+                  <i class="fa-solid fa-arrow-right-arrow-left w-4 text-slate-400"></i>
+                  <span>Packing Inputs</span>
+                </a>
+              </li>
+
+              <li>
+                <a href="{{ url_packing_summary|default:'#' }}"
+                  class="flex items-center gap-2 px-3 py-2 rounded-md transition hover:bg-slate-100
+                          {% if request.path == url_packing_summary or '/packing/summary/' in request.path %}bg-slate-100 font-semibold text-slate-900{% else %}text-slate-700{% endif %}"
+                  data-bgt-active="{% if request.path == url_packing_summary or '/packing/summary/' in request.path %}true{% else %}false{% endif %}">
+                  <i class="fa-solid fa-list-check w-4 text-slate-400"></i>
+                  <span>Packing Summary</span>
+                </a>
+              </li>
+
+              <li>
+                <a href="{{ url_packing_master_list|default:'#' }}"
+                  class="flex items-center gap-2 px-3 py-2 rounded-md transition hover:bg-slate-100
+                          {% if request.path == url_packing_master_list or '/packing/master/' in request.path %}bg-slate-100 font-semibold text-slate-900{% else %}text-slate-700{% endif %}"
+                  data-bgt-active="{% if request.path == url_packing_master_list or '/packing/master/' in request.path %}true{% else %}false{% endif %}">
+                  <i class="fa-solid fa-boxes-stacked w-4 text-slate-400"></i>
+                  <span>Packing Material Master</span>
+                </a>
+              </li>
+              {% endif %}
+              {# ------------------ END PACKING (NEW) ------------------ #}
+
+
+                {% if can_view_budget_rm or is_superuser %}
+                <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">RMC</li>
+
+                <li>
+                  <a href="{{ url_budget_rmc_home|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_rmc_home %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_rmc_home %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_rmc_home %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-boxes-stacked w-4 text-slate-400"></i>
+                    <span>RMC Budget (Summary)</span>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_budget_rmc_edit|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_rmc_edit %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_rmc_edit %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_rmc_edit %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-pen-to-square w-4 text-slate-400"></i>
+                    <span>RMC Budget (Edit)</span>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_budget_rmc_report|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if not url_budget_rmc_report %}{{ dead_class }}{% endif %}"
+                     {% if url_budget_rmc_report %}target="_blank" rel="noopener"{% endif %}
+                     data-bgt-active="false">
+                    <i class="fa-solid fa-file-arrow-down w-4 text-slate-400"></i>
+                    <span>Download RMC Report</span>
+                  </a>
+                </li>
+                {% endif %}
+
+                {% if show_department_forms or is_superuser %}
+                <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">Department Forms</li>
+                {% endif %}  
+                {% if can_view_budget_safety or is_superuser %}
+                <li><a href="{{ url_budget_safety|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_safety %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_safety %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_safety %}true{% else %}false{% endif %}"><i class="fa-solid fa-shield-heart w-4 text-slate-400"></i><span>Safety &amp; Health</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_environment or is_superuser %}
+                <li><a href="{{ url_budget_environment|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_environment %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_environment %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_environment %}true{% else %}false{% endif %}"><i class="fa-solid fa-leaf w-4 text-slate-400"></i><span>Environment</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_qaqc or is_superuser %}
+                <li><a href="{{ url_budget_qaqc|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_qaqc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_qaqc %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_qaqc %}true{% else %}false{% endif %}"><i class="fa-solid fa-flask w-4 text-slate-400"></i><span>QA/QC</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_engineering or is_superuser %}
+                <li><a href="{{ url_budget_engineering|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_engineering %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_engineering %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_engineering %}true{% else %}false{% endif %}"><i class="fa-solid fa-screwdriver-wrench w-4 text-slate-400"></i><span>Engineering</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_utility or is_superuser %}
+                <li><a href="{{ url_budget_utility|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_utility %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_utility %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_utility %}true{% else %}false{% endif %}"><i class="fa-solid fa-bolt w-4 text-slate-400"></i><span>Utility</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_admin or is_superuser %}
+                <li><a href="{{ url_budget_admin|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_admin %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_admin %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_admin %}true{% else %}false{% endif %}"><i class="fa-solid fa-building w-4 text-slate-400"></i><span>Admin</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_hr or is_superuser %}
+                <li><a href="{{ url_budget_hr|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_hr %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_hr %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_hr %}true{% else %}false{% endif %}"><i class="fa-solid fa-users w-4 text-slate-400"></i><span>HR</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_rd or is_superuser %}
+                <li><a href="{{ url_budget_rd|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_rd %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_rd %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_rd %}true{% else %}false{% endif %}"><i class="fa-solid fa-flask-vial w-4 text-slate-400"></i><span>R&amp;D</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_logistic or is_superuser %}
+                <li><a href="{{ url_budget_logistic|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_logistic %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_logistic %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_logistic %}true{% else %}false{% endif %}"><i class="fa-solid fa-truck w-4 text-slate-400"></i><span>Logistic</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_fin_accounts or is_superuser %}
+                <li><a href="{{ url_budget_fin_accts|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_fin_accts %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_fin_accts %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_fin_accts %}true{% else %}false{% endif %}"><i class="fa-solid fa-coins w-4 text-slate-400"></i><span>Finance &amp; Accounts</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_steam or is_superuser %}
+                <li><a href="{{ url_budget_steam|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_steam %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_steam %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_steam %}true{% else %}false{% endif %}"><i class="fa-solid fa-fire-flame-curved w-4 text-slate-400"></i><span>Steam</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_electricity or is_superuser %}
+                <li><a href="{{ url_budget_electricity|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_electricity %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_electricity %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_electricity %}true{% else %}false{% endif %}"><i class="fa-solid fa-plug-circle-bolt w-4 text-slate-400"></i><span>Electricity</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_rm or is_superuser %}
+                <li><a href="{{ url_budget_rm|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_rm %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_rm %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_rm %}true{% else %}false{% endif %}"><i class="fa-solid fa-screwdriver-wrench w-4 text-slate-400"></i><span>R &amp; M</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_emp_oc or is_superuser %}
+                <li><a href="{{ url_budget_emp_oc|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_emp_oc %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_emp_oc %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_emp_oc %}true{% else %}false{% endif %}"><i class="fa-solid fa-user-tie w-4 text-slate-400"></i><span>Employee Cost (OC)</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_emp_contract or is_superuser %}
+                <li><a href="{{ url_budget_emp_contract|default:'#' }}" class="flex items-center gap-2 px-3 py-1.5 rounded-md hover:bg-slate-100 transition {% if request.path == url_budget_emp_contract %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %} {% if not url_budget_emp_contract %}{{ dead_class }}{% endif %}" data-bgt-active="{% if request.path == url_budget_emp_contract %}true{% else %}false{% endif %}"><i class="fa-solid fa-user-group w-4 text-slate-400"></i><span>Employee Cost (Contract)</span></a></li>
+                {% endif %}  
+                {% if can_view_budget_fin_accounts or is_superuser %}
+                <li class="mt-2 px-3 text-slate-500 text-[11px] uppercase tracking-wide">Chart of Accounts</li>
+                <li>
+                  <a href="{{ url_budget_gl_list|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_gl_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_gl_list %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_gl_list %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-book w-4 text-slate-400"></i>
+                    <span>G/L Accounts (List)</span>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="{{ url_budget_gl_create|default:'#' }}"
+                     class="flex items-center gap-2 px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                            {% if request.path == url_budget_gl_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                            {% if not url_budget_gl_create %}{{ dead_class }}{% endif %}"
+                     data-bgt-active="{% if request.path == url_budget_gl_create %}true{% else %}false{% endif %}">
+                    <i class="fa-solid fa-plus w-4 text-slate-400"></i>
+                    <span>Create G/L Account</span>
+                  </a>
+                </li>
+                {% endif %}
+              </ul>
+            </li>
+            
+            <!-- End Budget -->
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 3) Store -->
+        {% if 'STORE' in user_groups or 'GRN' in user_groups or 'RGP Store' in user_groups or 'disp_head' in user_groups or is_superuser %}
+
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open"
+                  class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700"
+                  :aria-expanded="open.toString()">
+            <i class="fa-solid fa-warehouse w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">Store</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            {% if 'STORE' in user_groups or is_superuser %}
+            {% if perms.STORE.add_vehicle %}
+            <li>
+              <a href="{{ url_store_add_vehicle|default:'' }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                        {% if request.path == url_store_add_vehicle %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                        {% if not url_store_add_vehicle %}{{ dead_class }}{% endif %}"
+                 data-active="{% if request.path == url_store_add_vehicle %}true{% else %}false{% endif %}">
+                Add Vehicle
+              </a>
+            </li>
+            {% endif %}
+            {% if perms.STORE.view_vehicle %}
+            <li>
+              <a href="{{ url_store_vehicle_list }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                        {% if request.path == url_store_vehicle_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                        {% if not url_store_vehicle_list %}{{ dead_class }}{% endif %}"
+                 data-active="{% if request.path == url_store_vehicle_list %}true{% else %}false{% endif %}">
+                Vehicle Reports
+              </a>
+            </li>
+            {% endif %}
+            {% if perms.material_issue_capex.view_capexgrnline %}
+            <li>
+              <a href="{{ url_capex_mi_dashboard }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                        {% if request.path == url_capex_mi_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                        {% if not url_capex_mi_dashboard %}{{ dead_class }}{% endif %}"
+                 data-active="{% if request.path == url_capex_mi_dashboard %}true{% else %}false{% endif %}">
+                Capex GRN &amp; Material Issue
+              </a>
+            </li>
+            {% endif %}
+
+            <li><a href="{{ url_store_rack_dashboard|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_store_rack_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_store_rack_dashboard %}true{% else %}false{% endif %}">Rack Balances</a></li>
+            <li><a href="{{ url_store_rack_sync|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_store_rack_sync %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_store_rack_sync %}true{% else %}false{% endif %}">Sync ERP (GRN &amp; Issues)</a></li>
+            <li><a href="{{ url_store_grn_allocate|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_store_grn_allocate or request.resolver_match.url_name == 'grn_allocate_date' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_store_grn_allocate or request.resolver_match.url_name == 'grn_allocate_date' %}true{% else %}false{% endif %}">Allocate Racks (By Date)</a></li>
+            {% endif %}
+
+            {% if 'RGP Store' in user_groups or is_superuser %}
+            <li><a href="{{ url_rgp_issue_grn_report|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_rgp_issue_grn_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_rgp_issue_grn_report %}true{% else %}false{% endif %}">RGP Report</a></li>
+            {% endif %}
+
+            {% if 'AGE' in user_groups or is_superuser %}
+            <li><a href="{{ url_inventory_ageing_report|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_inventory_ageing_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_inventory_ageing_report %}true{% else %}false{% endif %}">Ageing Report</a></li>
+            <li><a href="{{ url_retest_dashboard|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_retest_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_retest_dashboard %}true{% else %}false{% endif %}">Retest Dashboard</a></li>
+            {% endif %}
+
+            {% if can_location_wise_stock %}
+            <li>
+              <a href="{% url 'inv_ageing_drill_report' %}"
+                class="block px-3 py-1.5 rounded hover:bg-slate-100
+                        {% if request.path|slice:':16' == '/inv-ageing-drill/' %}bg-slate-100 font-medium{% endif %}">
+                Location wise Stock
+              </a>
+            </li>
+            {% endif %}
+            {% if 'GRN' in user_groups or 'STORE' in user_groups or is_superuser %}
+            <li>
+              <a href="{{ url_pending_grn_report|default:'' }}"
+                class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100
+                        {% if request.path == url_pending_grn_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}
+                        {% if not url_pending_grn_report %}{{ dead_class }}{% endif %}"
+                data-active="{% if request.path == url_pending_grn_report %}true{% else %}false{% endif %}">
+                Pending GRN for approved by/check by
+              </a>
+            </li>
+            {% endif %}
+
+
+            {% if 'disp_head' in user_groups or is_superuser %}
+            <li><a href="{{ url_dispatch_analysis|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_dispatch_analysis %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_dispatch_analysis %}true{% else %}false{% endif %}">Dispatch Analysis</a></li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 4) Production -->
+        {% if 'PRODUCTION' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open"
+                  class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700"
+                  :aria-expanded="open.toString()">
+            <i class="fa-solid fa-industry w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">Production</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li><a href="{{ url_production_downtime_form|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_production_downtime_form %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_production_downtime_form %}true{% else %}false{% endif %}">Create Downtime</a></li>
+            <li><a href="{{ url_production_downtime_list|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_production_downtime_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_production_downtime_list %}true{% else %}false{% endif %}">Downtime Records</a></li>
+            <li><a href="{{ url_dc_entry_new|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_dc_entry_new %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_dc_entry_new %}true{% else %}false{% endif %}">Daily Block Entry</a></li>
+            <li><a href="{{ url_daily_block_list|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_daily_block_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_daily_block_list %}true{% else %}false{% endif %}">Daily Block List</a></li>
+            <li><a href="{{ url_daily_block_dashboard|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_daily_block_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_daily_block_dashboard %}true{% else %}false{% endif %}">Daily Block Dashboard</a></li>
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 5) QC -->
+        {% if 'QC' in user_groups or is_superuser %}
+        <li x-data="{ open:false, overview:false, qc_sub:false, products:false, master:false }"
+            x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open"
+                  class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700"
+                  :aria-expanded="open.toString()">
+            <i class="fa-solid fa-flask w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">QC</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li>
+              <button @click="overview = !overview"
+                      class="flex w-full items-center px-3 py-1.5 rounded-md transition hover:bg-slate-100 text-slate-700">
+                <span class="whitespace-nowrap font-medium">Overview</span>
+                <i class="fa-solid fa-chevron-right w-3 ml-auto transition-transform" :class="{ 'rotate-90' : overview }"></i>
+              </button>
+              <ul x-show="overview" x-transition class="mt-1 space-y-1 pl-5 text-sm">
+                <li><a href="{{ url_qc_home }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_home %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_home %}true{% else %}false{% endif %}">Home</a></li>
+                <li><a href="{{ url_qc_dashboard }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_dashboard %}true{% else %}false{% endif %}">Dashboard</a></li>
+                <li><a href="{{ url_qc_mis }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_mis %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_mis %}true{% else %}false{% endif %}">MIS Report</a></li>
+                <li><a href="{{ url_qc_monitoring_report }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_monitoring_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_monitoring_report %}true{% else %}false{% endif %}">QC Monitoring report</a></li>
+                {% if perms.QC.view_qccalibrationschedule %}
+                <li><a href="{{ url_calibration_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_calibration_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_calibration_list %}true{% else %}false{% endif %}">QC Calibration Schedule</a></li>
+                {% endif %}
+              </ul>
+            </li>
+
+            <li>
+              <button @click="qc_sub = !qc_sub"
+                      class="flex w-full items-center px-3 py-1.5 rounded-md transition hover:bg-slate-100 text-slate-700">
+                <span class="whitespace-nowrap font-medium">QC</span>
+                <i class="fa-solid fa-chevron-right w-3 ml-auto transition-transform" :class="{ 'rotate-90' : qc_sub }"></i>
+              </button>
+              <ul x-show="qc_sub" x-transition class="mt-1 space-y-1 pl-5 text-sm">
+                <li><a href="{{ url_qc_entries }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_entries %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_entries %}true{% else %}false{% endif %}">QC Entries</a></li>
+                <li><a href="{{ url_qc_new }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_new %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_new %}true{% else %}false{% endif %}">In-Process QC</a></li>
+                <li><a href="{{ url_qc_sfg_new }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_sfg_new %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_sfg_new %}true{% else %}false{% endif %}">SFG QC</a></li>
+                <li><a href="{{ url_qc_fg_new }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_fg_new %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_fg_new %}true{% else %}false{% endif %}">FG QC</a></li>
+                {% if perms.QC.view_fgproductqcstatus %}
+                <li>
+                  <a href="{{ url_fg_qc_status_list }}"
+                     class="block px-3 py-1.5 rounded hover:bg-slate-100 {% if request.path == url_fg_qc_status_list %}bg-slate-100 font-medium{% endif %}"
+                     data-active="{% if request.path == url_fg_qc_status_list %}true{% else %}false{% endif %}">
+                    Daily FG QC Status
+                  </a>
+                </li>
+                {% endif %}
+                
+                 {% if perms.QC.view_instrumentoccupancy %}
+                <li>
+                  <a href="{{ url_instrument_occupancy_list }}"
+                     class="block px-3 py-1.5 rounded hover:bg-slate-100 {% if request.path == url_instrument_occupancy_list %}bg-slate-100 font-medium{% endif %}"
+                     data-active="{% if request.path == url_instrument_occupancy_list %}true{% else %}false{% endif %}">
+                    Instrument Occupancy
+                  </a>
+                </li>
+                {% endif %}
+                <li><a href="{{ url_qc_coa_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_coa_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_coa_list %}true{% else %}false{% endif %}">Certificate</a></li>
+
+                {% if perms.QC.add_dailyqareport %}
+                <li><a href="{{ url_qc_daily_report_create }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_daily_report_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_daily_report_create %}true{% else %}false{% endif %}">Daily QA Report (New)</a></li>
+                {% endif %}
+
+                {% if perms.QC.add_pdlsample %}
+                <li><a href="{{ url_qc_pdl_entries|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'pdl_entries' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'pdl_entries' %}true{% else %}false{% endif %}">PDL Entries</a></li>
+                {% endif %}
+
+                {% if perms.QC.view_pdlsample %}
+                <li><a href="{{ url_qc_pdl_list|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'pdl_list' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'pdl_list' %}true{% else %}false{% endif %}">PDL List</a></li>
+                {% endif %}
+
+                {% if perms.QC.add_customercomplaint %}
+                <li><a href="{{ url_qc_complaint_create }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_complaint_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_complaint_create %}true{% else %}false{% endif %}">New Customer Complaint</a></li>
+                {% endif %}
+                {% if perms.QC.view_customercomplaint %}
+                <li><a href="{{ url_qc_complaint_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_complaint_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_complaint_list %}true{% else %}false{% endif %}">Customer Complaints (List)</a></li>
+                {% endif %}
+                <li><a href="{{ url_qc_complaint_report }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_complaint_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_complaint_report %}true{% else %}false{% endif %}">Customer Complaint Report</a></li>
+
+                {% if perms.QC.view_analyticaldowntime %}
+                <li><a href="{{ url_qc_downtime_create }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_downtime_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_downtime_create %}true{% else %}false{% endif %}">New Analytical Downtime</a></li>
+                <li><a href="{{ url_qc_downtime_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_downtime_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_downtime_list %}true{% else %}false{% endif %}">Analytical Downtime (List)</a></li>
+                <li><a href="{{ url_qc_downtime_report }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_downtime_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_downtime_report %}true{% else %}false{% endif %}">Analytical Downtime (Report)</a></li>
+                {% endif %}
+
+                {% if perms.QC.view_deviation or perms.QC.add_deviation %}
+                  {% if perms.QC.add_deviation %}
+                  <li><a href="{{ url_qc_deviation_create }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_deviation_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_deviation_create %}true{% else %}false{% endif %}">New Deviation</a></li>
+                  {% endif %}
+                  {% if perms.QC.view_deviation %}
+                  <li><a href="{{ url_qc_deviation_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_deviation_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_deviation_list %}true{% else %}false{% endif %}">Deviation (List)</a></li>
+                  <li><a href="{{ url_qc_deviation_report }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_deviation_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_deviation_report %}true{% else %}false{% endif %}">Deviation (Report)</a></li>
+                  {% endif %}
+                {% endif %}
+
+                {% if perms.qc.add_analyticalmistake %}
+                <li><a href="{{ url_qc_am_create|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_am_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_am_create %}true{% else %}false{% endif %}">New Analytical Mistake</a></li>
+                {% endif %}
+                {% if perms.qc.view_analyticalmistake %}
+                <li><a href="{{ url_qc_am_list|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_am_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_am_list %}true{% else %}false{% endif %}">Analytical Mistakes (List)</a></li>
+                <li><a href="{{ url_qc_am_report|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_am_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_am_report %}true{% else %}false{% endif %}">Analytical Mistake (Report)</a></li>
+                {% endif %}
+              </ul>
+            </li>
+
+            <li>
+              <button @click="products = !products" class="flex w-full items-center px-3 py-1.5 rounded-md transition hover:bg-slate-100 text-slate-700">
+                <span class="whitespace-nowrap font-medium">Products</span>
+                <i class="fa-solid fa-chevron-right w-3 ml-auto transition-transform" :class="{ 'rotate-90' : products }"></i>
+              </button>
+              <ul x-show="products" x-transition class="mt-1 space-y-1 pl-5 text-sm">
+                <li><a href="{{ url_qc_products|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_products %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_products %}true{% else %}false{% endif %}">Product List</a></li>
+                <li><a href="{{ url_qc_products_create|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_products_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_products_create %}true{% else %}false{% endif %}">Create WIP/SFG Product</a></li>
+                <li><a href="{{ url_qc_product_create_fg|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_product_create_fg %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_product_create_fg %}true{% else %}false{% endif %}">Create FG Product</a></li>
+              </ul>
+            </li>
+
+            <li>
+              <button @click="master = !master" class="flex w-full items-center px-3 py-1.5 rounded-md transition hover:bg-slate-100 text-slate-700">
+                <span class="whitespace-nowrap font-medium">Master Data</span>
+                <i class="fa-solid fa-chevron-right w-3 ml-auto transition-transform" :class="{ 'rotate-90' : master }"></i>
+              </button>
+              <ul x-show="master" x-transition class="mt-1 space-y-1 pl-5 text-sm">
+                <li><a href="{{ url_qc_import_appearance|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_import_appearance %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_import_appearance %}true{% else %}false{% endif %}">Import Appearance</a></li>
+                <li><a href="{{ url_qc_item_master|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_item_master %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_item_master %}true{% else %}false{% endif %}">Item Master</a></li>
+                <li><a href="{{ url_qc_equipment_master|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_equipment_master %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_equipment_master %}true{% else %}false{% endif %}">Equipment / Instrument Master</a></li>
+                <li><a href="{{ url_qc_sample_description|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_sample_description %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_sample_description %}true{% else %}false{% endif %}">Sample description</a></li>
+                <li><a href="{{ url_qc_test_parameter|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_qc_test_parameter %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_qc_test_parameter %}true{% else %}false{% endif %}">QC Test Parameter</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 6) ETP -->
+        {% if 'ETP' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-water w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">ETP</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li><a href="{{ effluent_dashboard|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'effluent_dashboard' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'effluent_dashboard' %}true{% else %}false{% endif %}">Effluent Dashboard</a></li>
+            <li><a href="{{ url_etp_add_effluent }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_etp_add_effluent %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_etp_add_effluent %}true{% else %}false{% endif %}">Add Effluent Record</a></li>
+            <li><a href="{{ url_etp_view_effluent|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_etp_view_effluent %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_etp_view_effluent %}true{% else %}false{% endif %}">Effluent Records</a></li>
+            {% if perms.ETP.add_generaleffluent %}
+            <li><a href="{{ url_etp_add_general_effluent|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_etp_add_general_effluent %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_etp_add_general_effluent %}true{% else %}false{% endif %}">Add General Effluent</a></li>
+            {% endif %}
+            {% if perms.ETP.view_generaleffluent %}
+            <li><a href="{{ url_etp_view_general_effluent|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_etp_view_general_effluent %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_etp_view_general_effluent %}true{% else %}false{% endif %}">General Effluent Records</a></li>
+            {% endif %}
+            {% if perms.ETP.add_primarytreatmenteffluent %}
+            <li><a href="{{ pte_create }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'pte_create' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'pte_create' %}true{% else %}false{% endif %}">Primary Treatment Entry</a></li>
+            {% endif %}
+            {% if perms.ETP.view_primarytreatmenteffluent %}
+            <li><a href="{{ pte_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'pte_list' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'pte_list' %}true{% else %}false{% endif %}">Primary Treatment Report</a></li>
+            {% endif %}
+            {% if perms.ETP.add_hazardouswaste %}
+            <li><a href="{{ url_h_waste_create }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100">Hazardous Waste create</a></li>
+            {% endif %}
+            {% if perms.ETP.view_hazardouswaste %}
+            <li><a href="{{ url_h_waste_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100">Hazardous waste record</a></li>
+            {% endif %}
+            <li><a href="{{ url_effluent_tank_report }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100">Effluent Storage Tank</a></li>
+            {% if perms.MEE.view_meedailyreading %}
+            <li><a href="{{ url_mee_reading_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100">MEE Readings</a></li>
+            {% endif %}
+            {% if perms.MEE.view_atfdreading %}
+            <li><a href="{{ url_atfd_reading_list }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100">ATFD Readings</a></li>
+            {% endif %}
+            {% if perms.BIOREACTOR.view_bioreactordailyreading %}
+            <li>
+              <a href="{{ url_bioreactor_daily_reading_list|default:'#' }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_bioreactor_daily_reading_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_bioreactor_daily_reading_list %}true{% else %}false{% endif %}"
+                 {% if request.path == url_bioreactor_daily_reading_list %}aria-current="page"{% endif %}>
+                Bioreactor Readings
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 7) Utility -->
+        {% if 'UTILITY' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-bolt w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">Utility</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li><a href="{{ url_utility_entry }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_utility_entry %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_utility_entry %}true{% else %}false{% endif %}">Create Steam Boiler Record</a></li>
+            <li><a href="{{ url_utility_report }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_utility_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_utility_report %}true{% else %}false{% endif %}">steam Boiler Reports</a></li>
+            <li><a href="{{ power_entry }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'power_entry' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'power_entry' %}true{% else %}false{% endif %}">Add Power Reading Entry</a></li>
+            <li><a href="{{ power_readings_report }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'power_readings_report' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'power_readings_report' %}true{% else %}false{% endif %}">Power reading Report</a></li>
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 8) Maintenance -->
+        {% if 'MAINTENANCE' in user_groups or is_superuser %}
+        <li x-data="{ open:false }"
+            x-init="open = $el.querySelector('[data-active=true]') !== null || '{{ request.path }}'.startsWith('/maintenance/')">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-screwdriver-wrench w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">Maintenance</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li><a href="{{ url_maint_dashboard }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_maint_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_maint_dashboard %}true{% else %}false{% endif %}">Dashboard</a></li>
+            <li><a href="{{ url_maint_upload }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_maint_upload %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_maint_upload %}true{% else %}false{% endif %}">Upload Schedule (Excel)</a></li>
+            <li><a href="{{ url_maint_calendar }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_maint_calendar %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_maint_calendar %}true{% else %}false{% endif %}">Calendar (Month)</a></li>
+            <li><a href="{% url 'maintenance:calendar_day' datestr=today_str %}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100">Today’s Jobs</a></li>
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 9) HR -->
+        {% if 'HR' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-users w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">HR Module</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            {% if perms.HR.view_dailyattendance %}
+            <li><a href="{{ url_attendance_pivot_report|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_attendance_pivot_report %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_attendance_pivot_report %}true{% else %}false{% endif %}">Attendance Summary</a></li>
+            {% endif %}
+            {% if perms.CANTEEN.view_attendance %}
+            <li><a href="{{ url_canteen_dashboard|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_canteen_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_canteen_dashboard %}true{% else %}false{% endif %}">Canteen Dashboard</a></li>
+            <li><a href="{{ url_canteen_record|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_canteen_record %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_canteen_record %}true{% else %}false{% endif %}">Canteen Records</a></li>
+            <li>
+              <a href="{{ url_ch_count_dashboard }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_ch_count_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_ch_count_dashboard %}true{% else %}false{% endif %}">
+                Canteen Headcount
+              </a>
+            </li>
+            {% endif %}
+            {% if 'HR_Budget' in user_groups or is_superuser %}
+            <li><a href="{{ url_monthly_hr_budget_summary|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_monthly_hr_budget_summary %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_monthly_hr_budget_summary %}true{% else %}false{% endif %}">HR Budget</a></li>
+            {% endif %}
+            {% if perms.CONTRACT.view_employeeassignment %}
+            <li><a href="{{ url_casual_employee_dashboard|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_casual_employee_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_casual_employee_dashboard %}true{% else %}false{% endif %}">Casual Worker Dashboard</a></li>
+            <li><a href="{{ url_casual_employee_assign|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_casual_employee_assign %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_casual_employee_assign %}true{% else %}false{% endif %}">Casual Worker Assign</a></li>
+            <li><a href="{{ url_contract_attendance|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_contract_attendance %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_contract_attendance %}true{% else %}false{% endif %}">Casual manual Sync</a></li>
+            {% endif %}
+            {% if perms.HR.view_employeejoining %}
+            <li><a href="{{ url_employee_joining_list|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_employee_joining_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_employee_joining_list %}true{% else %}false{% endif %}">Employee Joining</a></li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 10) EHS -->
+        {% if 'EHS' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-shield-halved w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">EHS Module</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li><a href="{{ url_hse_dashboard_page|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_hse_dashboard_page %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_hse_dashboard_page %}true{% else %}false{% endif %}">EHS dashboard</a></li>
+            <li><a href="{{ url_ehs_add_lagging|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_ehs_add_lagging %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_ehs_add_lagging %}true{% else %}false{% endif %}">Add Lagging Record</a></li>
+            <li><a href="{{ url_ehs_view_lagging|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_ehs_view_lagging %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_ehs_view_lagging %}true{% else %}false{% endif %}">Lagging Records</a></li>
+            <li><a href="{{ url_ehs_add_leading|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_ehs_add_leading %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_ehs_add_leading %}true{% else %}false{% endif %}">Add Leading Record</a></li>
+            <li><a href="{{ url_ehs_view_leading|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_ehs_view_leading %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_ehs_view_leading %}true{% else %}false{% endif %}">Leading Records</a></li>
+            <li><a href="{{ url_ehs_add_pssr|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_ehs_add_pssr %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_ehs_add_pssr %}true{% else %}false{% endif %}">Add PSSR</a></li>
+            <li><a href="{{ url_ehs_pssr_list|default:'' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_ehs_pssr_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_ehs_pssr_list %}true{% else %}false{% endif %}">PSSR Records</a></li>
+            {% if perms.EHS.view_dailyworkpermit %}
+            <li>
+              <a href="{{ url_permit_list }}"
+                 class="block px-3 py-1.5 rounded hover:bg-slate-100 {% if request.path == url_permit_list %}bg-slate-100 font-medium{% endif %}"
+                 data-active="{% if request.path == url_permit_list %}true{% else %}false{% endif %}">
+                Daily Work Permit
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 11) R&D -->
+        {% if 'R&D' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-vials w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">R&amp;D</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li><a href="{{ url_rd_add_moisture|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_rd_add_moisture %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_rd_add_moisture %}true{% else %}false{% endif %}">Add Moisture Record</a></li>
+            <li><a href="{{ url_rd_moisture_list|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_rd_moisture_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_rd_moisture_list %}true{% else %}false{% endif %}">Moisture Records</a></li>
+            <li><a href="{% url 'add_kf_factor_entry' %}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'add_kf_factor_entry' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'add_kf_factor_entry' %}true{% else %}false{% endif %}">KF Factor Entry</a></li>
+            <li><a href="{% url 'kf_factor_entry_list' %}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'kf_factor_entry_list' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'kf_factor_entry_list' %}true{% else %}false{% endif %}">KF Factor Report</a></li>
+            <li><a href="{% url 'add_melting_point_record' %}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'add_melting_point_record' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'add_melting_point_record' %}true{% else %}false{% endif %}">Melting Point Entry</a></li>
+            <li><a href="{% url 'melting_point_record_list' %}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.resolver_match.url_name == 'melting_point_record_list' %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.resolver_match.url_name == 'melting_point_record_list' %}true{% else %}false{% endif %}">Melting Point Report</a></li>
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- 12) Import & Export -->
+        {% if 'IMPORT_EXPORT' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-boxes-packing w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">IMPORT &amp; EXPORT</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            {% if perms.Export_Commercial_Invoice.view_invoicepostshipment %}
+            <li>
+              <a href="{{ url_invoice_post_shipment_list }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_invoice_post_shipment_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_invoice_post_shipment_list %}true{% else %}false{% endif %}">
+                Export Invoice &amp; Packing List
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+        <!-- PURCHASE -->
+        {% if 'PURCHASE' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open"
+                  class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700"
+                  :aria-expanded="open.toString()">
+            <i class="fa-solid fa-clipboard-list w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">PURCHASE</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            {% if perms.DomesticETA.view_domesticetatracking %}
+            <li>
+              <a href="{{ url_domestic_eta_list|default:'' }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_domestic_eta_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_domestic_eta_list %}true{% else %}false{% endif %}">
+                Domestic ETA Tracking
+              </a>
+            </li>
+            <li>
+              <a href="{{ url_eta_dashboard|default:'' }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_eta_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_eta_dashboard %}true{% else %}false{% endif %}">
+                DomesticETA Dashboard
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+        {% if 'SALES MARKETING' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open"
+                  class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700"
+                  :aria-expanded="open.toString()">
+            <i class="fas fa-poll w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">SALES MARKETING</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            {% if perms.sales_crm.view_customervisit %}
+             <li>
+              <a href="{{ url_customer_visit_list|default:'' }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_customer_visit_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_customer_visit_list %}true{% else %}false{% endif %}">
+                Customer Visit Record
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+
+        <!-- 13) Personal Care -->
+        {% if 'PERSONAL_CARE' in user_groups or 'PERSONAL_CARE_Management' in user_groups or is_superuser %}
+        <li x-data="{ open:false }" x-init="open = $el.querySelector('[data-active=true]') !== null">
+          <button @click="open = !open" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg transition hover:bg-slate-100 text-slate-700">
+            <i class="fa-solid fa-spa w-4 text-slate-400"></i>
+            <span class="whitespace-nowrap font-medium">PERSONAL CARE</span>
+            <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : open }"></i>
+          </button>
+          <ul x-show="open" x-transition class="mt-1 space-y-1 pl-6">
+            <li><a href="{{ url_pc_customer_dashboard|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_customer_dashboard %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_pc_customer_dashboard %}true{% else %}false{% endif %}">Personal Care Dashboard</a></li>
+            {% if perms.PERSONAL_CARE.view_pc_customermaster %}
+            <li><a href="{{ url_pc_customer_list|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_customer_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_pc_customer_list %}true{% else %}false{% endif %}">Customer Master</a></li>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.add_pc_customermaster %}
+            <li><a href="{{ url_pc_customer_create|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_customer_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_pc_customer_create %}true{% else %}false{% endif %}">Add Customer</a></li>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.view_pc_samplerequest %}
+            <li><a href="{{ url_pc_sample_request_list|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_sample_request_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_pc_sample_request_list %}true{% else %}false{% endif %}">Sample Requests</a></li>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.add_pc_samplerequest %}
+            <li><a href="{{ url_pc_sample_request_create|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_sample_request_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_pc_sample_request_create %}true{% else %}false{% endif %}">Create Sample Request</a></li>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.view_customer_followup %}
+            <li><a href="{{ url_pc_task_list|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_task_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_pc_task_list %}true{% else %}false{% endif %}">Customer Follow Ups</a></li>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.add_customer_followup %}
+            <li><a href="{{ url_pc_task_create|default:'#' }}" class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_task_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}" data-active="{% if request.path == url_pc_task_create %}true{% else %}false{% endif %}">Add Follow ups</a></li>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.view_pc_other_customermaster %}
+            <li>
+              <a href="{{ url_pc_other_customer_list }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_other_customer_list %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_pc_other_customer_list %}true{% else %}false{% endif %}">
+                Other Customer Master
+              </a>
+            </li>
+            {% endif %}
+
+            {% if perms.PERSONAL_CARE.add_pc_other_customermaster %}
+            <li>
+              <a href="{{ url_pc_other_customer_create }}"
+                 class="block px-3 py-1.5 rounded-md transition hover:bg-slate-100 {% if request.path == url_pc_other_customer_create %}bg-slate-100 font-semibold{% else %}text-slate-700{% endif %}"
+                 data-active="{% if request.path == url_pc_other_customer_create %}true{% else %}false{% endif %}">
+                Add Other Customer
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </li>
+        {% endif %}
+
+      </ul>
+    </nav>
+
+    <!-- Footer / User -->
+    <div class="mt-auto shrink-0 border-t border-slate-200 bg-white">
+      <div class="h-14 px-4 flex items-center gap-3">
+        <i class="fa-solid fa-circle-user text-2xl text-slate-400" aria-hidden="true"></i>
+        <div class="text-sm leading-tight min-w-0">
+          <p class="font-semibold text-slate-900 truncate">{{ user.username }}</p>
+          <p class="text-slate-500 text-xs">Online</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</aside>
+
+{% endwith %}

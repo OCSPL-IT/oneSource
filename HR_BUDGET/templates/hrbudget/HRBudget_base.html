@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block HRbudget_title %}
+    <title>Base Template</title>
+    {% endblock HRbudget_title %}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'main/css/fontawesome.css' %}">
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="flex min-h-screen">
+        <!-- Left Sidebar / Vertical Navbar -->
+        <div class=" fixed h-full top-0 left-0  bg-blue-950 text-white w-80 space-y-6 py-6 px-1 overflow-y-scroll">
+            <a href="/" class="block w-full border-b ps-4  rounded py-2 hover:text-gray-950 hover:bg-white bg-blue-950">← Back</a>
+            <ul class="leading-10">
+                <li><a href="{% url 'monthly_hr_budget_summary' %}" class="border-b h-9 block w-full ps-1 rounded  {% if active_link == 'dashboard' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Dashboard</a></li>
+                <li><a href="{% url 'contractorwages_list' %}" class="border-b h-9 block w-full  ps-1 rounded {% if active_link == 'contractor_wages' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Contractor Wages</a></li>
+                <li><a href="{% url 'securitywages_list' %}" class="border-b h-9 block w-full ps-1 rounded  {% if active_link == 'security_wages' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Security Wages</a></li>
+                <li><a href="{% url 'hrbudget_welfare_list' %}" class="border-b h-9 block w-full ps-1 rounded  {% if active_link == 'welfare' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Welfare</a></li>
+                <li><a href="{% url 'hrbudget_canteen_list' %}" class="border-b h-9 block w-full ps-1 rounded  {% if active_link == 'canteen' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Canteen</a></li>
+                <li><a href="{% url 'hrbudget_medical_list' %}" class="border-b h-9 block w-full ps-1 rounded  {% if active_link == 'medical' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Medical</a></li>
+                <li><a href="{% url 'hrbudget_vehicle_list' %}" class="border-b h-9 block w-full ps-1 rounded  {% if active_link == 'vehicle' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Vehicle</a></li>
+                <li><a href="{% url 'hrbudget_general_admin_list' %}" class="border-b h-9 block w-full ps-1 rounded  {% if active_link == 'general_admin' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">General Admin</a></li>
+                <li><a href="{% url 'hrbudget_travelling_lodging_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'travelling_lodging_boarding' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Travelling (Lodging & Boarding)</a></li>
+                <li><a href="{% url 'hrbudget_guesthouse_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'guest_house' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Guest House</a></li>
+                <li><a href="{% url 'hrbudget_communication_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'communication' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Communication</a></li>
+                <li><a href="{% url 'insurance_mediclaim_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'insurance_mediclaim' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Mediclaim Insurance</a></li>
+                <li><a href="{% url 'hrbudget_amc_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'hrbudget_amc' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">AMC</a></li>
+                <li><a href="{% url 'hrbudget_training_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'hrbudget_training' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Training</a></li>
+                <li><a href="{% url 'hrbudget_legal_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'hrbudget_legal' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Legal</a></li>
+                <li><a href="{% url 'admin_repair_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'admin_repair_list' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Admin Repair & Maintenance</a></li>
+                <li><a href="{% url 'admin_capex_list' %}" class="border-b h-9 block w-full rounded  {% if active_link == 'admin_capex' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Admin Capex</a></li>
+                
+                <!-- Add other links similarly -->
+            </ul>
+        </div>
+
+        <!-- Right Content Area -->
+        <div class="flex-1 p-10 ml-80 w-96">
+            {% block HRbudget_report_header %}
+                
+            {% endblock HRbudget_report_header %}
+            <hr style="height: 2px; background-color: darkblue;">
+            {% block HRbudget_report_content %}
+                
+            {% endblock HRbudget_report_content %}
+        </div>
+    </div>
+
+
+    <script src="{% static 'main/js/fontawesome.js' %}"></script>
+</body>
+</html>

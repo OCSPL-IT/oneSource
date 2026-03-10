@@ -1,0 +1,11 @@
+{% comment %}
+Usage: {% include "maintenance/_status_badge.html" with status=r.status %}
+{% endcomment %}
+
+{% if status == "DONE" %}
+  <span class="badge rounded-pill text-bg-success">Done</span>
+{% elif status == "POSTPONED" %}
+  <span class="badge rounded-pill text-bg-warning">Postponed</span>
+{% else %}
+  <span class="badge rounded-pill text-bg-secondary">Scheduled</span>
+{% endif %}

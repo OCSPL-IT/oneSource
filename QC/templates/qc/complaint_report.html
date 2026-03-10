@@ -1,0 +1,266 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Customer Complaints Report – QC Project{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root{
+    --primary-color:#6A1B9A;
+    --primary-dark-color:#4A148C;
+    --primary-light-color:#9C27B0;
+
+    /* Category accents */
+    --category-color-1:#FF5722;
+    --category-color-2:#4CAF50;
+    --category-color-3:#2196F3;
+    --category-color-4:#FFC107;
+    --category-color-5:#9E9E9E;
+
+    /* Status colors */
+    --status-open:#FFC107;
+    --status-in-progress:#2196F3;
+    --status-closed:#4CAF50;
+
+    --text-color:#212121;
+    --light-text-color:#757575;
+    --border-color:#E0E0E0;
+    --background-color:#FDFDFD;
+    --card-background:#FFFFFF;
+    --header-bg-color:#FFFFFF;
+    --shadow:rgba(0,0,0,0.08);
+  }
+
+  .report-root{font-family:'Inter',sans-serif;background:var(--background-color);color:var(--text-color);line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  .container{max-width:1300px;margin:0 auto;padding:30px 20px}
+  .header-section{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;background:var(--header-bg-color);padding:25px 35px;border-radius:14px;box-shadow:0 6px 20px var(--shadow);border:1px solid var(--border-color)}
+  .header-section h2{margin:0;font-size:32px;font-weight:700;color:var(--primary-dark-color)}
+  .actions{display:flex;gap:15px}
+  .btn{padding:12px 20px;border:none;background:var(--primary-color);color:#fff;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;transition:background .3s,transform .2s,box-shadow .3s;cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 4px 10px rgba(106,27,154,.2)}
+  .btn:hover{background:var(--primary-dark-color);transform:translateY(-2px);box-shadow:0 6px 15px rgba(106,27,154,.3)}
+  .btn.outline{background:none;border:2px solid var(--primary-color);color:var(--primary-color);box-shadow:none}
+  .btn.outline:hover{background:var(--primary-light-color);color:#fff;border-color:var(--primary-light-color);box-shadow:0 4px 10px rgba(106,27,154,.1)}
+
+  .filters-section{background:var(--card-background);padding:25px 35px;border-radius:14px;box-shadow:0 6px 20px var(--shadow);margin-bottom:30px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;border:1px solid var(--border-color)}
+  .filters-section input,.filters-section select{flex:1;min-width:180px;padding:12px 16px;border-radius:10px;border:1px solid var(--border-color);font-size:15px;color:var(--text-color);transition:border-color .3s,box-shadow .3s;background:#fff}
+  .filters-section input:focus,.filters-section select:focus{border-color:var(--primary-color);box-shadow:0 0 0 4px rgba(106,27,154,.15);outline:none}
+  .filters-section .btn{min-width:120px;justify-content:center}
+
+  .charts-section{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:30px;margin-bottom:30px}
+  .chart-card{background:var(--card-background);padding:25px;border-radius:14px;box-shadow:0 6px 20px var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border-color)}
+  .chart-card canvas{max-width:100%;height:300px}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card-background);border-radius:14px;overflow:hidden;box-shadow:0 6px 20px var(--shadow);border:1px solid var(--border-color)}
+  th,td{border-bottom:1px solid var(--border-color);padding:15px 20px;font-size:15px;text-align:left}
+  th{background:#F8F8F8;font-weight:600;color:var(--light-text-color);text-transform:uppercase;font-size:13px;letter-spacing:.5px}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#F5F5F5;transition:background-color .2s}
+
+  .status-open{color:var(--status-open);font-weight:600}
+  .status-in-progress{color:var(--status-in-progress);font-weight:600}
+  .status-closed{color:var(--status-closed);font-weight:600}
+
+  .category-product-issue{color:var(--category-color-1);font-weight:600}
+  .category-service-quality{color:var(--category-color-2);font-weight:600}
+  .category-billing-error{color:var(--category-color-3);font-weight:600}
+  .category-delivery-problem{color:var(--category-color-4);font-weight:600}
+  .category-other{color:var(--category-color-5);font-weight:600}
+
+  @media (max-width:1024px){.charts-section{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}}
+  @media (max-width:768px){
+    .header-section{flex-direction:column;align-items:flex-start;padding:20px 25px}
+    .header-section h2{margin-bottom:15px;font-size:28px}
+    .actions{width:100%;justify-content:flex-end}
+    .filters-section{flex-direction:column;align-items:stretch;padding:20px 25px}
+    .filters-section input,.filters-section select,.filters-section button{width:100%;min-width:unset}
+    .charts-section{grid-template-columns:1fr}
+  }
+</style>
+
+<div class="report-root">
+  <div class="container">
+    <div class="header-section">
+      <h2>Customer Complaints Report</h2>
+      <div class="actions">
+        <a href="{% url 'qc:qc_home' %}" class="btn outline">… Back to Home …</a>
+        <a href="?download=1" class="btn">… Download Excel …</a>
+      </div>
+    </div>
+
+    <form method="get" class="filters-section">
+      <!-- filters unchanged -->
+    </form>
+
+    <div class="charts-section">
+      <div class="chart-card"><canvas id="statusChart"></canvas></div>
+      <div class="chart-card"><canvas id="typeChart"></canvas></div>
+    </div>
+
+    <table>
+      <thead>
+         <tr>
+          <th>Date</th>
+          <th>Complaint No</th>
+          <th>Product (Alfa)</th>
+          <th>Finished Product</th>
+          <th>Customer</th>
+          <th>Nature</th>
+          <th>Type</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in complaints %}
+        <tr>
+          <td>{{ c.complaint_date|date:"d-m-Y" }}</td>
+          <td>{{ c.complaint_no }}</td>
+          <td>{{ c.product_name }}</td>
+          <td>{{ c.finished_display|default:"—" }}</td>
+          <td>{{ c.customer_name }}</td>
+          <td>{{ c.nature_of_complaint }}</td>
+          <td>{{ c.complaint_type }}</td>
+          <td><span class="status-{{ c.status|slugify }}">{{ c.status }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center; padding: 20px;">No records found matching your criteria.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  // Resolve CSS variables to real colors (canvas can't use var(...) directly reliably)
+  const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  // Convert hex (#rrggbb or #rgb) to rgba(r,g,b,a)
+  function hexToRgba(hex, alpha = 1) {
+    let h = hex.replace('#','').trim();
+    if (h.length === 3) h = h.split('').map(c => c + c).join('');
+    const num = parseInt(h, 16);
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // Data from backend
+  const statusData = {{ status_counts|safe }};
+  const typeData   = {{ type_counts|safe }};
+
+  // Colors (resolved once)
+  const statusColors = {
+    'Open': cssVar('--status-open') || '#FFC107',
+    'In Progress': cssVar('--status-in-progress') || '#2196F3',
+    'Closed': cssVar('--status-closed') || '#4CAF50'
+  };
+
+  const categoryColors = {
+    'Product Issue': cssVar('--category-color-1') || '#FF5722',
+    'Service Quality': cssVar('--category-color-2') || '#4CAF50',
+    'Billing Error': cssVar('--category-color-3') || '#2196F3',
+    'Delivery Problem': cssVar('--category-color-4') || '#FFC107',
+    'Other': cssVar('--category-color-5') || '#9E9E9E'
+  };
+
+  // Chart.js defaults
+  Chart.defaults.font.family = "'Inter', sans-serif";
+  Chart.defaults.color = cssVar('--light-text-color') || '#757575';
+  Chart.defaults.borderColor = cssVar('--border-color') || '#E0E0E0';
+
+  // Status pie
+  const ctx1 = document.getElementById('statusChart').getContext('2d');
+  new Chart(ctx1, {
+    type: 'pie',
+    data: {
+      labels: statusData.map(r => r.status),
+      datasets: [{
+        data: statusData.map(r => r.total),
+        backgroundColor: statusData.map(r => statusColors[r.status] || '#999999'),
+        hoverOffset: 10,
+        borderColor: cssVar('--card-background') || '#FFFFFF',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Complaints by Status',
+          font: { size: 20, weight: '700' },
+          color: cssVar('--text-color') || '#212121',
+          padding: { top: 10, bottom: 25 }
+        },
+        legend: {
+          position: 'bottom',
+          labels: { padding: 20, font: { size: 14, weight: '500' } }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleFont: { size: 16, weight: '600' },
+          bodyFont: { size: 14 },
+          padding: 12,
+          cornerRadius: 8
+        }
+      }
+    }
+  });
+
+  // Type bar
+  const ctx2 = document.getElementById('typeChart').getContext('2d');
+  const barBg = typeData.map(r => categoryColors[r.complaint_type] || cssVar('--primary-color') || '#6A1B9A');
+  const barBorder = barBg.map(c => hexToRgba(c, 0.8));
+
+  new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: typeData.map(r => r.complaint_type),
+      datasets: [{
+        label: 'Total Complaints',
+        data: typeData.map(r => r.total),
+        backgroundColor: barBg,
+        borderColor: barBorder,
+        borderWidth: 1,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        title: {
+          display: true,
+          text: 'Complaints by Type',
+          font: { size: 20, weight: '700' },
+          color: cssVar('--text-color') || '#212121',
+          padding: { top: 10, bottom: 25 }
+        },
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          titleFont: { size: 16, weight: '600' },
+          bodyFont: { size: 14 },
+          padding: 12,
+          cornerRadius: 8
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: cssVar('--border-color') || '#E0E0E0', drawBorder: false },
+          ticks: { stepSize: 1, font: { size: 13 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 13, weight: '500' }, color: cssVar('--text-color') || '#212121' }
+        }
+      }
+    }
+  });
+</script>
+{% endblock maincontent %}

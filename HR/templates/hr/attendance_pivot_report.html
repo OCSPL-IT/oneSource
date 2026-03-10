@@ -1,0 +1,226 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto py-6 px-4">
+    <!-- Header & Navigation -->
+    <header class="relative mb-6">
+        <div class="relative">
+            <h2 class="text-2xl md:text-3xl font-semibold text-center">Attendance Pivot Report</h2>
+            <a href="{% url 'attendance_summary' %}"
+               class="absolute right-0 top-1/2 -translate-y-1/2 bg-indigo-500 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded shadow-md">
+               All Reports
+            </a>
+        </div>
+    </header>
+
+    <!-- Filter Section -->
+    <div class="flex flex-wrap justify-between items-start mb-6 gap-4">
+        <div class="flex-grow flex justify-center w-full sm:w-auto">
+            <form method="get" class="bg-white shadow-md rounded-lg p-4 flex flex-wrap gap-4 items-end justify-center">
+                <!-- Start Date -->
+                <div>
+                    <label for="from_date" class="block text-sm text-gray-700 font-medium">Start Date</label>
+                    <input type="date" name="from_date" id="from_date" value="{{ from_date }}"
+                        class="text-xs border border-gray-300 rounded px-3 py-2 w-full">
+                </div>
+                <!-- End Date -->
+                <div>
+                    <label for="to_date" class="block text-sm text-gray-700 font-medium">End Date</label>
+                    <input type="date" name="to_date" id="to_date" value="{{ to_date }}"
+                        class="text-xs border border-gray-300 rounded px-3 py-2 w-full">
+                </div>
+                <!-- Company -->
+                <div>
+                    <label for="company" class="block text-sm text-gray-700 font-medium">Company</label>
+                    <select name="company" id="company" class="text-xs border border-gray-300 rounded pr-3 py-2 w-full">
+                        {% for company_item in companies %}
+                        <option value="{{ company_item }}" {% if company_item == selected_company %}selected{% endif %}>{{ company_item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Branch -->
+                <div>
+                    <label for="branch" class="block text-sm text-gray-700 font-medium">Branch</label>
+                    <select name="branch" id="branch" class="text-xs border border-gray-300 rounded pr-5 py-2 w-full">
+                        {% for branch_item in branches %}
+                        <option value="{{ branch_item }}" {% if branch_item == selected_branch %}selected{% endif %}>{{ branch_item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Department -->
+                <div>
+                    <label for="department" class="block text-sm text-gray-700 font-medium">Department</label>
+                    <select name="department" id="department" class="text-xs border border-gray-300 rounded pr-2 py-2 w-full">
+                        {% for department_item in departments %}
+                        <option value="{{ department_item }}" {% if department_item == selected_department %}selected{% endif %}>{{ department_item }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Sub Department -->
+                 <div>
+                    <label for="sub_department" class="block text-sm text-gray-700 font-medium">Sub Department</label>
+                    <select name="sub_department" id="sub_department" class="text-xs border border-gray-300 rounded pr-2 py-2 w-full">
+                        {% for sub_dept_item in sub_departments %}
+                            {% if sub_dept_item %}
+                                <option value="{{ sub_dept_item }}" {% if sub_dept_item == selected_sub_department %}selected{% endif %}>
+                                    {{ sub_dept_item }}
+                                </option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Shift Code -->
+                <div>
+                    <label for="shift_code" class="block text-sm text-gray-700 font-medium">Shift Code</label>
+                    <select name="shift_code" id="shift_code" class="text-xs border border-gray-300 rounded pr-5 py-2 w-full">
+                        {% for shift_code_item in shift_codes %}
+                             {% if shift_code_item %}
+                                <option value="{{ shift_code_item }}" {% if shift_code_item == selected_shift_code %}selected{% endif %}>{{ shift_code_item }}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <!-- Buttons -->
+                <div class="flex gap-2 pt-5">
+                    <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition">
+                        <i class="fa-solid fa-filter"></i>
+                    </button>
+                    <a href="{% url 'attendance_pivot_report' %}"
+                       class="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500 transition">
+                       <i class="fa-solid fa-eraser"></i>
+                    </a>
+                    <a href="{% url 'attendance_pivot_excel' %}?from_date={{ from_date }}&to_date={{ to_date }}&company={{ selected_company }}&branch={{ selected_branch }}&department={{ selected_department }}&sub_department={{ selected_sub_department }}&shift_code={{ selected_shift_code }}"
+                        class="text-green-700 hover:text-green-900"
+                        style="text-decoration:none;"
+                        download>
+                        <i class="fa-solid fa-file-excel fa-2xl"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg relative">
+        <h4 class="text-lg font-semibold text-center py-2 border-b sticky left-0">{{ date_label }}</h4>
+        <table class="min-w-full border border-gray-300 text-sm text-left">
+            <thead class="bg-gray-100 border-b text-gray-700 font-semibold text-sm">
+                <tr>
+                    <th class="sticky left-0 top-0 z-20 bg-gray-100 py-2 px-4 border whitespace-nowrap">Status in Out</th>
+                    {% for day in days %}
+                        <th class="sticky top-0 z-10 bg-gray-100 py-2 px-4 border text-center whitespace-nowrap">{{ day }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table_data %}
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="sticky left-0 bg-white border z-10 py-2 px-4 font-semibold whitespace-nowrap">
+                        {{ row.status }}{% if row.status_label %} 
+                        <span class="text-gray-500 text-xs">({{ row.status_label }})</span>{% endif %}
+                    </td>
+                    {% for count in row.counts %}
+                        <td class="py-2 px-4 border text-center">{{ count }}</td>
+                    {% endfor %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{{ days|length|add:1 }}" class="py-4 text-center text-gray-500">
+                        No records found for selected period.
+                    </td>
+                </tr>
+                {% endfor %}
+                <tr class="font-bold bg-green-100 border-t-2">
+                    <td class="sticky left-0 bg-green-100 border z-10 py-2 px-4 font-bold whitespace-nowrap">Grand Total</td>
+                    {% for total in grand_total %}
+                        <td class="py-2 px-4 border text-center">{{ total }}</td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- =================================================================== -->
+<!--               JAVASCRIPT FOR DYNAMIC/CHAINED FILTERS              -->
+<!-- =================================================================== -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const branchSelect = document.getElementById('branch');
+    const departmentSelect = document.getElementById('department');
+    const subDepartmentSelect = document.getElementById('sub_department');
+    const shiftCodeSelect = document.getElementById('shift_code');
+
+    // Helper function to clear and populate a dropdown
+    function updateSelectWithOptions(selectElement, options) {
+        const previouslySelected = selectElement.value;
+        selectElement.innerHTML = '<option value="All">All</option>'; // Always add 'All'
+        
+        options.forEach(optionValue => {
+            if (optionValue) { // Ensure the option is not null or empty
+                const option = document.createElement('option');
+                option.value = optionValue;
+                option.textContent = optionValue;
+                selectElement.appendChild(option);
+            }
+        });
+
+        // Restore the previous selection if it's still a valid option
+        if (Array.from(selectElement.options).some(opt => opt.value === previouslySelected)) {
+            selectElement.value = previouslySelected;
+        }
+    }
+
+    // --- EVENT LISTENERS ---
+
+    // When Branch changes
+    branchSelect.addEventListener('change', function () {
+        const branch = this.value;
+        // Reset all child dropdowns
+        departmentSelect.innerHTML = '<option value="All">All</option>';
+        subDepartmentSelect.innerHTML = '<option value="All">All</option>';
+        shiftCodeSelect.innerHTML = '<option value="All">All</option>';
+        
+        // Fetch new list of departments based on the selected branch
+        fetch(`{% url 'api_get_departments' %}?branch=${branch}`)
+            .then(response => response.json())
+            .then(data => {
+                updateSelectWithOptions(departmentSelect, data.departments);
+            });
+    });
+
+    // When Department changes
+    departmentSelect.addEventListener('change', function () {
+        const branch = branchSelect.value;
+        const department = this.value;
+        // Reset subsequent dropdowns
+        subDepartmentSelect.innerHTML = '<option value="All">All</option>';
+        shiftCodeSelect.innerHTML = '<option value="All">All</option>';
+
+        // Fetch new list of sub-departments
+        fetch(`{% url 'api_get_sub_departments' %}?branch=${branch}&department=${department}`)
+            .then(response => response.json())
+            .then(data => {
+                updateSelectWithOptions(subDepartmentSelect, data.sub_departments);
+            });
+    });
+
+    // When Sub Department changes
+    subDepartmentSelect.addEventListener('change', function () {
+        const branch = branchSelect.value;
+        const department = departmentSelect.value;
+        const subDepartment = this.value;
+        // Reset the final dropdown
+        shiftCodeSelect.innerHTML = '<option value="All">All</option>';
+
+        // Fetch new list of shift codes
+        fetch(`{% url 'api_get_shift_codes' %}?branch=${branch}&department=${department}&sub_department=${subDepartment}`)
+            .then(response => response.json())
+            .then(data => {
+                updateSelectWithOptions(shiftCodeSelect, data.shift_codes);
+            });
+    });
+});
+</script>
+{% endblock %}

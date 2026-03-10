@@ -1,0 +1,207 @@
+{% extends 'main/index.html' %}
+{% load static %}
+{% load r_and_d_filters %}
+
+{% block maincontent %}
+<div class="container mx-auto py-1 px-4">
+
+    <!-- Messages Section -->
+    {% if messages %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+        <div
+            class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+            <span class="flex-1">{{ message }}</span>
+            <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">✖</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="container mx-auto px-6 mt-4">
+        <div class="flex items-center justify-between mb-4">
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                Back to Main Page
+            </a>
+            <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">KF Factor Records</h2>
+            {% if perms.R_and_D.add_kffactorentry %}
+            <a href="{% url 'add_kf_factor_entry' %}"
+               class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                <i class="fa-solid fa-square-plus"></i>
+            </a>
+            {% endif %}
+            
+        </div>
+    </div>
+    
+    
+    <form method="get" class="mb-6 bg-white shadow-md rounded-lg p-4 flex flex-wrap items-center justify-center gap-4">
+
+        <!-- Entry Date From -->
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Entry Date From</label>
+            <input type="date" name="date_from" value="{{ date_from|default_if_none:'' }}"
+                class="w-full p-2 border border-gray-300 rounded-lg">
+        </div>
+    
+        <!-- Entry Date To -->
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">To</label>
+            <input type="date" name="date_to" value="{{ date_to|default_if_none:'' }}"
+                class="w-full p-2 border border-gray-300 rounded-lg">
+        </div>
+    
+        <!-- Instrument -->
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Instrument</label>
+            <select name="instrument" class="w-full p-2 border border-gray-300 rounded-lg">
+                <option value="">All</option>
+                {% for instrument in instruments %}
+                    <option value="{{ instrument.id }}" {% if instrument_id|default_if_none:'' == instrument.id|stringformat:'s' %}selected{% endif %}>{{ instrument.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    
+        <!-- Analysed By -->
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Analysed By</label>
+            <select name="analysed_by" class="w-full p-2 border border-gray-300 rounded-lg">
+                <option value="">All</option>
+                {% for analyst in analysts %}
+                    <option value="{{ analyst.id }}" {% if analysed_by_id|default_if_none:'' == analyst.id|stringformat:'s' %}selected{% endif %}>{{ analyst.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    
+        <!-- Buttons -->
+        <div class="flex space-x-1 mt-4">
+            <button type="submit"
+                class="bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition duration-300">
+                <i class="fa-solid fa-filter"></i> Filter
+            </button>
+            <a href="{% url 'kf_factor_entry_list' %}"
+                class="bg-gray-400 text-white px-2 py-2 rounded-lg hover:bg-gray-500 transition duration-300">
+                <i class="fa-solid fa-eraser"></i> Clear
+            </a>
+            <a href="{% url 'kf_factor_entry_download_excel' %}?date_from={{ date_from }}&date_to={{ date_to }}&instrument={{ instrument_id }}&analysed_by={{ analysed_by_id }}"
+             class=" px-2 py-1 rounded items-center">
+            <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+        </a>
+        </div>
+        
+
+        <div class="flex items-center justify-center space-x-2 mt-4">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if instrument_id %}&instrument={{ instrument_id }}{% endif %}{% if analysed_by_id %}&analysed_by={{ analysed_by_id }}{% endif %}"
+                   class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Previous</a>
+            {% endif %}
+        
+            <span class="px-3 py-1 rounded bg-gray-100">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if instrument_id %}&instrument={{ instrument_id }}{% endif %}{% if analysed_by_id %}&analysed_by={{ analysed_by_id }}{% endif %}"
+                   class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Next</a>
+            {% endif %}
+        </div>
+    </form>
+    
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table class="min-w-full border border-gray-300 rounded-lg text-sm">
+            <thead class="bg-gray-200 text-gray-800">
+                <tr>
+                    <th class="py-2 px-4 border">Sr. No</th>
+                    <th class="py-2 px-4 border">Entry Date</th>
+                    <th class="py-2 px-4 border">Instrument</th>
+                    <th class="py-2 px-4 border">Analysed By</th>
+                    <th class="py-2 px-4 border">Sample Weight 01 (gm)</th>
+                    <th class="py-2 px-4 border">Sample Weight 02 (gm)</th>
+                    <th class="py-2 px-4 border">Sample Weight 03 (gm)</th>
+                    <th class="py-2 px-4 border">Burette Reading 01 (mL)</th>
+                    <th class="py-2 px-4 border">Burette Reading 02 (mL)</th>
+                    <th class="py-2 px-4 border">Burette Reading 03 (mL)</th>
+                    <th class="py-2 px-4 border">KF Factor 01</th>
+                    <th class="py-2 px-4 border">KF Factor 02</th>
+                    <th class="py-2 px-4 border">KF Factor 03</th>
+                    <th class="py-2 px-4 border">Average</th>
+                    {% if perms.R_and_D.change_kffactorentry or perms.R_and_D.delete_kffactorentry %}
+                    <th class="py-2 px-4 border text-center">Action</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table_data %}
+                <tr class="border-b hover:bg-blue-50 transition duration-200">
+                    <td class="px-4 py-2 border text-center">{{ forloop.counter }}</td>
+                    <td class="px-4 py-2 border text-center whitespace-nowrap">{{ row.entry.created_at|date:"d-m-Y" }}</td>
+                    <td class="px-4 py-2 border text-center whitespace-nowrap">{{ row.entry.instrument.name }}</td>
+                    <td class="px-4 py-2 border text-center whitespace-nowrap">{{ row.entry.analysed_by.name }}</td>
+                    
+                    {# Sample Weight Columns #}
+                    {% for i in "0,1,2"|cut:"," %}
+                        {% with line=row.lines|index:i %}
+                            <td class="px-4 py-2 border text-right">
+                                {% if line %}
+                                    {{ line.sample_weight_mg }}
+                                {% else %}-{% endif %}
+                            </td>
+                        {% endwith %}
+                    {% endfor %}
+
+                    {# Burette Reading Columns #}
+                    {% for i in "0,1,2"|cut:"," %}
+                        {% with line=row.lines|index:i %}
+                            <td class="px-4 py-2 border text-right">
+                                {% if line %}
+                                    {{ line.burette_reading_ml }}
+                                {% else %}-{% endif %}
+                            </td>
+                        {% endwith %}
+                    {% endfor %}
+
+                    {# KF Factor Columns #}
+                    {% for i in "0,1,2"|cut:"," %}
+                        {% with line=row.lines|index:i %}
+                            <td class="px-4 py-2 border text-right">
+                                {% if line %}
+                                    {{ line.kf_factor|floatformat:4 }}
+                                {% else %}-{% endif %}
+                            </td>
+                        {% endwith %}
+                    {% endfor %}
+
+                    <td class="px-4 py-2 border text-right font-semibold">
+                        {% if row.avg_kf %}{{ row.avg_kf|floatformat:4 }}{% else %}-{% endif %}
+                    </td>
+                    {% if perms.R_and_D.change_kffactorentry or perms.R_and_D.delete_kffactorentry %}
+                    <td class="px-4 py-2 border text-center whitespace-nowrap">
+                        {% if perms.R_and_D.change_kffactorentry %}
+                        <a href="{% url 'kf_factor_entry_edit' row.entry.id %}" 
+                           class="inline-block px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded mr-1 text-xs"
+                           title="Edit">
+                            <i class="fa fa-edit"></i>
+                        </a>
+                        {% endif %}
+                        {% if perms.R_and_D.delete_kffactorentry %}
+                        <form method="post" action="{% url 'kf_factor_entry_delete' row.entry.pk %}" style="display:inline;" 
+                              onsubmit="return confirm('Are you sure you want to delete this entry?');">
+                            {% csrf_token %}
+                            <button type="submit" class="inline-block px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs"
+                                    title="Delete">
+                                <i class="fa fa-trash"></i> 
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="15" class="py-4 text-center text-gray-400">No KF entries found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

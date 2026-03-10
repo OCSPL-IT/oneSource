@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Contract Attendance Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto py-8 px-4">
+
+    <div class="container mx-auto px-6">
+      <div class="flex items-center mb-8">
+        <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md mr-4 whitespace-nowrap">
+            Back to Main Page
+        </a>
+        <div class="flex-1 text-center">
+          <h1 class="text-3xl font-bold text-gray-700">Contract Attendance Report</h1>
+        </div>
+        <div class="w-[184px]">
+          <!-- 🔄 Sync Button for HR Contract -->
+          <button id="syncBtn"
+                  class="bg-indigo-500 hover:bg-indigo-600 px-4 py-2 rounded shadow-md">
+            🔄 Sync Casual worker
+          </button>
+          <!-- ✅ Status message area -->
+          <span id="syncStatus" class="ms-2 text-muted small"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow p-6 border-t-4 border-blue-400">
+      <div class="text-gray-500 uppercase font-semibold mb-2">Total Records</div>
+      <div class="text-3xl font-bold text-gray-700">{{ total }}</div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-6 border-t-4 border-green-400">
+      <div class="text-gray-500 uppercase font-semibold mb-2">Total OT (Hrs)</div>
+      <div class="text-3xl font-bold text-gray-700">{{ total_ot }}</div>
+    </div>
+
+    <!-- Removed Double OT card -->
+
+    <div class="bg-white rounded-xl shadow p-6 border-t-4 border-teal-400">
+      <div class="text-gray-500 uppercase font-semibold mb-2">Total Work (HH:MM)</div>
+      <div class="text-3xl font-bold text-gray-700">{{ total_work_hhmm }}</div>
+    </div>
+
+    <!-- NEW: Unregistered (not matched) card -->
+    <a
+      href="?start_date={{ start_date }}&end_date={{ end_date }}&department={{ selected_dept }}&employee_name={{ employee_name|urlencode }}&shift={{ selected_shift }}&unregistered=1"
+      class="bg-white rounded-xl shadow p-6 border-t-4 border-amber-400 hover:bg-amber-50 transition"
+    >
+      <div class="text-gray-500 uppercase font-semibold mb-2">Unregistered (not matched)</div>
+      <div class="text-3xl font-bold text-gray-700">{{ unregistered_count }}</div>
+      <div class="mt-1 text-xs text-amber-700 font-medium">Click to show only unregistered records</div>
+    </a>
+  </div>
+
+  <!-- Filter Form -->
+  <form method="get" class="flex flex-wrap items-end gap-4 mb-6 bg-white rounded-lg shadow px-4 py-4 text-xs justify-center">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+      <input type="date" name="start_date" value="{{ start_date }}" class="border rounded px-3 py-2 w-full">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+      <input type="date" name="end_date" value="{{ end_date }}" class="border rounded px-3 py-2 w-full">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Company</label>
+      <select name="department" class="border rounded px-3 py-2 w-full">
+        <option value="" {% if selected_dept == "" %}selected{% endif %}>All</option>
+        {% for dept in departments %}
+          <option value="{{ dept.id }}" {% if dept.id|stringformat:"s" == selected_dept %}selected{% endif %}>{{ dept.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Employee Name</label>
+      <input type="text" name="employee_name" value="{{ employee_name }}" placeholder="Type name" class="border rounded px-3 py-2 w-full">
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Shift</label>
+      <select name="shift" class="border rounded px-3 py-2 w-full">
+        <option value="all">All</option>
+        {% for s in shift_choices %}
+          <option value="{{ s }}" {% if s == selected_shift %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded transition">Apply</button>
+    </div>
+    <div>
+      <a href="{% url 'contract_employee_matched_report' %}" class="bg-gray-400 hover:bg-gray-600 text-white px-5 py-2 rounded transition inline-block text-center">Clear</a>
+    </div>
+    <a href="{% url 'contract_employee_attend_report_excel' %}?start_date={{ start_date }}&end_date={{ end_date }}&department={{ selected_dept }}&employee_name={{ employee_name }}&shift={{ selected_shift }}"
+       class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded transition ml-2"
+       style="display:inline-block;">
+      Download Excel
+    </a>
+  </form>
+
+  <!-- Attendance Table -->
+  <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+    <table class="min-w-full divide-y divide-gray-200">
+      <thead class="bg-gray-50">
+        <tr class="whitespace-nowrap">
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Emp Code</th>
+
+          {% if not show_unregistered %}
+            <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Name</th>
+            <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Company</th>
+          {% endif %}
+
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Work Date</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">In Date</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">In Time</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Out Date</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Out Time</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Shift</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Work HHMM</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">OT Hours</th>
+          <th class="px-4 py-2 text-xs font-medium text-gray-600 uppercase">Double OT</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white divide-y divide-gray-200">
+        {% for rec in records %}
+        <tr class="whitespace-nowrap text-xs text-center">
+          <td class="px-4 py-2">{{ rec.employee_id }}</td>
+
+          {% if not show_unregistered %}
+            <td class="px-4 py-2">{{ rec.employee_name }}</td>
+            <td class="px-4 py-2">{{ rec.company }}</td>
+          {% endif %}
+
+          <td class="px-4 py-2">{{ rec.work_date|date:'d-m-Y' }}</td>
+          <td class="px-4 py-2">{{ rec.in_date|date:'d-m-Y' }}</td>
+          <td class="px-4 py-2">{{ rec.in_time }}</td>
+          <td class="px-4 py-2">{{ rec.out_date|date:'d-m-Y' }}</td>
+          <td class="px-4 py-2">{{ rec.out_time }}</td>
+          <td class="px-4 py-2">{{ rec.shift }}</td>
+          <td class="px-4 py-2">{{ rec.work_hhmm }}</td>
+          <td class="px-4 py-2">{{ rec.ot_hours }}</td>
+          <td class="px-4 py-2">{{ rec.double_ot_hours }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="{% if show_unregistered %}9{% else %}11{% endif %}" class="px-4 py-3 text-center text-gray-400">
+            {% if show_unregistered %}No unregistered employees for this filter.{% else %}No matched employees found for this filter.{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  </div>
+
+  <script>
+    document.getElementById("syncBtn").addEventListener("click", function () {
+      const btn = this;
+      const status = document.getElementById("syncStatus");
+
+      btn.disabled = true;
+      status.textContent = "Syncing...";
+
+      fetch("{% url 'sync_hr_contract' %}", {
+          method: "POST",
+          headers: {
+              "X-CSRFToken": "{{ csrf_token }}",
+              "X-Requested-With": "XMLHttpRequest"
+          }
+      })
+      .then(res => res.json())
+      .then(data => {
+          if (data.success) {
+              status.textContent = data.message || "✅ Sync completed.";
+              status.classList.remove("text-danger");
+              status.classList.add("text-success");
+          } else {
+              status.textContent = "❌ " + (data.error || "Sync failed.");
+              status.classList.remove("text-success");
+              status.classList.add("text-danger");
+          }
+      })
+      .catch(err => {
+          status.textContent = "❌ Request failed: " + err;
+          status.classList.remove("text-success");
+          status.classList.add("text-danger");
+      })
+      .finally(() => {
+          btn.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>

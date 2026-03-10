@@ -1,0 +1,152 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+
+<!-- Messages Section -->
+{% if messages %}
+<div class="mt-2 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+    <div
+        class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+            onclick="this.parentElement.remove()">
+            ✖
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if form.non_field_errors %}
+<div class="mt-2 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for error in form.non_field_errors %}
+    <div class="relative p-4 border-l-4 rounded-md bg-red-50 border-red-500">
+        <span class="text-red-700">{{ error }}</span>
+        <button type="button" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 p-1"
+            onclick="this.parentElement.remove()">
+            X
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex justify-center items-center bg-gray-100 py-4">
+    <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-4">
+        <div class="container mx-auto px-2 mt-1">
+            <div class="flex items-center justify-between mb-2">
+                <!-- Back to Main Page Button -->
+                <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                    Back to Main Page
+                </a>
+                <!-- Heading -->
+                <h2 class="text-xl font-bold text-center flex-1 text-gray-700">Edit HR Form</h2>
+                <!-- View Records Button -->
+                <a href="{% url 'view_hr_records' %}"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                    View Records
+                </a>
+            </div>
+        </div>
+        <hr class="mb-2">
+
+        <!-- The form uses the same structure as create_hr.html -->
+        <form method="POST" class="space-y-3" novalidate>
+            {% csrf_token %}
+
+            <!-- Date -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Date</label>
+                    {{ form.date }}
+                </div>
+            </div>
+
+            <!-- Employee Counts -->
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Permanent Employees</label>
+                    {{ form.permanent_employees }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Contract Labour (Production)</label>
+                    {{ form.contract_labour_production }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Contract Labour (Others)</label>
+                    {{ form.contract_labour_others }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Total Employees</label>
+                    {{ form.total_employee }}
+                </div>
+            </div>
+
+            <!-- Hours -->
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Hours per Employee</label>
+                    {{ form.hrs }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Total Number of Hours</label>
+                    {{ form.total_no_of_hrs }}
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 mb-2 mt-4">
+                Update
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- jQuery (optional if you're already including it) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const permanentEmployeesInput = document.getElementById("id_permanent_employees");
+        const contractProductionInput = document.getElementById("id_contract_labour_production");
+        const contractOthersInput = document.getElementById("id_contract_labour_others");
+        const totalEmployeeInput = document.getElementById("id_total_employee");
+        const hrsInput = document.getElementById("id_hrs");
+        const totalHrsInput = document.getElementById("id_total_no_of_hrs");
+
+        // Set hrs to 8 on page load (if not already set by the form)
+        if (!hrsInput.value) {
+            hrsInput.value = 8;
+        }
+
+        function updateTotals() {
+            // Parse the integer values, default to 0 if not valid
+            const permanent = parseInt(permanentEmployeesInput.value) || 0;
+            const contractProd = parseInt(contractProductionInput.value) || 0;
+            const contractOthers = parseInt(contractOthersInput.value) || 0;
+
+            // Calculate total employees
+            const totalEmp = permanent + contractProd + contractOthers;
+            totalEmployeeInput.value = totalEmp;
+
+            // Hours is always 8
+            hrsInput.value = 8;
+
+            // Calculate total number of hours
+            totalHrsInput.value = totalEmp * 8;
+        }
+
+        // Attach event listeners to recalc on input
+        [permanentEmployeesInput, contractProductionInput, contractOthersInput].forEach(el => {
+            el.addEventListener("input", updateTotals);
+        });
+    });
+</script>
+
+{% endblock maincontent %}

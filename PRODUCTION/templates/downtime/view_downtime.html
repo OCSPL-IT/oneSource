@@ -1,0 +1,211 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+
+<style>
+  /* ---- Card + buttons ---- */
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;border-radius:.6rem;padding:.55rem .8rem;font-weight:600;}
+  .btn i{font-size:.95rem}
+  .btn-dark{background:#0f172a;color:#fff}
+  .btn-dark:hover{background:#0b1222}
+  .btn-emerald{background:#059669;color:#fff}
+  .btn-emerald:hover{background:#047857}
+  .btn-ghost{background:#fff;border:1px solid #e2e8f0}
+  .btn-ghost:hover{background:#f8fafc}
+
+  /* ---- Compact table with fixed small columns ---- */
+  .dt-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:12px}
+  .dt-table th{background:#f8fafc;color:#475569;text-transform:uppercase;letter-spacing:.03em;font-weight:600;font-size:10.5px;border-bottom:1px solid #e2e8f0}
+  .dt-table th,.dt-table td{padding:.45rem .55rem}
+  .dt-table tbody tr{border-bottom:1px solid #f1f5f9}
+  .dt-table tbody tr:nth-child(odd){background:#fcfcfc}
+  .dt-table tbody tr:hover{background:#f8fafc}
+
+  .dt-clip{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .num{text-align:right;font-variant-numeric:tabular-nums}
+
+  .btn-icon{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #e2e8f0;border-radius:.5rem;background:#fff}
+  .btn-icon:hover{background:#f1f5f9}
+
+  /* colgroup widths (small columns fixed, Stage/Category flex) */
+  col.col-id{width:56px}
+  col.col-date{width:110px}
+  col.col-eqp{width:120px}
+  /* Stage + Category = auto (no width) */
+  col.col-loss{width:90px}
+  col.col-act{width:104px}
+</style>
+
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+  {% if messages %}
+    <div class="mb-3 space-y-2">
+      {% for message in messages %}
+        <div class="relative flex justify-between items-center px-4 py-2 rounded-lg shadow text-white
+                    {% if message.tags == 'debug' %}bg-gray-600
+                    {% elif message.tags == 'info' %}bg-blue-600
+                    {% elif message.tags == 'success' %}bg-green-600
+                    {% elif message.tags == 'warning' %}bg-yellow-500 text-black
+                    {% elif message.tags == 'error' %}bg-red-600{% endif %}">
+          <span class="font-medium">{{ message }}</span>
+          <button type="button" class="ml-3 font-bold" onclick="this.parentElement.remove()">×</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Header -->
+  <div class="card mb-4">
+    <div class="p-3 flex flex-wrap items-center gap-3">
+      <a href="{% url 'indexpage' %}" class="btn btn-ghost">
+        <i class="fa-solid fa-chevron-left text-slate-500"></i>
+        <span>Back</span>
+      </a>
+
+      <h2 class="text-lg font-semibold text-slate-800">Downtime Records</h2>
+
+      <div class="ml-auto flex items-center gap-2">
+        <a href="{% url 'downtime_report' %}" class="btn btn-dark"><i class="fa-solid fa-chart-simple"></i><span>REPORT</span></a>
+        {% if can_add_downtime %}
+          <a href="{% url 'add_downtime' %}" class="btn btn-emerald"><i class="fa-solid fa-plus"></i><span>New</span></a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Filters + Actions (single row on wide screens; wraps neatly on small) -->
+    <form method="GET" class="border-t border-slate-200 p-3">
+      <div class="flex flex-wrap items-end gap-3">
+
+        <!-- Filter fields block (takes remaining width) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 flex-1 min-w-[720px]">
+          <label class="block">
+            <span class="block text-xs text-slate-500 mb-1">Date</span>
+            <input type="date" name="date_filter" value="{{ date_filter }}" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+          </label>
+
+          <label class="block">
+            <span class="block text-xs text-slate-500 mb-1">Equipment ID</span>
+            <input type="text" name="eqpt_id_filter" value="{{ eqpt_id_filter }}" placeholder="EQPT-XXXX"
+              class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+          </label>
+
+          <label class="block">
+            <span class="block text-xs text-slate-500 mb-1">Product Name</span>
+            <input type="text" name="product_name_filter" value="{{ product_name_filter }}" placeholder="Product"
+              class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+          </label>
+
+          <label class="block">
+            <span class="block text-xs text-slate-500 mb-1">Downtime Dept</span>
+            <select name="downtime_dept_filter" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+              <option value="">All</option>
+              {% for code, label in DEPARTMENT_CHOICES %}
+                <option value="{{ code }}" {% if downtime_dept_filter == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="block">
+            <span class="block text-xs text-slate-500 mb-1">Block</span>
+            <select name="block_filter" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm">
+              <option value="">All</option>
+              {% for code, label in select_block %}
+                <option value="{{ code }}" {% if block_filter == code %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <!-- Actions group -->
+        <div class="flex items-end gap-2 ml-auto">
+          <button type="submit" class="btn btn-dark"><i class="fa-solid fa-filter"></i><span>Apply</span></button>
+          <a href="{% url 'view_downtime' %}" class="btn btn-ghost"><i class="fa-solid fa-rotate-left"></i><span>Clear</span></a>
+          <a href="{% url 'export_downtime_excel' %}?date_filter={{ date_filter }}&eqpt_id_filter={{ eqpt_id_filter }}&block_filter={{ block_filter }}&downtime_dept_filter={{ downtime_dept_filter }}&product_name_filter={{ product_name_filter }}"
+             class="btn btn-ghost" title="Export to Excel">
+            <i class="fa-solid fa-file-excel text-emerald-600"></i><span>Export</span>
+          </a>
+        </div>
+
+        <!-- Pager (locks to far right, same row if there’s room) -->
+        <div class="ml-auto flex items-end gap-2">
+          <span class="px-3 py-2 text-sm border rounded-lg bg-slate-50">Page {{ downtimes.number }} of {{ downtimes.paginator.num_pages }}</span>
+          {% if downtimes.has_previous %}
+            <a href="?page={{ downtimes.previous_page_number }}&date_filter={{ date_filter }}&eqpt_id_filter={{ eqpt_id_filter }}&block_filter={{ block_filter }}&downtime_dept_filter={{ downtime_dept_filter }}&product_name_filter={{ product_name_filter }}"
+               class="btn btn-ghost"><span>Prev</span></a>
+          {% endif %}
+          {% if downtimes.has_next %}
+            <a href="?page={{ downtimes.next_page_number }}&date_filter={{ date_filter }}&eqpt_id_filter={{ eqpt_id_filter }}&block_filter={{ block_filter }}&downtime_dept_filter={{ downtime_dept_filter }}&product_name_filter={{ product_name_filter }}"
+               class="btn btn-ghost"><span>Next</span></a>
+          {% endif %}
+        </div>
+
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="card">
+    <div class="overflow-hidden">
+      <table class="dt-table">
+        <colgroup>
+          <col class="col-id">
+          <col class="col-date">
+          <col class="col-eqp">
+          <col class="col-stage"><!-- flex -->
+          <col class="col-cat"><!-- flex -->
+          <col class="col-loss">
+          <col class="col-act">
+        </colgroup>
+        <thead>
+          <tr>
+            <th class="text-left">ID</th>
+            <th class="text-left">Date</th>
+            <th class="text-left">Eqpt ID</th>
+            <th class="text-left">Stage</th>
+            <th class="text-left">Category</th>
+            <th class="num">Loss (Kg)</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in downtimes %}
+          <tr>
+            <td>{{ downtimes.start_index|add:forloop.counter0 }}</td>
+            <td>{{ record.date|date:"d/m/Y" }}</td>
+            <td><span class="dt-clip" title="{{ record.eqpt_id }}">{{ record.eqpt_id }}</span></td>
+            <td><span class="dt-clip" title="{{ record.stage_name }}">{{ record.stage_name }}</span></td>
+            <td><span class="dt-clip" title="{{ record.downtime_category }}">{{ record.downtime_category }}</span></td>
+            <td class="num" title="{{ record.loss }}">{{ record.loss|default:"—" }}</td>
+            <td class="text-center">
+              <div class="inline-flex items-center gap-1">
+                {% if can_view_downtime %}
+                  <a href="{% url 'view_downtime_detail' record.id %}" class="btn-icon" title="View"><i class="fa fa-eye"></i></a>
+                {% endif %}
+                {% if can_edit_downtime %}
+                  <a href="{% url 'edit_downtime' record.id %}" class="btn-icon" title="Edit"><i class="fa-solid fa-pen-to-square"></i></a>
+                {% endif %}
+                {% if can_delete_downtime %}
+                  <form action="{% url 'delete_downtime' record.id %}" method="POST" class="inline"
+                        onsubmit="return confirm('Delete this downtime record?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-icon" title="Delete"><i class="fa fa-trash"></i></button>
+                  </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-6 text-slate-500">No downtime records found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+{% endblock maincontent %}

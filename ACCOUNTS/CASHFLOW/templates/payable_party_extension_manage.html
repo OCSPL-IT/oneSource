@@ -1,0 +1,248 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="bg-slate-50 min-h-screen py-6">
+  <div class="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
+
+    <!-- Header -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-5 mb-4">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h1 class="text-base sm:text-lg font-semibold text-slate-900">Payable Party Due Date Extension</h1>
+          <p class="text-xs text-slate-500 mt-1">ERP due date will be adjusted only for report calculation.</p>
+        </div>
+
+        <a href="{% url 'ACCOUNTS:payables_cashflow_report' %}"
+           class="inline-flex items-center px-3 py-2 rounded-md border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50">
+          Back to Cashflow
+        </a>
+      </div>
+    </div>
+
+    <!-- Add Form -->
+    <form method="post"
+          class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-6 mb-4">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <div class="sm:col-span-5">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Party Name *</label>
+          <input type="text" name="party_name" required
+                 placeholder="Exact party name from ERP"
+                 class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
+        </div>
+
+        <div class="sm:col-span-3">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Company (Optional)</label>
+          <select name="company_group"
+                  class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
+            <option value="">ALL Companies</option>
+            {% for k,label in company_choices %}
+              <option value="{{ k }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Extend Days *</label>
+          <input type="number" name="extend_days" value="0" required
+                 class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
+        </div>
+
+        <div class="sm:col-span-2 flex items-end">
+          <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" name="active" value="1" checked
+                   class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+            Active
+          </label>
+        </div>
+
+        <div class="sm:col-span-12">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
+          <input type="text" name="remarks" placeholder="Optional note"
+                 class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button type="submit"
+                class="inline-flex items-center justify-center px-4 py-2 rounded-md bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
+          Save Extension
+        </button>
+      </div>
+    </form>
+
+    <!-- Filters -->
+    <form method="get"
+          class="bg-white border border-slate-200 rounded-xl shadow-sm p-4 sm:p-5 mb-3">
+      <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <div class="sm:col-span-4">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Search Party</label>
+          <input type="text" name="q" value="{{ q }}"
+                 placeholder="Search..."
+                 class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+        </div>
+
+        <div class="sm:col-span-3">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Company</label>
+          <select name="company" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white">
+            <option value="">All</option>
+            {% for k,label in company_choices %}
+              <option value="{{ k }}" {% if company == k %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Active</label>
+          <select name="active" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white">
+            <option value="" {% if not active %}selected{% endif %}>All</option>
+            <option value="1" {% if active == "1" %}selected{% endif %}>Active</option>
+            <option value="0" {% if active == "0" %}selected{% endif %}>Inactive</option>
+          </select>
+        </div>
+
+        <!-- ✅ FIXED: no split filter -->
+        <div class="sm:col-span-2">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Per page</label>
+          <select name="per_page" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white">
+            {% for n in per_page_allowed %}
+              <option value="{{ n }}" {% if per_page == n %}selected{% endif %}>{{ n }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="sm:col-span-1 flex items-end">
+          <button class="w-full px-3 py-2 rounded-md bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800">
+            Apply
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- List -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100 text-slate-700">
+            <tr>
+              <th class="text-left px-3 py-2 whitespace-nowrap">Party</th>
+              <th class="text-left px-3 py-2 whitespace-nowrap">Company</th>
+              <th class="text-right px-3 py-2 whitespace-nowrap">Days</th>
+              <th class="text-center px-3 py-2 whitespace-nowrap">Active</th>
+              <th class="text-left px-3 py-2 whitespace-nowrap">Remarks</th>
+              <th class="text-right px-3 py-2 whitespace-nowrap">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200">
+            {% for r in page_obj.object_list %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-2">
+                <div class="font-medium text-slate-900">{{ r.party_name }}</div>
+                <div class="text-[11px] text-slate-500">Norm: {{ r.party_norm }}</div>
+              </td>
+
+              <td class="px-3 py-2">
+                {% if r.company_group %}
+                  <span class="text-slate-700">{{ r.company_group }}</span>
+                {% else %}
+                  <span class="text-slate-500">ALL</span>
+                {% endif %}
+              </td>
+
+              <td class="px-3 py-2 text-right font-semibold tabular-nums">
+                {{ r.extend_days }}
+              </td>
+
+              <td class="px-3 py-2 text-center">
+                {% if r.active %}
+                  <span class="inline-flex px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">Yes</span>
+                {% else %}
+                  <span class="inline-flex px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-xs font-semibold">No</span>
+                {% endif %}
+              </td>
+
+              <td class="px-3 py-2 text-slate-700">{{ r.remarks }}</td>
+
+              <td class="px-3 py-2 text-right">
+                <!-- Inline Edit -->
+                <form method="post"
+                      action="{% url 'ACCOUNTS:payable_party_extension_edit' r.id %}"
+                      class="inline-flex items-center gap-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ current_full_path }}">
+
+                  <input type="text" name="party_name" value="{{ r.party_name }}"
+                         class="w-64 hidden md:inline rounded-md border border-slate-300 px-2 py-1 text-xs">
+
+                  <select name="company_group"
+                          class="hidden md:inline rounded-md border border-slate-300 px-2 py-1 text-xs bg-white">
+                    <option value="" {% if not r.company_group %}selected{% endif %}>ALL</option>
+                    {% for k,label in company_choices %}
+                      <option value="{{ k }}" {% if r.company_group == k %}selected{% endif %}>{{ k }}</option>
+                    {% endfor %}
+                  </select>
+
+                  <input type="number" name="extend_days" value="{{ r.extend_days }}"
+                         class="w-20 hidden md:inline rounded-md border border-slate-300 px-2 py-1 text-xs text-right">
+
+                  <label class="hidden md:inline-flex items-center gap-1 text-xs text-slate-700">
+                    <input type="checkbox" name="active" value="1" {% if r.active %}checked{% endif %}
+                           class="h-4 w-4 rounded border-slate-300 text-indigo-600">
+                    Active
+                  </label>
+
+                  <input type="text" name="remarks" value="{{ r.remarks }}"
+                         class="w-48 hidden md:inline rounded-md border border-slate-300 px-2 py-1 text-xs">
+
+                  <button class="px-3 py-1.5 rounded-md bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700">
+                    Update
+                  </button>
+                </form>
+
+                <!-- Delete -->
+                <form method="post"
+                      action="{% url 'ACCOUNTS:payable_party_extension_delete' r.id %}"
+                      class="inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="next" value="{{ current_full_path }}">
+
+                  <button onclick="return confirm('Delete this extension?')"
+                          class="ml-2 px-3 py-1.5 rounded-md bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700">
+                    Delete
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="px-3 py-8 text-center text-slate-500">No records found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="border-t border-slate-200 px-3 py-2 flex items-center justify-between text-xs text-slate-600">
+        <div>
+          Page {{ page_obj.number }} of {{ paginator.num_pages }}
+        </div>
+        <div class="flex items-center gap-1">
+          {% for p in page_links %}
+            {% if p %}
+              <a class="px-2 py-1 rounded border border-slate-200 hover:bg-slate-50 {% if p == page_obj.number %}bg-slate-900 text-white border-slate-900{% endif %}"
+                 href="?{{ qs_no_page_str }}&page={{ p }}">{{ p }}</a>
+            {% else %}
+              <span class="px-2 py-1">…</span>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

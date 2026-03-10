@@ -1,0 +1,40 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-lg mx-auto px-3 sm:px-4 lg:px-6 py-10">
+    <div class="bg-white border border-red-200 rounded-xl shadow-sm p-6">
+      <h1 class="text-lg font-semibold text-red-700 mb-2">
+        Delete Employee Joining Record
+      </h1>
+      <p class="text-sm text-slate-600 mb-4">
+        Are you sure you want to delete the following record?
+      </p>
+
+      <div class="mb-4 text-sm bg-red-50 border border-red-100 rounded-md px-3 py-2">
+        <p><span class="font-semibold">Employee ID:</span> {{ object.employee_id }}</p>
+        <p><span class="font-semibold">Employee Name:</span> {{ object.employee_name }}</p>
+        <p><span class="font-semibold">Company:</span> {{ object.company }}</p>
+        <p><span class="font-semibold">Location:</span> {{ object.location }}</p>
+      </div>
+
+      <form method="post" class="flex items-center justify-end gap-2">
+        {% csrf_token %}
+        <a href="{% url 'employee_joining_list' %}"
+           class="inline-flex items-center px-3 py-2 rounded-md text-xs font-medium
+                  border border-slate-300 text-slate-700 bg-white hover:bg-slate-50">
+          Cancel
+        </a>
+        <button type="submit"
+                class="inline-flex items-center px-3 py-2 rounded-md text-xs font-medium
+                       bg-red-600 text-white hover:bg-red-700">
+          Yes, Delete
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

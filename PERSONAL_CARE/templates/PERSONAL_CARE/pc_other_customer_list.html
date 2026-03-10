@@ -1,0 +1,380 @@
+{# templates/PERSONAL_CARE/pc_other_customer_list.html #}
+{% extends 'main/index.html' %}
+
+{% block maincontent %}
+<div class="max-w py-8 mx-4">
+  <!-- Messages Section -->
+  {% if messages %}
+  <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+      <div
+        class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+               {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">
+          ✖
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-semibold text-gray-800">
+      Personal Care Other Customers
+    </h1>
+
+    {% if perms.PERSONAL_CARE.add_pc_other_customermaster %}
+    <a href="{% url 'pc_other_customer_create' %}"
+       class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium
+              bg-indigo-600 text-white hover:bg-indigo-700">
+      + Add Other Customer
+    </a>
+    {% endif %}
+  </div>
+
+  {# Filter form #}
+  <form method="get" class="mb-6 bg-white shadow rounded-lg p-4">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Created date (From)
+        </label>
+        <input
+          type="date"
+          name="created_from"
+          value="{{ filters.created_from }}"
+          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                 focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Created date (To)
+        </label>
+        <input
+          type="date"
+          name="created_to"
+          value="{{ filters.created_to }}"
+          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                 focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Customer name
+        </label>
+        <input type="text" name="customer_name" list="customer_name_filter_list"
+               value="{{ filters.customer_name }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="customer_name_filter_list">
+          {% for v in customer_name_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Customer profile
+        </label>
+        <input type="text" name="customer_profile" list="customer_profile_filter_list"
+               value="{{ filters.customer_profile }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="customer_profile_filter_list">
+          {% for v in customer_profile_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Sub profile
+        </label>
+        <input type="text" name="sub_profile" list="sub_profile_filter_list"
+               value="{{ filters.sub_profile }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="sub_profile_filter_list">
+          {% for v in sub_profile_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Contact person
+        </label>
+        <input type="text" name="contact_person"
+               value="{{ filters.contact_person }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          City
+        </label>
+        <input type="text" name="city" list="city_filter_list"
+               value="{{ filters.city }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="city_filter_list">
+          {% for v in city_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          State
+        </label>
+        <input type="text" name="state" list="state_filter_list"
+               value="{{ filters.state }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="state_filter_list">
+          {% for v in state_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Zone
+        </label>
+        <input type="text" name="zone" list="zone_filter_list"
+               value="{{ filters.zone }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="zone_filter_list">
+          {% for v in zone_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Executive name
+        </label>
+        <input type="text" name="executive_name" list="executive_filter_list"
+               value="{{ filters.executive_name }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="executive_filter_list">
+          {% for v in executive_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Source
+        </label>
+        <input type="text" name="source" list="source_filter_list"
+               value="{{ filters.source }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="source_filter_list">
+          {% for v in source_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+    </div>
+
+    <div class="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <!-- Left: counts -->
+      <div class="inline-flex rounded-md border border-yellow-300 bg-yellow-50 px-3 py-1
+                  flex flex-wrap gap-3 items-center">
+        <span class="text-xs font-semibold text-gray-700">
+          Total Records:
+          <span class="ml-1 inline-flex items-center rounded-full bg-white px-2 py-0.5 border border-yellow-300 text-gray-900">
+            {{ total_records }}
+          </span>
+        </span>
+
+        <span class="text-xs font-semibold text-gray-700">
+          Customers:
+          <span class="ml-1 inline-flex items-center rounded-full bg-white px-2 py-0.5 border border-yellow-300 text-gray-900">
+            {{ distinct_customers }}
+          </span>
+        </span>
+      </div>
+
+      <!-- Right: buttons -->
+      <div class="flex justify-end gap-2 shrink-0">
+        <a href="{% url 'pc_other_customer_list' %}"
+           class="inline-flex items-center px-3 py-1.5 rounded-md border border-gray-300
+                  text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+          Clear
+        </a>
+
+        <button type="submit"
+                class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium
+                       text-white bg-indigo-600 hover:bg-indigo-700">
+          Filter
+        </button>
+
+        <button type="submit"
+                formmethod="get"
+                formaction="{% url 'pc_other_customer_export' %}"
+                class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium
+                       text-white bg-green-600 hover:bg-green-700">
+          Download Excel
+        </button>
+      </div>
+    </div>
+  </form>
+
+  {# Results table #}
+  <div class="bg-white shadow rounded-lg overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Created date</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Customer Name</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Customer Profile</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Sub Profile</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Core Business</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Contact Person</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Contact No</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Email ID</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Address</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Place</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">City</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">State</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Zone</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Executive Name</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Source</th>
+
+          {% if perms.PERSONAL_CARE.change_pc_other_customermaster or perms.PERSONAL_CARE.delete_pc_other_customermaster %}
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Action</th>
+          {% endif %}
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-gray-200">
+        {% for c in customers %}
+          <tr>
+            <td class="px-3 py-2 whitespace-nowrap">{{ c.created_at|date:"d-m-Y" }}</td>
+
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.customer_name %}{{ c.customer_name.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.customer_profile %}{{ c.customer_profile.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.sub_profile %}{{ c.sub_profile.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.core_business %}{{ c.core_business }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">{{ c.contact_person }}</td>
+            <td class="px-3 py-2 whitespace-nowrap">{{ c.contact_no }}</td>
+            <td class="px-3 py-2 whitespace-nowrap">{{ c.email_id }}</td>
+            <td class="px-3 py-2 whitespace-nowrap">{{ c.address }}</td>
+
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.place %}{{ c.place.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.city %}{{ c.city.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.state %}{{ c.state.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.zone %}{{ c.zone.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.executive_name %}{{ c.executive_name.subcategory }}{% endif %}
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap">
+              {% if c.source %}{{ c.source.subcategory }}{% endif %}
+            </td>
+
+            {% if perms.PERSONAL_CARE.change_pc_other_customermaster or perms.PERSONAL_CARE.delete_pc_other_customermaster %}
+            <td class="px-3 py-2 whitespace-nowrap">
+              <div class="flex items-center gap-2">
+                {% if perms.PERSONAL_CARE.change_pc_other_customermaster %}
+                <a href="{% url 'pc_other_customer_edit' c.pk %}"
+                   class="text-yellow-600 hover:text-yellow-700">
+                  <i class="fa fa-edit"></i>
+                </a>
+                {% endif %}
+
+                {% if perms.PERSONAL_CARE.delete_pc_other_customermaster %}
+                <form action="{% url 'pc_other_customer_delete' c.pk %}" method="post"
+                      class="inline"
+                      onsubmit="return confirm('Are you sure you want to delete this other customer?');">
+                  {% csrf_token %}
+                  <button type="submit" class="text-red-600 hover:text-red-700">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="15" class="px-3 py-4 text-center text-gray-500">
+              No other customers found.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination controls #}
+  {% if is_paginated %}
+    <div class="mt-4 flex items-center justify-between text-xs text-gray-600">
+      <div>
+        Page {{ page_obj.number }} of {{ paginator.num_pages }}
+      </div>
+      <div class="flex space-x-1">
+        {% if page_obj.has_previous %}
+          <a href="?{% if querystring %}{{ querystring }}&{% endif %}page=1"
+             class="px-2 py-1 border rounded hover:bg-gray-100">
+            « First
+          </a>
+          <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}"
+             class="px-2 py-1 border rounded hover:bg-gray-100">
+            ‹ Prev
+          </a>
+        {% endif %}
+
+        <span class="px-2 py-1 border rounded bg-gray-100">
+          {{ page_obj.number }}
+        </span>
+
+        {% if page_obj.has_next %}
+          <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}"
+             class="px-2 py-1 border rounded hover:bg-gray-100">
+            Next ›
+          </a>
+          <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ paginator.num_pages }}"
+             class="px-2 py-1 border rounded hover:bg-gray-100">
+            Last »
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

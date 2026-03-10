@@ -1,0 +1,20 @@
+{% extends "main/index.html" %}
+{% block title %}Check{% endblock %}
+{% block maincontent %}
+<div class="max-w-xl mx-auto p-6">
+  <h1 class="text-2xl font-bold">Mark as Checked</h1>
+  <p class="mt-2">{{ object_label }}</p>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="block mt-4 font-semibold">Remarks (optional)</label>
+    <textarea name="remarks" class="w-full border rounded p-2" rows="3"></textarea>
+
+    <div class="mt-4 flex gap-2">
+      <button class="px-4 py-2 bg-amber-500 text-white rounded" type="submit">Confirm Check</button>
+      <a class="px-4 py-2 border rounded" href="{{ next|default:'/' }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

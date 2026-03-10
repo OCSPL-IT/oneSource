@@ -1,0 +1,202 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto py-4 px-4 max-w-7xl">
+
+  {# === START: UPDATED MESSAGES BLOCK === #}
+  {% if messages %}
+  <div class="mb-4 space-y-2">
+    {% for message in messages %}
+      <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+        {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% else %}bg-slate-600{% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">✖</button>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {# === END: UPDATED MESSAGES BLOCK === #}
+
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-2xl font-bold text-slate-800">Hazardous Waste</h1>
+    <div class="flex items-center gap-2">
+      {% if perms.ETP.add_hazardouswaste %}
+      <a href="{% url 'hazardous_waste_create' %}"
+         class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-2 rounded-lg shadow">
+        <i class="fa-solid fa-plus"></i> Add
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Filters (2-row layout on md+ screens) #}
+  <form method="get" class="mb-4 bg-white border border-slate-200 rounded-lg p-4 grid grid-cols-1 md:grid-cols-12 gap-3">
+    {# ─── Row 1: From, To, Challan, Manifest, Transporter ─── #}
+    <div class="md:col-span-2">
+      <label class="block text-sm font-medium text-slate-700">From Date</label>
+      <input type="date" name="from_date" value="{{ from_date }}"
+             class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm font-medium text-slate-700">To Date</label>
+      <input type="date" name="to_date" value="{{ to_date }}"
+             class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs">
+    </div>
+    <div class="md:col-span-2">
+      <label class="block text-sm font-medium text-slate-700">Challan No</label>
+      <input type="text" name="challan_no" value="{{ challan_no }}"
+             placeholder="icontains"
+             class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs">
+    </div>
+    <div class="md:col-span-3">
+      <label class="block text-sm font-medium text-slate-700">Manifest No</label>
+      <input type="text" name="manifest_no" value="{{ manifest_no }}"
+             placeholder="icontains"
+             class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs">
+    </div>
+    <div class="md:col-span-3">
+      <label class="block text-sm font-medium text-slate-700">Transporter</label>
+      <input type="text" name="transporter_name" value="{{ transporter_name }}"
+             placeholder="icontains"
+             class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs">
+    </div>
+
+    {# ─── Row 2: centered block with Facility, Method, Buttons ─── #}
+    <div class="md:col-span-12">
+      <div class="w-full flex flex-wrap items-end justify-center gap-3">
+        <div class="min-w-[260px]">
+          <label class="block text-sm font-medium text-slate-700">Disposal Facility</label>
+          <input type="text" name="disposal_facility" value="{{ disposal_facility }}"
+                 placeholder="icontains"
+                 class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs">
+        </div>
+        <div class="min-w-[220px]">
+          <label class="block text-sm font-medium text-slate-700">Disposal Method</label>
+          <select name="disposal_method"
+                  class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 text-xs">
+            <option value="">-- All --</option>
+            {% for val,label in method_choices %}
+              <option value="{{ val }}" {% if val == disposal_method %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="flex items-end gap-2">
+          <button type="submit"
+                  class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg shadow">
+            Filter
+          </button>
+          <a href="{% url 'hazardous_waste_list' %}"
+             class="text-center bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-4 py-2 rounded-lg">
+            Clear
+          </a>
+          <a href="{% url 'hazardous_waste_export_xlsx' %}?from_date={{ from_date }}&to_date={{ to_date }}&challan_no={{ challan_no }}&transporter_name={{ transporter_name }}&manifest_no={{ manifest_no }}&disposal_facility={{ disposal_facility }}&disposal_method={{ disposal_method }}"
+             class="text-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg">
+            Excel
+          </a>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  {# Totals + Pagination in one row #}
+  <div class="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <span class="inline-flex items-center gap-3 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-sm">
+      <strong>Totals (filtered):</strong>
+      <span>Quantity(MT): <span class="font-semibold">{{ totals.qty }}</span> MT</span>
+      <span>Transportation Cost: <span class="font-semibold">{{ totals.transport }}</span></span>
+      <span>Total Cost: <span class="font-semibold">{{ totals.amount }}</span></span>
+    </span>
+
+    <div class="flex items-center gap-2 md:justify-end">
+      {% if items.has_previous %}
+        <a href="?page={{ items.previous_page_number }}&from_date={{ from_date }}&to_date={{ to_date }}&challan_no={{ challan_no }}&transporter_name={{ transporter_name }}&manifest_no={{ manifest_no }}&disposal_facility={{ disposal_facility }}&disposal_method={{ disposal_method }}"
+           class="px-3 py-1 rounded border border-slate-300 hover:bg-slate-50">Previous</a>
+      {% endif %}
+      <span class="px-3 py-1 rounded bg-slate-100 border border-slate-300">
+        Page {{ items.number }} of {{ items.paginator.num_pages }}
+      </span>
+      {% if items.has_next %}
+        <a href="?page={{ items.next_page_number }}&from_date={{ from_date }}&to_date={{ to_date }}&challan_no={{ challan_no }}&transporter_name={{ transporter_name }}&manifest_no={{ manifest_no }}&disposal_facility={{ disposal_facility }}&disposal_method={{ disposal_method }}"
+           class="px-3 py-1 rounded border border-slate-300 hover:bg-slate-50">Next</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Table #}
+  <div class="overflow-auto bg-white border border-slate-200 rounded-lg">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-700">
+        <tr class="border-b">
+          <th class="text-left px-4 py-2">Date</th>
+          <th class="text-left px-4 py-2">DC Challan No</th>
+          <th class="text-left px-4 py-2 whitespace-nowrap">Manifest No</th>
+          <th class="text-left px-4 py-2">Transporter</th>
+          <th class="text-left px-4 py-2">Vehicle</th>
+          <th class="text-left px-4 py-2 whitespace-nowrap">Type of Waste</th>
+          <th class="text-left px-4 py-2 whitespace-nowrap">Waste Category</th>
+          <th class="text-left px-4 py-2">Disposal Method</th>
+          <th class="text-right px-4 py-2">Disposal Facility</th>
+          <th class="text-right px-4 py-2">Qty (MT)</th>
+          <th class="text-right px-4 py-2">Disposal Rate/(MT)</th>
+          <th class="text-right px-4 py-2 whitespace-nowrap">Transp. Cost</th>
+          <th class="text-right px-4 py-2">Total Cost</th>
+          {% if perms.ETP.change_hazardouswaste or perms.ETP.delete_hazardouswaste %}
+          <th class="text-center px-4 py-2 whitespace-nowrap">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in items %}
+        <tr class="border-b hover:bg-slate-50">
+          <td class="px-4 py-2 whitespace-nowrap">{{ r.date|date:"d/m/Y" }}</td>
+          <td class="px-4 py-2">{{ r.challan_no }}</td>
+          <td class="px-4 py-2">{{ r.manifest_no|default:"—" }}</td>
+          <td class="px-4 py-2">{{ r.transporter_name }}</td>
+          <td class="px-4 py-2">{{ r.vehicle_registration_numbers|default:"—" }}</td>
+          <td class="px-4 py-2">{{ r.type_of_waste }}</td>
+          <td class="px-4 py-2">{{ r.waste_category }}</td>
+          <td class="px-4 py-2">{{ r.disposal_method }}</td>
+          <td class="px-4 py-2">{{ r.disposal_facility }}</td>
+          <td class="px-4 py-2 text-right">{{ r.quantity_mt|floatformat:3 }}</td>
+          <td class="px-4 py-2 text-right">{{ r.disposal_rate_rs_per_mt|floatformat:2 }}</td>
+          <td class="px-4 py-2 text-right">{{ r.transportation_cost|default_if_none:0|floatformat:2 }}</td>
+          <td class="px-4 py-2 text-right font-semibold">{{ r.total_cost|default_if_none:0|floatformat:2 }}</td>
+
+          {% if perms.ETP.change_hazardouswaste or perms.ETP.delete_hazardouswaste %}
+          <td class="px-4 py-2 text-center">
+            <div class="flex items-center justify-center gap-2">
+              {% if perms.ETP.change_hazardouswaste %}
+              <a href="{% url 'hazardous_waste_edit' r.id %}"
+                 class="inline-flex items-center justify-center w-9 h-9 rounded bg-yellow-500 hover:bg-yellow-600 text-white"
+                 title="Edit">
+                 <i class="fas fa-edit"></i>
+              </a>
+              {% endif %}
+              {% if perms.ETP.delete_hazardouswaste %}
+              <form action="{% url 'hazardous_waste_delete' r.id %}" method="post"
+                    onsubmit="return confirm('Are you sure you want to delete this record?');" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="inline-flex items-center justify-center w-9 h-9 rounded bg-red-500 hover:bg-red-600 text-white"
+                        title="Delete">
+                  <i class="fa fa-trash" aria-hidden="true"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="11" class="px-4 py-6 text-center text-slate-500">No records found for the selected filters.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

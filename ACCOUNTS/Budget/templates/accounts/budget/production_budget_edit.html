@@ -1,0 +1,1004 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Production Budget{% endblock %}
+{% block maincontent %}
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  .truncate-2{
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+  }
+  .sticky-th thead th{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:white;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  }
+  
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  /* Input focus states */
+  .input-field:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+
+  /* Table hover effect */
+  .table-row-hover:hover {
+    background-color: #f8fafc;
+    transition: background-color 0.15s ease;
+  }
+
+  /* Badge styles */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  /* Month header gradient */
+  .month-header {
+    background: linear-gradient(to bottom, #fafafa, #f5f5f5);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: #334155;
+  }
+
+  /* Card shadow on hover */
+  .card-hover:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    transition: box-shadow 0.2s ease;
+  }
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+    <!-- HEADER CARD -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-5">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div class="space-y-2">
+            <div class="flex items-center gap-3">
+              <div class="bg-white/20 rounded-lg p-2">
+                <i class="fa-solid fa-chart-line text-white text-xl"></i>
+              </div>
+              <h1 class="text-2xl font-bold text-white">Production Budget</h1>
+              {% if is_locked %}
+                <span class="badge bg-amber-500 text-white border-0">
+                  <i class="fa-solid fa-lock"></i> Read-only
+                </span>
+              {% else %}
+                <span class="badge bg-emerald-500 text-white border-0">
+                  <i class="fa-solid fa-pen-to-square"></i> Editable
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 text-sm text-indigo-100">
+              <div class="flex items-center gap-2">
+                <i class="fa-regular fa-calendar"></i>
+                <span>FY: <span class="font-semibold text-white">{{ plan.fy }}</span></span>
+              </div>
+              <span class="text-indigo-300">•</span>
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-box"></i>
+                <span>FG: <span class="font-semibold text-white">{{ fg_name }}</span></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'accounts_budget:production_budget_home' %}"
+               class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm transition-all">
+              <i class="fa-solid fa-arrow-left"></i> Back
+            </a>
+
+            {% if submit_url and not is_locked %}
+              <form method="post" action="{{ submit_url }}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next_url|default:request.get_full_path }}">
+                <button type="submit"
+                        class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white text-indigo-600 hover:bg-indigo-50 font-medium transition-all shadow-sm">
+                  <i class="fa-solid fa-paper-plane"></i> Submit for Approval
+                </button>
+              </form>
+            {% endif %}
+
+            {% if can_approve and approve_url and reject_url %}
+              <a href="{{ approve_url }}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}"
+                 class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 font-medium transition-all shadow-sm">
+                <i class="fa-solid fa-check"></i> Approve
+              </a>
+
+              <a href="{{ reject_url }}{% if next_url %}?next={{ next_url|urlencode }}{% endif %}"
+                 class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-rose-500 text-white hover:bg-rose-600 font-medium transition-all shadow-sm">
+                <i class="fa-solid fa-xmark"></i> Disapprove
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if mc %}
+        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="badge
+              {% if mc.get_status_display|default:mc.status == 'APPROVED' %}
+                bg-emerald-50 text-emerald-700 border border-emerald-200
+              {% elif mc.get_status_display|default:mc.status == 'SUBMITTED' %}
+                bg-amber-50 text-amber-700 border border-amber-200
+              {% elif mc.get_status_display|default:mc.status == 'REJECTED' %}
+                bg-rose-50 text-rose-700 border border-rose-200
+              {% else %}
+                bg-slate-50 text-slate-700 border border-slate-200
+              {% endif %}
+            ">
+              <i class="fa-solid fa-circle-info"></i>
+              Status: {{ mc.get_status_display|default:mc.status }}
+            </span>
+
+            {% if mc.updated_at %}
+              <span class="badge bg-white text-slate-600 border border-slate-200">
+                <i class="fa-regular fa-clock"></i>
+                Updated: {{ mc.updated_at }}
+              </span>
+            {% endif %}
+
+            {% if mc.remarks %}
+              <span class="badge bg-blue-50 text-blue-700 border border-blue-200">
+                <i class="fa-regular fa-comment-dots"></i>
+                Remarks: {{ mc.remarks }}
+              </span>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if is_locked %}
+      <div class="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-amber-100 px-5 py-4">
+        <div class="flex items-start gap-3">
+          <div class="bg-amber-500 rounded-lg p-2 mt-0.5">
+            <i class="fa-solid fa-triangle-exclamation text-white"></i>
+          </div>
+          <div>
+            <div class="font-semibold text-amber-900 text-base">Budget Locked</div>
+            <div class="text-amber-700 text-sm mt-1">
+              This budget is currently locked for editing. To make changes, the entry must be disapproved first.
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- MAIN FORM -->
+    <form method="post" class="space-y-6" id="prod-budget-form" action="">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next_url|default:request.get_full_path }}">
+      <input type="hidden" name="action" id="js-action" value="save">
+
+      <!-- FG Monthly Plan -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden card-hover">
+        <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                <i class="fa-solid fa-calendar-days text-indigo-600"></i>
+                FG Monthly Plan Quantity
+              </h2>
+              <div class="text-sm text-slate-600 mt-1">Enter planned production quantities for each month (April – March)</div>
+            </div>
+            {% if head_form.non_field_errors %}
+              <div class="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg border border-rose-200">
+                {{ head_form.non_field_errors }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar">
+          <div class="inline-block min-w-full">
+            <table class="min-w-full text-sm">
+              <thead class="sticky-th">
+                <tr>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Apr</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">May</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Jun</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Jul</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Aug</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Sep</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Oct</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Nov</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Dec</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Jan</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Feb</th>
+                  <th class="month-header px-3 py-3 text-center border-r border-slate-200">Mar</th>
+                  <th class="month-header px-3 py-3 text-left">Remarks</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr class="{% if is_locked %}opacity-75{% endif %}">
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.apr.html_name }}"
+                           data-fg-month="apr"
+                           value="{{ head_form.apr.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.apr.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.apr.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.may.html_name }}"
+                           data-fg-month="may"
+                           value="{{ head_form.may.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.may.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.may.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.jun.html_name }}"
+                           data-fg-month="jun"
+                           value="{{ head_form.jun.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.jun.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.jun.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.jul.html_name }}"
+                           data-fg-month="jul"
+                           value="{{ head_form.jul.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.jul.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.jul.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.aug.html_name }}"
+                           data-fg-month="aug"
+                           value="{{ head_form.aug.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.aug.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.aug.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.sep.html_name }}"
+                           data-fg-month="sep"
+                           value="{{ head_form.sep.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.sep.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.sep.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.oct.html_name }}"
+                           data-fg-month="oct"
+                           value="{{ head_form.oct.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.oct.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.oct.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.nov.html_name }}"
+                           data-fg-month="nov"
+                           value="{{ head_form.nov.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.nov.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.nov.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.dec.html_name }}"
+                           data-fg-month="dec"
+                           value="{{ head_form.dec.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.dec.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.dec.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.jan.html_name }}"
+                           data-fg-month="jan"
+                           value="{{ head_form.jan.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.jan.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.jan.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.feb.html_name }}"
+                           data-fg-month="feb"
+                           value="{{ head_form.feb.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.feb.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.feb.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3 text-center border-r border-slate-100">
+                    <input type="number" step="0.01" inputmode="decimal"
+                           name="{{ head_form.mar.html_name }}"
+                           data-fg-month="mar"
+                           value="{{ head_form.mar.value|default_if_none:'' }}"
+                           class="input-field w-28 rounded-lg border border-slate-300 px-3 py-2 text-center {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.mar.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.mar.errors }}</div>{% endif %}
+                  </td>
+
+                  <td class="px-3 py-3">
+                    <input type="text"
+                           name="{{ head_form.remarks.html_name }}"
+                           value="{{ head_form.remarks.value|default_if_none:'' }}"
+                           placeholder="Add remarks..."
+                           class="input-field min-w-[16rem] w-full rounded-lg border border-slate-300 px-3 py-2 {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                    {% if head_form.remarks.errors %}<div class="text-xs text-rose-600 mt-1">{{ head_form.remarks.errors }}</div>{% endif %}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOM Inputs + Waste & Effluent -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden card-hover">
+        <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-indigo-600"></i>
+                BOM Inputs & Norm Configuration
+              </h2>
+              <div class="text-sm text-slate-600 mt-1">Configure budget norms, captive status, and target norms for materials</div>
+            </div>
+            <div class="text-xs text-slate-500 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+              <i class="fa-solid fa-info-circle text-blue-600"></i> BOM Qty auto-calculates from FG qty ÷ Budget Norm
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar sticky-th">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="px-4 py-3 text-left font-semibold text-slate-700 border-b-2 border-slate-200">Item Code</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-700 border-b-2 border-slate-200">Material Name</th>
+                <th class="px-4 py-3 text-left font-semibold text-slate-700 border-b-2 border-slate-200">Unit</th>
+                <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200">BOM QTY (Year)</th>
+                <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200">Budget Norm</th>
+                <th class="px-4 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Captive</th>
+                <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200">Target Norm</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              {% for r in input_rows %}
+              <tr class="table-row-hover">
+                <td class="px-4 py-3">
+                  <span class="font-mono text-xs bg-slate-100 px-2 py-1 rounded">{{ r.code }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <div class="font-medium text-slate-900 truncate-2" title="{{ r.name }}">{{ r.name }}</div>
+                  {% if r.category %}
+                    <div class="text-xs text-slate-500 mt-1">
+                      <span class="inline-flex items-center gap-1">
+                        <i class="fa-solid fa-tag text-slate-400"></i>
+                        {{ r.category }}
+                      </span>
+                    </div>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-700">{{ r.unit }}</td>
+
+                <td class="px-4 py-3 text-right">
+                  <span class="js-bomqty font-medium text-slate-700 bg-slate-50 px-2 py-1 rounded" data-code="{{ r.code }}">
+                    {{ r.bom_qty_year|default_if_none:"0.00" }}
+                  </span>
+                </td>
+
+                <td class="px-4 py-3 text-right">
+                  <input type="number" inputmode="decimal" step="0.01"
+                         name="norm__{{ r.code }}"
+                         value="{{ r.norm|default_if_none:'' }}"
+                         data-code="{{ r.code }}"
+                         placeholder="0.00"
+                         class="input-field js-norm w-32 rounded-lg border border-slate-300 px-3 py-2 text-right {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                         {% if is_locked %}disabled{% endif %}>
+                </td>
+
+                <td class="px-4 py-3 text-center">
+                  <input type="hidden" name="is_captive__{{ r.code }}" value="0">
+                  <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox"
+                           name="is_captive__{{ r.code }}"
+                           value="1"
+                           class="h-5 w-5 rounded border-slate-300 text-indigo-600 focus:ring-2 focus:ring-indigo-200 focus:ring-offset-0 {% if is_locked %}cursor-not-allowed{% endif %}"
+                           {% if r.is_captive %}checked{% endif %}
+                           {% if is_locked %}disabled{% endif %}>
+                    <span class="text-sm text-slate-600 font-medium">Yes</span>
+                  </label>
+                </td>
+
+                <td class="px-4 py-3 text-right">
+                  <input type="number" inputmode="decimal" step="0.01"
+                         name="target_norm__{{ r.code }}"
+                         value="{{ r.target_norm|default_if_none:'' }}"
+                         placeholder="0.00"
+                         class="input-field w-32 rounded-lg border border-slate-300 px-3 py-2 text-right {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                         {% if is_locked %}disabled{% endif %}>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="7" class="px-4 py-16 text-center">
+                  <div class="flex flex-col items-center gap-3">
+                    <div class="bg-slate-100 rounded-full p-4">
+                      <i class="fa-solid fa-inbox text-slate-400 text-3xl"></i>
+                    </div>
+                    <div class="text-slate-500">No ERP BOM inputs found for this FG</div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Waste & Effluent Section -->
+        <div class="border-t-2 border-slate-200">
+          <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                  <i class="fa-solid fa-recycle text-emerald-600"></i>
+                  Waste & Effluent Budget Norms
+                </h3>
+                <div class="text-sm text-slate-600 mt-1">Configure waste norms and view monthly quantities</div>
+              </div>
+              <div class="text-xs text-slate-500 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200">
+                <i class="fa-solid fa-calculator text-emerald-600"></i> Monthly qty auto-calculates from FG qty × Waste norm
+              </div>
+            </div>
+          </div>
+
+          <input type="hidden" name="eff_count" value="{{ eff_rows|length }}">
+
+          <div class="overflow-x-auto custom-scrollbar sticky-th">
+            <table class="min-w-full text-sm">
+              <thead>
+                <tr class="bg-slate-50">
+                  <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200">#</th>
+                  <th class="px-4 py-3 text-left font-semibold text-slate-700 border-b-2 border-slate-200">Waste Type</th>
+                  <th class="px-4 py-3 text-left font-semibold text-slate-700 border-b-2 border-slate-200">Waste Name</th>
+                  <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200">Qty (Year)</th>
+                  <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200">Waste Budget Norm</th>
+                  <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200">Waste Target Norm</th>
+                </tr>
+              </thead>
+
+              <tbody class="divide-y divide-slate-100">
+                {% for r in eff_rows %}
+                <tr class="table-row-hover">
+                  <td class="px-4 py-3 text-right">
+                    <span class="inline-flex items-center justify-center w-8 h-8 bg-slate-100 text-slate-700 rounded-full font-semibold">
+                      {{ forloop.counter }}
+                    </span>
+                    <input type="hidden" name="eff_id__{{ forloop.counter0 }}" value="{{ r.id }}">
+                    <input type="hidden" name="eff_qty_year__{{ forloop.counter0 }}" value="{{ r.total|default_if_none:'0.00' }}">
+                    <input type="hidden" name="eff_apr__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_may__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_jun__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_jul__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_aug__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_sep__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_oct__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_nov__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_dec__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_jan__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_feb__{{ forloop.counter0 }}" value="">
+                    <input type="hidden" name="eff_mar__{{ forloop.counter0 }}" value="">
+                  </td>
+
+                  <td class="px-4 py-3">
+                    <div class="truncate-2 text-slate-700">{{ r.waste_type }}</div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="truncate-2 font-medium text-slate-900">{{ r.waste_name }}</div>
+                  </td>
+
+                  <td class="px-4 py-3 text-right">
+                    <span class="js-eff-qtyyear font-medium text-slate-700 bg-slate-50 px-2 py-1 rounded" data-idx="{{ forloop.counter0 }}">
+                      {{ r.total|default_if_none:"0.00" }}
+                    </span>
+                  </td>
+
+                  <td class="px-4 py-3 text-right">
+                    <input type="number" inputmode="decimal" step="0.01"
+                           name="eff_norm__{{ forloop.counter0 }}"
+                           value="{{ r.waste_norm|default_if_none:r.waste_budget_norm|default_if_none:'0.00' }}"
+                           data-idx="{{ forloop.counter0 }}"
+                           placeholder="0.00"
+                           class="input-field js-eff-norm w-40 rounded-lg border border-slate-300 px-3 py-2 text-right {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                  </td>
+
+                  <td class="px-4 py-3 text-right">
+                    <input type="number" inputmode="decimal" step="0.01"
+                           name="eff_target_norm__{{ forloop.counter0 }}"
+                           value="{{ r.waste_target_norm|default_if_none:'' }}"
+                           placeholder="0.00"
+                           class="input-field w-40 rounded-lg border border-slate-300 px-3 py-2 text-right {% if is_locked %}bg-slate-100 cursor-not-allowed{% else %}bg-white{% endif %}"
+                           {% if is_locked %}disabled{% endif %}>
+                  </td>
+                </tr>
+
+                <!-- Monthly breakdown -->
+                <tr class="bg-gradient-to-r from-slate-50/50 to-slate-100/50">
+                  <td colspan="6" class="px-4 py-4">
+                    <div class="space-y-3">
+                      <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                        <i class="fa-solid fa-calendar-days text-indigo-600"></i>
+                        Monthly Waste Quantities (Apr – Mar)
+                      </div>
+                      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-12 gap-2">
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Apr</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="apr">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">May</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="may">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Jun</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="jun">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Jul</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="jul">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Aug</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="aug">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Sep</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="sep">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Oct</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="oct">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Nov</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="nov">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Dec</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="dec">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Jan</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="jan">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Feb</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="feb">0.00</div>
+                        </div>
+                        <div class="bg-white rounded-lg border border-slate-200 px-3 py-2 shadow-sm">
+                          <div class="text-xs text-slate-500 font-medium">Mar</div>
+                          <div class="js-eff-m text-sm font-semibold text-slate-900 mt-1" data-idx="{{ forloop.counter0 }}" data-month="mar">0.00</div>
+                        </div>
+                      </div>
+                      <div class="text-xs text-slate-500 italic">
+                        <i class="fa-solid fa-lightbulb text-amber-500"></i> Calculated as: FG Monthly Qty × Waste Budget Norm
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="px-4 py-16 text-center">
+                    <div class="flex flex-col items-center gap-3">
+                      <div class="bg-slate-100 rounded-full p-4">
+                        <i class="fa-solid fa-inbox text-slate-400 text-3xl"></i>
+                      </div>
+                      <div class="text-slate-500">No waste/effluent lines configured</div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+
+              <tfoot class="bg-gradient-to-r from-indigo-50 to-indigo-100 border-t-2 border-indigo-200">
+                <tr>
+                  <td colspan="3" class="px-4 py-4 font-bold text-slate-900 text-base">
+                    <i class="fa-solid fa-calculator text-indigo-600"></i> Total (Year)
+                  </td>
+                  <td class="px-4 py-4 text-right">
+                    <span id="js-eff-grand" class="text-lg font-bold text-indigo-900">{{ eff_grand_total|default_if_none:"0.00" }}</span>
+                  </td>
+                  <td colspan="2" class="px-4 py-4 text-right text-xs text-slate-600">
+                    Auto-calculated from FG qty and effluent norms
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- Save Section -->
+        <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-t border-slate-200">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-sm text-slate-600">
+              {% if is_locked %}
+                <div class="flex items-center gap-2 text-amber-700">
+                  <i class="fa-solid fa-lock"></i>
+                  <span class="font-medium">Editing is currently disabled</span>
+                </div>
+              {% else %}
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-floppy-disk text-indigo-600"></i>
+                  <span>Save all changes including FG plan, BOM norms, and waste configurations</span>
+                </div>
+              {% endif %}
+            </div>
+
+            <button type="submit"
+                    form="prod-budget-form"
+                    onclick="document.getElementById('js-action').value='save';"
+                    class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-semibold shadow-md transition-all {% if is_locked %}bg-slate-400 cursor-not-allowed{% else %}bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg active:scale-95{% endif %}"
+                    {% if is_locked %}disabled{% endif %}>
+              <i class="fa-solid fa-floppy-disk text-lg"></i>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Computed RM Qty -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden card-hover">
+        <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 class="font-bold text-slate-900 text-lg flex items-center gap-2">
+                <i class="fa-solid fa-calculator text-purple-600"></i>
+                Computed Raw Material Quantities
+              </h2>
+              <div class="text-sm text-slate-600 mt-1">Auto-calculated as: FG Qty × Budget Norm</div>
+            </div>
+            <div class="text-xs text-purple-600 bg-purple-50 px-3 py-2 rounded-lg border border-purple-200 font-medium">
+              <i class="fa-solid fa-sync-alt"></i> Real-time calculations
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar sticky-th">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="px-4 py-3 text-left font-semibold text-slate-700 border-b-2 border-slate-200 sticky left-0 bg-slate-50 z-10">Material</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Apr</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">May</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Jun</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Jul</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Aug</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Sep</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Oct</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Nov</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Dec</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Jan</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Feb</th>
+                <th class="px-3 py-3 text-center font-semibold text-slate-700 border-b-2 border-slate-200">Mar</th>
+                <th class="px-4 py-3 text-right font-semibold text-slate-700 border-b-2 border-slate-200 bg-purple-50">Total</th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+              {% for r in mat_rows %}
+              <tr class="table-row-hover">
+                <td class="px-4 py-3 sticky left-0 bg-white border-r border-slate-100">
+                  <div class="font-medium text-slate-900 truncate-2" title="{{ r.material }}">{{ r.material }}</div>
+                  <div class="flex flex-wrap gap-2 text-xs text-slate-500 mt-2">
+                    <span class="inline-flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded">
+                      <i class="fa-solid fa-barcode"></i>
+                      {{ r.code }}
+                    </span>
+                    <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
+                      <i class="fa-solid fa-ruler"></i>
+                      {{ r.unit }}
+                    </span>
+                    {% if r.category %}
+                    <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded">
+                      <i class="fa-solid fa-tag"></i>
+                      {{ r.category }}
+                    </span>
+                    {% endif %}
+                    {% if r.budget_norm is not None %}
+                    <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded">
+                      <i class="fa-solid fa-chart-line"></i>
+                      Norm: {{ r.budget_norm }}
+                    </span>
+                    {% endif %}
+                    {% if r.is_captive %}
+                    <span class="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded">
+                      <i class="fa-solid fa-industry"></i>
+                      Captive
+                    </span>
+                    {% endif %}
+                    {% if r.target_norm is not None %}
+                    <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded">
+                      <i class="fa-solid fa-bullseye"></i>
+                      Target: {{ r.target_norm }}
+                    </span>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="apr">{{ r.per_month.apr }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="may">{{ r.per_month.may }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="jun">{{ r.per_month.jun }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="jul">{{ r.per_month.jul }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="aug">{{ r.per_month.aug }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="sep">{{ r.per_month.sep }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="oct">{{ r.per_month.oct }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="nov">{{ r.per_month.nov }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="dec">{{ r.per_month.dec }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="jan">{{ r.per_month.jan }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="feb">{{ r.per_month.feb }}</span></td>
+                <td class="px-3 py-3 text-center"><span class="js-rm-cell inline-block bg-slate-50 px-2 py-1 rounded text-slate-700" data-code="{{ r.code }}" data-month="mar">{{ r.per_month.mar }}</span></td>
+
+                <td class="px-4 py-3 text-right bg-purple-50">
+                  <span class="js-rm-total font-bold text-purple-900 text-base" data-code="{{ r.code }}">{{ r.total }}</span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="14" class="px-4 py-16 text-center">
+                  <div class="flex flex-col items-center gap-3">
+                    <div class="bg-slate-100 rounded-full p-4">
+                      <i class="fa-solid fa-inbox text-slate-400 text-3xl"></i>
+                    </div>
+                    <div class="text-slate-500">No computed rows available. Please add budget norms above.</div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+
+            <tfoot class="bg-gradient-to-r from-purple-50 to-purple-100 border-t-2 border-purple-200">
+              <tr>
+                <td class="px-4 py-4 font-bold text-slate-900 text-base sticky left-0 bg-purple-50">
+                  <i class="fa-solid fa-sum text-purple-600"></i> Monthly Totals
+                </td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="apr">{{ month_totals.apr }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="may">{{ month_totals.may }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="jun">{{ month_totals.jun }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="jul">{{ month_totals.jul }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="aug">{{ month_totals.aug }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="sep">{{ month_totals.sep }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="oct">{{ month_totals.oct }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="nov">{{ month_totals.nov }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="dec">{{ month_totals.dec }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="jan">{{ month_totals.jan }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="feb">{{ month_totals.feb }}</span></td>
+                <td class="px-3 py-4 text-center"><span class="js-rm-sum font-bold text-purple-900" data-month="mar">{{ month_totals.mar }}</span></td>
+                <td class="px-4 py-4 text-right bg-purple-100">
+                  <span id="js-rm-grand" class="text-xl font-bold text-purple-900">{{ grand_total }}</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const MONTHS = ["apr","may","jun","jul","aug","sep","oct","nov","dec","jan","feb","mar"];
+
+  function toNum(v) {
+    if (v === null || v === undefined) return 0;
+    const s = String(v).replace(/,/g, "").trim();
+    if (!s) return 0;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+  
+  // Changed from 6 decimals to 2 decimals
+  function fmt2(n) { 
+    return (Number.isFinite(n) ? n : 0).toFixed(2); 
+  }
+
+  function findFgInput(month){
+    let el = document.querySelector(`input[data-fg-month="${month}"]`);
+    if (el) return el;
+
+    el = document.querySelector(`input[name="${month}"]`);
+    if (el) return el;
+
+    const all = Array.from(document.querySelectorAll('input[type="number"][name]'));
+    return all.find(x => x.name === month || x.name.endsWith(`-${month}`) || x.name.endsWith(`_${month}`)) || null;
+  }
+
+  function getFgQty(m) {
+    const el = findFgInput(m);
+    return el ? toNum(el.value) : 0;
+  }
+
+  function recalcRM() {
+    const normInputs = Array.from(document.querySelectorAll(".js-norm[data-code]"));
+    const sums = Object.fromEntries(MONTHS.map(m => [m, 0]));
+    let grand = 0;
+
+    for (const inp of normInputs) {
+      const code = inp.getAttribute("data-code");
+      const norm = toNum(inp.value);
+
+      let rowTotal = 0;
+      for (const m of MONTHS) {
+        const qty = getFgQty(m) * norm;
+        rowTotal += qty;
+        sums[m] += qty;
+
+        const cell = document.querySelector(`.js-rm-cell[data-code="${CSS.escape(code)}"][data-month="${m}"]`);
+        if (cell) cell.textContent = fmt2(qty);
+      }
+
+      const tot = document.querySelector(`.js-rm-total[data-code="${CSS.escape(code)}"]`);
+      if (tot) tot.textContent = fmt2(rowTotal);
+
+      const bom = document.querySelector(`.js-bomqty[data-code="${CSS.escape(code)}"]`);
+      if (bom) bom.textContent = fmt2(rowTotal);
+
+      grand += rowTotal;
+    }
+
+    for (const m of MONTHS) {
+      const el = document.querySelector(`.js-rm-sum[data-month="${m}"]`);
+      if (el) el.textContent = fmt2(sums[m]);
+    }
+    const g = document.getElementById("js-rm-grand");
+    if (g) g.textContent = fmt2(grand);
+  }
+
+  function setEffMonthHidden(idx, month, val){
+    const hid = document.querySelector(`input[name="eff_${month}__${idx}"]`);
+    if (hid) hid.value = fmt2(val);
+  }
+
+  function recalcEff() {
+    const norms = Array.from(document.querySelectorAll(".js-eff-norm[data-idx]"));
+    let grand = 0;
+
+    for (const inp of norms) {
+      const idx = inp.getAttribute("data-idx");
+      const norm = toNum(inp.value);
+
+      let qtyYear = 0;
+      for (const m of MONTHS) {
+        const q = getFgQty(m) * norm;
+        qtyYear += q;
+
+        const spanM = document.querySelector(`.js-eff-m[data-idx="${idx}"][data-month="${m}"]`);
+        if (spanM) spanM.textContent = fmt2(q);
+
+        setEffMonthHidden(idx, m, q);
+      }
+
+      const span = document.querySelector(`.js-eff-qtyyear[data-idx="${idx}"]`);
+      if (span) span.textContent = fmt2(qtyYear);
+
+      const hidYear = document.querySelector(`input[name="eff_qty_year__${idx}"]`);
+      if (hidYear) hidYear.value = fmt2(qtyYear);
+
+      grand += qtyYear;
+    }
+
+    const g = document.getElementById("js-eff-grand");
+    if (g) g.textContent = fmt2(grand);
+  }
+
+  let raf = 0;
+  function scheduleRecalc() {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      recalcRM();
+      recalcEff();
+    });
+  }
+
+  document.addEventListener("input", function (e) {
+    const t = e.target;
+    if (
+      t.classList.contains("js-norm") ||
+      t.classList.contains("js-eff-norm") ||
+      (t.matches && t.matches('input[type="number"][data-fg-month]'))
+    ) {
+      scheduleRecalc();
+    }
+  });
+
+  MONTHS.forEach(m => {
+    const el = findFgInput(m);
+    if (!el) return;
+    el.addEventListener("input", scheduleRecalc);
+    el.addEventListener("change", scheduleRecalc);
+  });
+
+  const form = document.getElementById("prod-budget-form");
+  if (form) {
+    form.addEventListener("submit", function () {
+      recalcRM();
+      recalcEff();
+
+      MONTHS.forEach(m => {
+        const el = findFgInput(m);
+        if (el && String(el.value ?? "").trim() === "") el.value = "0.00";
+      });
+
+      document.querySelectorAll('input[name^="norm__"]').forEach(el => {
+        if (String(el.value ?? "").trim() === "") el.value = "0.00";
+      });
+
+      document.querySelectorAll('input[name^="eff_norm__"]').forEach(el => {
+        if (String(el.value ?? "").trim() === "") el.value = "0.00";
+      });
+    });
+  }
+
+  scheduleRecalc();
+})();
+</script>
+
+{% endblock %}
+</document_content>

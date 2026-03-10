@@ -1,0 +1,264 @@
+{% extends "main/index.html" %}
+{% block title %}PM — {{ target|date:"d M Y" }}{% endblock %}
+
+{% block maincontent %}
+<style>
+  /* ==== Preventive Maintenance · Day View (clean + modern) ==== */
+  .pmday {
+    --brand: #3b82f6;
+    --ink: #111827;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --soft: #f9fafb;
+
+    --row-gap: .6rem;
+    --gutter: var(--bs-gutter-x, 1.5rem);
+    margin: 0 calc(-1 * var(--gutter));     /* align with sidebar frame */
+    border-left: 1px solid var(--line);
+    background: #fff;
+  }
+  .pmday .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 var(--gutter) 1.25rem;
+  }
+
+  /* Header */
+  .pmday .header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: .75rem;
+    padding: 1rem 0 1.25rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .pmday .nav {
+    display: inline-flex; gap: .4rem; align-items: center;
+  }
+  .pmday .nav a {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    color: var(--muted); text-decoration: none;
+  }
+  .pmday .nav a:hover { background: var(--soft); color: var(--ink); }
+
+  .pmday .title {
+    margin: 0; text-align: center; font-weight: 800; color: var(--ink);
+    font-size: 1.3rem; line-height: 1.2;
+  }
+
+  .pmday .actions { justify-self: end; display: flex; gap: .5rem; flex-wrap: wrap; }
+  .pmday .btn-chip {
+    border-radius: 999px; padding: .45rem .8rem; font-weight: 600;
+    border: 1px solid var(--line); background: #fff; text-decoration: none; color: var(--ink);
+  }
+  .pmday .btn-chip:hover { background: var(--soft); }
+
+  /* Toolbar (filters + search) */
+  .pmday .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: .75rem; padding: .9rem 0;
+  }
+  .pmday .pills { display: inline-flex; gap: .4rem; flex-wrap: wrap; }
+  .pmday .pill {
+    border: 1px solid var(--line); background: #fff; color: var(--ink);
+    padding: .3rem .6rem; border-radius: 999px; font-weight: 600; font-size: .85rem;
+  }
+  .pmday .pill[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .pmday .search { width: 260px; }
+  @media (max-width: 768px) { .pmday .search { width: 180px; } }
+
+  /* Card + table with spaced rows */
+  .pmday .card {
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    box-shadow: 0 6px 22px rgba(2,6,23,.05); overflow: hidden;
+  }
+  .pmday .table-wrap { position: relative; }
+  .pmday table { width: 100%; border-collapse: separate; border-spacing: 0 var(--row-gap); }
+
+  thead th {
+    position: sticky; top: 0; z-index: 1; background: #fff; border-bottom: 1px solid var(--line);
+    font-size: .85rem; color: #64748b; letter-spacing: .02em; padding: .6rem .75rem;
+  }
+  tbody td {
+    padding: .55rem .75rem; background: #fff; vertical-align: middle;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  tbody td:first-child {
+    border-left: 1px solid var(--line); border-top-left-radius: 10px; border-bottom-left-radius: 10px;
+    box-shadow: 0 2px 8px rgba(2,6,23,.04);
+  }
+  tbody td:last-child {
+    border-right: 1px solid var(--line); border-top-right-radius: 10px; border-bottom-right-radius: 10px;
+  }
+  tbody tr:hover td { background: #fafafa; }
+
+  /* Badges */
+  .badge { border-radius: 999px; padding: .22rem .55rem; font-size: .74rem; font-weight: 700; border: 1px solid transparent; }
+  .bdg-scheduled { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+  .bdg-postponed { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+  .bdg-done      { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+
+  /* Row actions */
+  .row-actions { display: inline-flex; gap: .35rem; }
+  .btn-xxs { padding:.28rem .5rem; line-height:1; font-weight:600; border-radius:8px; border:1px solid transparent; }
+  .btn-ok { background:#16a34a; color:#fff; border-color:#16a34a; }
+  .btn-ok[disabled] { opacity:.55; cursor:not-allowed; }
+  .btn-edit { background:#2563eb; color:#fff; border-color:#2563eb; }
+
+  /* Empty state */
+  .empty { text-align:center; color:#6b7280; padding: 1.1rem .5rem; font-weight:600; }
+</style>
+
+<div class="pmday">
+  <div class="page">
+
+    <!-- Header with optional day navigation -->
+    <div class="header">
+      <div class="nav">
+        {% if prev_day_str %}
+          <a href="{% url 'maintenance:calendar_day' prev_day_str %}" title="Previous day">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </a>
+        {% endif %}
+      </div>
+
+      <h2 class="title">Tasks on {{ target|date:"l, d F Y" }}</h2>
+
+      <div class="actions">
+        <a class="btn-chip" href="{% url 'maintenance:calendar' %}?month={{ month_str }}">
+          <i class="bi bi-calendar-event me-1"></i> Back to Month
+        </a>
+        <a class="btn-chip" href="{% url 'maintenance:dashboard' %}">
+          <i class="bi bi-table me-1"></i> Dashboard
+        </a>
+        {% if next_day_str %}
+          <a class="btn-chip" href="{% url 'maintenance:calendar_day' next_day_str %}" title="Next day">
+            Next
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="pills" role="group" aria-label="Status filter">
+        <button class="pill" data-filter="ALL" aria-pressed="true">All</button>
+        <button class="pill" data-filter="SCHEDULED">Scheduled</button>
+        <button class="pill" data-filter="POSTPONED">Postponed</button>
+        <button class="pill" data-filter="DONE">Done</button>
+      </div>
+      <input id="pmday-search" class="form-control search" type="search" placeholder="Search equipment or location…">
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+      <div class="table-wrap table-responsive">
+        <table id="pmday-table" class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="min-width:140px">Equipment</th>
+              <th>Location</th>
+              <th>Status</th>
+              <th>Eff. Date</th>
+              <th class="text-end" style="width:1%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in items %}
+              <tr data-status="{{ it.status }}" data-text="{{ it.equipment_id }} {{ it.location }}">
+                <td class="fw-semibold"><i class="bi bi-gear-wide-connected me-1"></i>{{ it.equipment_id }}</td>
+                <td class="text-muted">{{ it.location }}</td>
+                <td>
+                  {% if it.status == 'DONE' %}
+                    <span class="badge bdg-done">Done</span>
+                  {% elif it.status == 'POSTPONED' %}
+                    <span class="badge bdg-postponed">Postponed</span>
+                  {% else %}
+                    <span class="badge bdg-scheduled">Scheduled</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {{ it.rescheduled_to|default:it.scheduled_date|date:"d-M-Y" }}
+                </td>
+                <td class="text-end">
+                  <div class="row-actions">
+                    <form method="post" action="{% url 'maintenance:mark_done' it.pk %}" class="d-inline">
+                      {% csrf_token %}
+                      <button class="btn-xxs btn-ok" {% if it.status == 'DONE' %}disabled{% endif %}>
+                        <i class="bi bi-check2"></i> Done
+                      </button>
+                    </form>
+                    <a class="btn-xxs btn-edit" href="{% url 'maintenance:update' it.pk %}">
+                      <i class="bi bi-pencil-square"></i> Update
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr class="pm-empty-row"><td colspan="5" class="empty">No tasks for this day.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  (function() {
+    const table = document.getElementById("pmday-table");
+    const searchBox = document.getElementById("pmday-search");
+
+    function apply(status, q) {
+      const rows = table.querySelectorAll("tbody tr");
+      let shown = 0;
+      rows.forEach(tr => {
+        if (tr.classList.contains("pm-empty-row")) { tr.style.display = "none"; return; }
+        const s = tr.dataset.status || "SCHEDULED";
+        const t = (tr.dataset.text || "").toLowerCase();
+        const okS = (status === "ALL") || (s === status);
+        const okQ = !q || t.includes(q.toLowerCase());
+        const show = okS && okQ;
+        tr.style.display = show ? "" : "none";
+        if (show) shown++;
+      });
+      let empty = table.querySelector(".pm-empty-row");
+      if (shown === 0) {
+        if (!empty) {
+          empty = document.createElement("tr");
+          empty.className = "pm-empty-row";
+          empty.innerHTML = `<td colspan="5" class="empty">No matching tasks.</td>`;
+          table.querySelector("tbody").appendChild(empty);
+        }
+        empty.style.display = "";
+      } else if (empty) {
+        empty.style.display = "none";
+      }
+    }
+
+    // Pills
+    document.querySelectorAll(".pmday .pill").forEach(btn => {
+      btn.addEventListener("click", e => {
+        const group = e.currentTarget.parentElement;
+        group.querySelectorAll(".pill").forEach(b => b.setAttribute("aria-pressed", "false"));
+        e.currentTarget.setAttribute("aria-pressed", "true");
+        apply(e.currentTarget.dataset.filter || "ALL", searchBox?.value || "");
+      });
+    });
+
+    // Search
+    if (searchBox) {
+      searchBox.addEventListener("input", () => {
+        const active = document.querySelector(".pmday .pill[aria-pressed='true']");
+        const status = active?.dataset.filter || "ALL";
+        apply(status, searchBox.value);
+      });
+    }
+
+    // Initial
+    apply("ALL", "");
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,382 @@
+{# qc/templates/qc/qc_list.html #}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}QC Entries – QC Project{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  :root{
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --border: #e6e9ef;
+    --muted: #707781;
+    --text: #1f2937;
+    --primary: #2563eb;
+    --primary-600:#1d4ed8;
+    --success-bg: #dcfce7;
+    --success-text: #166534;
+    --warning-bg: #fef3c7;
+    --warning-text: #92400e;
+    --danger-bg: #fee2e2;
+    --danger-text: #991b1b;
+    --shadow: 0 6px 18px rgba(17,24,39,.06);
+    --radius: 12px;
+  }
+
+  /* --- START: NEW MESSAGES STYLES --- */
+  .messages-container {
+    padding: 0 22px 16px; /* Add padding to align with other content */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .message-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .message-box.success { background-color: var(--success-bg); color: var(--success-text); border-color: #bbf7d0; }
+  .message-box.error { background-color: var(--danger-bg); color: var(--danger-text); border-color: #fecaca; }
+  .message-box.warning { background-color: var(--warning-bg); color: var(--warning-text); border-color: #fde68a; }
+  .message-box.info { background-color: #dbeafe; color: var(--primary-600); border-color: #bfdbfe; }
+  
+  .message-box span { display: flex; align-items: center; gap: 10px; }
+  .message-box .close-btn {
+    background: none; border: none; color: inherit; opacity: 0.7;
+    font-size: 1.2rem; font-weight: bold; cursor: pointer; padding: 0 0 0 16px;
+    transition: opacity .15s;
+  }
+  .message-box .close-btn:hover { opacity: 1; }
+  /* --- END: NEW MESSAGES STYLES --- */
+
+
+  /* ───────────────────────────────────
+      PAGE & CARD LAYOUT (ERP look)
+  ─────────────────────────────────── */
+  body {
+    background-color: var(--bg);
+    font-family: -apple-system, "Segoe UI", "Roboto", Inter, system-ui, sans-serif;
+    color: var(--text);
+  }
+  .content-area {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 28px;
+    overflow: hidden;
+  }
+
+  /* ───────────────────────────────────
+      HEADER
+  ─────────────────────────────────── */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(#fff, #fafbff);
+  }
+  .page-header h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: .2px;
+  }
+  .btn-primary-action {
+    background-color: var(--primary); color: #fff; text-decoration: none;
+    padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: .95rem;
+    display: inline-flex; align-items: center; gap: 8px; transition: .15s ease-in-out;
+    border: 1px solid transparent; white-space: nowrap;
+  }
+  .btn-primary-action:hover { background-color: var(--primary-600); transform: translateY(-1px); }
+
+  /* ───────────────────────────────────
+      FILTER TOOLBAR (grid with compact dates)
+  ─────────────────────────────────── */
+  .filter-toolbar {
+    display: grid;
+    gap: 14px 18px;
+    padding: 16px 22px;
+    background-color: #fbfcff;
+    border-bottom: 1px solid var(--border);
+    align-items: end;
+    grid-template-columns: minmax(260px, 2fr) minmax(180px, 1fr) 140px 140px auto;
+  }
+  @media (max-width: 1200px) {
+    .filter-toolbar {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .filter-toolbar .actions {
+      grid-column: 1 / -1;
+      justify-content: flex-end;
+    }
+  }
+
+  .filter-toolbar .form-group label {
+    display: block; font-weight: 600; font-size: .8rem; margin-bottom: 6px; color: var(--muted);
+  }
+  .filter-toolbar input[type="text"],
+  .filter-toolbar input[type="date"],
+  .filter-toolbar select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    min-height: 36px;
+    font-size: .95rem;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .filter-toolbar input[type="text"]:focus,
+  .filter-toolbar input[type="date"]:focus,
+  .filter-toolbar select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+  }
+
+  .filter-toolbar .is-compact {
+    min-height: 34px;
+    font-size: .9rem;
+    padding: 6px 8px;
+    width: 100%;
+  }
+
+  .filter-toolbar .actions {
+    display: flex; align-items: center; gap: 10px; justify-content: flex-end;
+    white-space: nowrap;
+  }
+  .btn-filter {
+    padding: 8px 14px; border-radius: 8px; font-weight: 600; border: 1px solid; cursor: pointer;
+    transition: .15s ease-in-out; font-size: .95rem;
+  }
+  .btn-apply { background-color: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-apply:hover { background-color: var(--primary-600); transform: translateY(-1px); }
+  .btn-clear { background-color: #fff; color: var(--muted); border-color: var(--border); text-decoration: none; }
+  .btn-clear:hover { border-color: #d7dbe3; color: #374151; background: #f8fafc; }
+
+  /* ───────────────────────────────────
+      META + TABLE (ERP modern)
+  ─────────────────────────────────── */
+  .table-meta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 22px 8px;
+    font-size: .9rem;
+    color: var(--muted);
+  }
+  .data-table-container { padding: 0 22px 22px; }
+  .data-table {
+    width: 100%; border-collapse: collapse; font-size: .95rem; background: #fff;
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .data-table thead th {
+    background: #f6f8fc; color: #4b5563; font-weight: 700; text-transform: uppercase;
+    font-size: .78rem; letter-spacing: .4px; border-bottom: 1px solid var(--border);
+    padding: 12px 10px;
+  }
+  .data-table td { padding: 14px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .data-table tbody tr:nth-child(even){ background: #fbfcff; }
+  .data-table tbody tr:hover { background-color: #eef3ff; }
+
+  .entry-link { font-weight: 700; color: var(--primary); text-decoration: none; }
+  .entry-link:hover { text-decoration: underline; }
+
+  .status-pill, .decision-pill {
+    display: inline-block; padding: 5px 10px; border-radius: 999px; font-size: .82rem; font-weight: 700;
+  }
+  .status-draft { background: #e5e7eb; color: #374151; }
+  .status-pending { background: #fff3cd; color: #92400e; }
+  .status-completed { background: #dcfce7; color: #166534; }
+  .status-cancelled { background: #fee2e2; color: #991b1b; }
+  .decision-approved { background: #dcfce7; color: #166534; }
+  .decision-rejected { background: #fee2e2; color: #991b1b; }
+  .decision-variation { background: #ffedd5; color: #9a3412; }
+
+  .actions-cell { display: flex; gap: 8px; }
+  .action-btn {
+    display: inline-flex; justify-content: center; align-items: center;
+    width: 34px; height: 34px; border-radius: 10px; text-decoration: none;
+    color: #475569; background-color: #f3f4f6; transition: .15s;
+    border: 1px solid #e5e7eb;
+  }
+  .action-btn:hover { background-color: #eaf0ff; color: var(--primary); border-color: #dbe5ff; transform: translateY(-1px); }
+  .action-btn.edit:hover { background-color: #eaf0ff; color: var(--primary); }
+  .action-btn.cancel:hover { background-color: #fee2e2; color: #991b1b; }
+
+  .pagination-container { display: flex; justify-content: center; padding-top: 18px; }
+  .no-entries { text-align: center; padding: 60px 24px; color: var(--muted); }
+  .no-entries i { font-size: 3em; color: #d6dbe6; margin-bottom: 16px; }
+  .no-entries a { color: var(--primary); font-weight: 700; text-decoration: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="content-area">
+  <div class="page-header">
+    <h1>QC Entries</h1>
+    {% if perms.QC.add_qcentry %}
+      <a href="{% url 'qc:qc_create' %}" class="btn-primary-action">
+        <i class="fa-solid fa-plus"></i> New QC Entry
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- START: NEW MESSAGES BLOCK -->
+  {% if messages %}
+  <div class="messages-container">
+    {% for message in messages %}
+    <div class="message-box {{ message.tags }}" role="alert">
+      <span>
+        {% if 'success' in message.tags %}<i class="fa-solid fa-check-circle"></i>
+        {% elif 'error' in message.tags %}<i class="fa-solid fa-times-circle"></i>
+        {% elif 'warning' in message.tags %}<i class="fa-solid fa-exclamation-triangle"></i>
+        {% else %}<i class="fa-solid fa-info-circle"></i>{% endif %}
+        {{ message }}
+      </span>
+      <button type="button" class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <!-- END: NEW MESSAGES BLOCK -->
+
+  <form method="get" class="filter-toolbar">
+    <div class="form-group">
+      <label for="search-query">Search</label>
+      <input type="text" id="search-query" name="q" placeholder="Product, Batch, or Entry No..." value="{{ request.GET.q|default:'' }}">
+    </div>
+
+    <div class="form-group">
+      <label for="status-filter">Status</label>
+      <select id="status-filter" name="status">
+        <option value="" {% if not request.GET.status %}selected{% endif %}>All Statuses</option>
+        <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
+        <option value="pending_qc" {% if request.GET.status == 'pending_qc' %}selected{% endif %}>Pending QC</option>
+        <option value="qc_completed" {% if request.GET.status == 'qc_completed' %}selected{% endif %}>QC Completed</option>
+        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="start-date">Start Date</label>
+      <input type="date" id="start-date" class="is-compact" name="start_date" value="{{ request.GET.start_date|default:'' }}">
+    </div>
+
+    <div class="form-group">
+      <label for="end-date">End Date</label>
+      <input type="date" id="end-date" class="is-compact" name="end_date" value="{{ request.GET.end_date|default:'' }}">
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn-filter btn-apply">Apply</button>
+      <a href="{% url 'qc:qc_list' %}" class="btn-filter btn-clear">Clear</a>
+    </div>
+  </form>
+
+  <div class="table-meta-header">
+    <span class="results-summary">
+      Showing <strong>{{ entries.start_index|default:1 }}–{{ entries.end_index|default:entries|length }}</strong> of <strong>{{ entries.paginator.count|default:entries|length }}</strong> entries
+    </span>
+  </div>
+
+  <div class="data-table-container">
+    {% if entries %}
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Entry No.</th>
+            <th>Product</th>
+            <th>Batch No.</th>
+            <th>Group</th>
+            <th>Entry Date</th>
+            <th>Status</th>
+            <th>QC Decision</th>
+            {% if perms.QC.view_qcentry or perms.QC.change_qcentry or perms.QC.delete_qcentry %}
+              <th style="width:15%;">Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+            <tr>
+              <td><a href="{% url 'qc:qc_detail' entry.id %}" class="entry-link">{{ entry.id }}</a></td>
+              <td>{{ entry.product.name }}</td>
+              <td>{{ entry.batch_no|default:"—" }}</td>
+              <td>{{ entry.group|default:"—" }}</td>
+              <td>{{ entry.entry_date|date:"Y-m-d"|default:"—" }}</td>
+              <td>
+                {% if entry.status == 'draft' %}
+                  <span class="status-pill status-draft">Draft</span>
+                {% elif entry.status == 'pending_qc' %}
+                  <span class="status-pill status-pending">Pending QC</span>
+                {% elif entry.status == 'qc_completed' %}
+                  <span class="status-pill status-completed">Completed</span>
+                {% elif entry.status == 'cancelled' %}
+                  <span class="status-pill status-cancelled">Cancelled</span>
+                {% else %}
+                  <span class="text-muted">Unknown</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if entry.decision_status == 'approved' %}
+                  <span class="decision-pill decision-approved">Approved</span>
+                {% elif entry.decision_status == 'approved_under_deviation' %}
+                  <span class="decision-pill decision-variation">Under Deviation</span>
+                {% elif entry.decision_status == 'rejected' %}
+                  <span class="decision-pill decision-rejected">Rejected</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              {% if perms.QC.view_qcentry or perms.QC.change_qcentry or perms.QC.delete_qcentry %}
+                <td class="actions-cell">
+                  {% if perms.QC.view_qcentry %}
+                    <a href="{% url 'qc:qc_detail' entry.id %}" class="action-btn view" title="View Details">
+                      <i class="fa-solid fa-eye"></i>
+                    </a>
+                  {% endif %}
+                  {% if perms.QC.change_qcentry and entry.status in 'draft,pending_qc' %}
+                    <a href="{% url 'qc:qc_update' entry.id %}" class="action-btn edit" title="Edit Entry">
+                      <i class="fa-solid fa-pencil"></i>
+                    </a>
+                  {% endif %}
+                  {% if perms.QC.delete_qcentry and entry.status != 'cancelled' %}
+                    <a href="{% url 'qc:qc_cancel' entry.id %}" class="action-btn cancel" title="Cancel Entry" onclick="return confirm('Cancel entry #{{ entry.id }}?');">
+                      <i class="fa-solid fa-trash"></i>
+                    </a>
+                  {% endif %}
+                </td>
+              {% endif %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      {% if entries.has_other_pages %}
+        <div class="pagination-container">
+          {# Add your Django pagination controls here #}
+        </div>
+      {% endif %}
+
+    {% else %}
+      <div class="no-entries">
+        <i class="fa-solid fa-folder-open"></i>
+        <p><strong>No QC entries found</strong></p>
+        {% if perms.QC.add_qcentry %}
+          <p><a href="{% url 'qc:qc_create' %}">Create a new entry</a> or <a href="{% url 'qc:qc_list' %}">clear the filters</a>.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

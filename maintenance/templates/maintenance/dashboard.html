@@ -1,0 +1,335 @@
+{% extends "main/index.html" %}
+{% block title %}Preventive Maintenance — Dashboard{% endblock %}
+
+{% block maincontent %}
+<style>
+  /* ===== Preventive Maintenance (scoped) ===== */
+  .pm2 {
+    --ink: #0f172a;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --card: #fff;
+    --brand: #4f46e5;
+
+    /* Layout */
+    --gutter: var(--bs-gutter-x, 1.5rem);
+    --sidebar-gap: 32px;              /* ⬅️ increase this to add more room next to the sidebar */
+
+    /* Pull section to edges, add a slim divider on the left */
+    margin: 0 calc(-1 * var(--gutter));
+    border-left: 1px solid var(--line);
+  }
+  .pm2 .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    /* More space on the LEFT to clear the sidebar; normal gutter on the right */
+    padding-left: calc(var(--gutter) + var(--sidebar-gap));
+    padding-right: var(--gutter);
+  }
+
+  /* Header: grid ensures true centered title */
+  .pm2 .header { margin: .5rem 0 1rem; padding: 0 4px; }
+  .pm2 .hd-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;  /* left spacer | title | right actions */
+    align-items: center;
+    gap: .5rem;
+    min-height: 44px;
+  }
+  .pm2 .hd-title {
+    margin: 0;
+    font-weight: 800;
+    color: var(--ink);
+    font-size: 1.35rem;
+    text-align: center;
+    justify-self: center;
+    line-height: 1.2;
+  }
+  .pm2 .actions { justify-self: end; display: flex; gap: .5rem; flex-wrap: wrap; }
+  .pm2 .btn-chip { border-radius: 999px; padding: .35rem .7rem; font-weight: 600; border: 1px solid var(--line); background: #fff; }
+  .pm2 .btn-ghost { border: 1px solid var(--line); background: #fff; }
+  .pm2 .btn-ghost:hover { background: #f8fafc; }
+
+  .pm2 .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 6px 22px rgba(2, 6, 23, .05); overflow: hidden; }
+  .pm2 .card-h { padding: .6rem .85rem; background: #f9fafb; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+  .pm2 .title { display: flex; gap: .5rem; align-items: baseline; }
+  .pm2 .title b { font-size: .82rem; color: #334155; letter-spacing: .02em; }
+  .pm2 .date { color: var(--muted); font-size: .85rem; }
+
+  .pm2 .tools { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+  .pm2 .pill { border-radius: 999px; padding: .26rem .58rem; border: 1px solid var(--line); font-weight: 600; font-size: .8rem; background: #fff; }
+  .pm2 .pill[aria-pressed="true"] { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .pm2 .search { min-width: 220px; height: 34px; padding: .2rem .6rem; }
+  @media (max-width: 992px){ .pm2 .search { min-width: 160px; } }
+
+  /* Tables */
+  .pm2 .table-wrap { position: relative; }
+  .pm2 table {
+    width: 100%;
+    border-collapse: separate;
+    --row-gap: .75rem;                 /* tweak row gap here */
+    border-spacing: 0 var(--row-gap);  /* vertical gap between rows */
+    background: transparent;
+  }
+  .pm2 thead th {
+    position: sticky; top: 0; z-index: 1; background: #fff; border-bottom: 1px solid var(--line);
+    font-size: .8rem; color: #64748b; letter-spacing: .02em; padding: .5rem .7rem;
+  }
+  .pm2 tbody td { padding: .42rem .7rem; vertical-align: middle; }
+  .pm2 tbody tr:hover td { background: #fafafa; }
+  .pm2 tbody tr:not(:last-child) td { border-bottom: none !important; }
+
+  /* Card-like rows with gap */
+  .pm2 tbody td { background: #fff; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .pm2 tbody td:first-child { border-left: 1px solid var(--line); border-top-left-radius: 10px; border-bottom-left-radius: 10px; box-shadow: 0 2px 8px rgba(2,6,23,.04); }
+  .pm2 tbody td:last-child  { border-right: 1px solid var(--line); border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+
+  /* Badges */
+  .pm2 .badge { border-radius: 999px; padding: .22rem .55rem; font-size: .74rem; font-weight: 700; border: 1px solid transparent; }
+  .pm2 .bdg-scheduled { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+  .pm2 .bdg-postponed { background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+  .pm2 .bdg-done { background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+
+  /* Row actions */
+  .pm2 .row-actions { display:flex; gap:.35rem; justify-content:flex-end; }
+  .pm2 .btn-xxs { padding:.25rem .45rem; line-height:1; font-weight:600; border-radius:8px; }
+  .pm2 .btn-xxs i { font-size:.9rem; }
+  .pm2 .btn-ok   { background:#16a34a; color:#fff; border:1px solid #16a34a; }
+  .pm2 .btn-ok[disabled] { opacity:.55; cursor:not-allowed; }
+  .pm2 .btn-edit { background:#2563eb; color:#fff; border:1px solid #2563eb; }
+
+  .pm2 .empty { text-align:center; color:var(--muted); padding:1.1rem .5rem; font-weight:600; }
+</style>
+
+<div class="pm2">
+  <div class="page">
+    {% if messages %}
+      <div class="mb-2">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} py-2 mb-2" role="alert">{{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Header (centered title, buttons at right) -->
+    <div class="header">
+      <div class="hd-grid">
+        <div></div> <!-- left spacer -->
+        <h2 class="hd-title">Preventive Maintenance Schedule</h2>
+        <div class="actions text-nowrap">
+          <a class="btn btn-ghost btn-chip" href="{% url 'maintenance:upload_excel' %}">
+            <i class="bi bi-upload me-1"></i> Upload Schedule
+          </a>
+          <a class="btn btn-ghost btn-chip" href="{% url 'maintenance:dashboard' %}">
+            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <!-- TODAY -->
+      <div class="col-12 col-lg-6">
+        <div class="card">
+          <div class="card-h">
+            <div class="title">
+              <b>Today</b>
+              <span class="date">{{ today|date:"l, F d, Y" }}</span>
+            </div>
+            <div class="tools">
+              <div class="btn-group" role="group" aria-label="Status filter today">
+                <button class="pill" data-table="#pm-today" data-filter="ALL" aria-pressed="true">All</button>
+                <button class="pill" data-table="#pm-today" data-filter="SCHEDULED">Scheduled</button>
+                <button class="pill" data-table="#pm-today" data-filter="POSTPONED">Postponed</button>
+                <button class="pill" data-table="#pm-today" data-filter="DONE">Done</button>
+              </div>
+              <input id="pm-search-today" class="form-control search" type="search" placeholder="Search…">
+            </div>
+          </div>
+
+          <div class="table-wrap table-responsive">
+            <table id="pm-today" class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th style="min-width:140px">Equipment</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Eff. Date</th>
+                  <th class="text-end" style="width:1%;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in today_qs %}
+                <tr data-status="{{ r.status }}" data-text="{{ r.equipment_id }} {{ r.location }}">
+                  <td class="fw-semibold"><i class="bi bi-gear-wide-connected me-1"></i>{{ r.equipment_id }}</td>
+                  <td class="text-muted">{{ r.location }}</td>
+                  <td>
+                    {% if r.status == 'DONE' %}
+                      <span class="badge bdg-done">Done</span>
+                    {% elif r.status == 'POSTPONED' %}
+                      <span class="badge bdg-postponed">Postponed</span>
+                    {% else %}
+                      <span class="badge bdg-scheduled">Scheduled</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ r.rescheduled_to|default:r.scheduled_date|date:"d-M-Y" }}</td>
+                  <td>
+                    <div class="row-actions">
+                      <form method="post" action="{% url 'maintenance:mark_done' r.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-xxs btn-ok" title="Mark Done" {% if r.status == 'DONE' %}disabled{% endif %}>
+                          <i class="bi bi-check2"></i><span class="d-none d-md-inline ms-1">Done</span>
+                        </button>
+                      </form>
+                      <a class="btn btn-xxs btn-edit" href="{% url 'maintenance:update' r.pk %}" title="Update">
+                        <i class="bi bi-pencil-square"></i><span class="d-none d-md-inline ms-1">Update</span>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr class="pm-empty-row"><td colspan="5" class="empty">No maintenance due today.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOMORROW -->
+      <div class="col-12 col-lg-6">
+        <div class="card">
+          <div class="card-h">
+            <div class="title">
+              <b>Tomorrow</b>
+              <span class="date">{{ tomorrow|date:"l, F d, Y" }}</span>
+            </div>
+            <div class="tools">
+              <div class="btn-group" role="group" aria-label="Status filter tomorrow">
+                <button class="pill" data-table="#pm-tomorrow" data-filter="ALL" aria-pressed="true">All</button>
+                <button class="pill" data-table="#pm-tomorrow" data-filter="SCHEDULED">Scheduled</button>
+                <button class="pill" data-table="#pm-tomorrow" data-filter="POSTPONED">Postponed</button>
+                <button class="pill" data-table="#pm-tomorrow" data-filter="DONE">Done</button>
+              </div>
+              <input id="pm-search-tomorrow" class="form-control search" type="search" placeholder="Search…">
+            </div>
+          </div>
+
+          <div class="table-wrap table-responsive">
+            <table id="pm-tomorrow" class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th style="min-width:140px">Equipment</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Eff. Date</th>
+                  <th class="text-end" style="width:1%;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in tomorrow_qs %}
+                <tr data-status="{{ r.status }}" data-text="{{ r.equipment_id }} {{ r.location }}">
+                  <td class="fw-semibold"><i class="bi bi-gear-wide-connected me-1"></i>{{ r.equipment_id }}</td>
+                  <td class="text-muted">{{ r.location }}</td>
+                  <td>
+                    {% if r.status == 'DONE' %}
+                      <span class="badge bdg-done">Done</span>
+                    {% elif r.status == 'POSTPONED' %}
+                      <span class="badge bdg-postponed">Postponed</span>
+                    {% else %}
+                      <span class="badge bdg-scheduled">Scheduled</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ r.rescheduled_to|default:r.scheduled_date|date:"d-M-Y" }}</td>
+                  <td>
+                    <div class="row-actions">
+                      <form method="post" action="{% url 'maintenance:mark_done' r.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button class="btn btn-xxs btn-ok" title="Mark Done" {% if r.status == 'DONE' %}disabled{% endif %}>
+                          <i class="bi bi-check2"></i><span class="d-none d-md-inline ms-1">Done</span>
+                        </button>
+                      </form>
+                      <a class="btn btn-xxs btn-edit" href="{% url 'maintenance:update' r.pk %}" title="Update">
+                        <i class="bi bi-pencil-square"></i><span class="d-none d-md-inline ms-1">Update</span>
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr class="pm-empty-row"><td colspan="5" class="empty">No maintenance due tomorrow.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    function applyFilters(sel, status, q) {
+      const table = document.querySelector(sel);
+      if (!table) return;
+
+      const rows = table.querySelectorAll("tbody tr");
+      let visible = 0;
+
+      rows.forEach(tr => {
+        if (tr.classList.contains("pm-empty-row")) { tr.style.display = "none"; return; }
+        const s = tr.dataset.status || "SCHEDULED";
+        const t = (tr.dataset.text || "").toLowerCase();
+        const okS = (status === "ALL") || (s === status);
+        const okQ = !q || t.includes(q.toLowerCase());
+        const show = okS && okQ;
+        tr.style.display = show ? "" : "none";
+        if (show) visible += 1;
+      });
+
+      let empty = table.querySelector(".pm-empty-row");
+      if (visible === 0) {
+        if (!empty) {
+          empty = document.createElement("tr");
+          empty.className = "pm-empty-row";
+          empty.innerHTML = `<td colspan="5" class="empty">No Matching Tasks</td>`;
+          table.querySelector("tbody").appendChild(empty);
+        }
+        empty.style.display = "";
+      } else if (empty) {
+        empty.style.display = "none";
+      }
+    }
+
+    // Status pills
+    document.querySelectorAll(".pm2 .pill").forEach(btn => {
+      btn.addEventListener("click", e => {
+        const group = e.currentTarget.parentElement;
+        group.querySelectorAll(".pill").forEach(b => b.setAttribute("aria-pressed", "false"));
+        e.currentTarget.setAttribute("aria-pressed", "true");
+
+        const tableSel = e.currentTarget.dataset.table;
+        const searchSel = tableSel === "#pm-today" ? "#pm-search-today" : "#pm-search-tomorrow";
+        const q = document.querySelector(searchSel)?.value || "";
+        applyFilters(tableSel, e.currentTarget.dataset.filter || "ALL", q);
+      });
+    });
+
+    // Search boxes
+    [["#pm-today", "#pm-search-today"], ["#pm-tomorrow", "#pm-search-tomorrow"]].forEach(([t, i]) => {
+      const input = document.querySelector(i);
+      if (!input) return;
+      input.addEventListener("input", () => {
+        const active = document.querySelector(`[data-table="${t}"][aria-pressed="true"]`);
+        const status = active?.dataset.filter || "ALL";
+        applyFilters(t, status, input.value);
+      });
+    });
+
+    // Initial render
+    applyFilters("#pm-today", "ALL", "");
+    applyFilters("#pm-tomorrow", "ALL", "");
+  })();
+</script>
+{% endblock %}

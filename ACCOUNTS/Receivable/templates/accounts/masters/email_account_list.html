@@ -1,0 +1,90 @@
+{% extends "main/index.html" %}
+
+{% block title %}Outgoing Email Accounts{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">
+        Outgoing Email Accounts
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Configure sender accounts for reminders and payment follow-ups.
+      </p>
+    </div>
+
+    <a href="{% url 'accounts:email_account_create' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-md
+              bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+      <i class="fa-solid fa-plus"></i>
+      Add Email Account
+    </a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="rounded-md px-4 py-3 text-sm
+           {% if message.tags == 'success' %}
+             bg-emerald-50 text-emerald-700 border border-emerald-200
+           {% else %}
+             bg-slate-50 text-slate-700 border border-slate-200
+           {% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-lg overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600">
+        <tr>
+          <th class="px-4 py-3 text-left font-medium">Company Group</th>
+          <th class="px-4 py-3 text-left font-medium">Email</th>
+          <th class="px-4 py-3 text-left font-medium">SMTP Host</th>
+          <th class="px-4 py-3 text-center font-medium">Active</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-200">
+        {% for a in accounts %}
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2 font-medium text-slate-800">
+            {{ a.company_group }}
+          </td>
+          <td class="px-4 py-2">
+            {{ a.email_address }}
+          </td>
+          <td class="px-4 py-2">
+            {{ a.smtp_host }}:{{ a.smtp_port }}
+          </td>
+          <td class="px-4 py-2 text-center">
+            {% if a.is_active %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
+                           bg-emerald-100 text-emerald-700">
+                Active
+              </span>
+            {% else %}
+              <span class="inline-flex items-center px-2 py-0.5 rounded text-xs
+                           bg-slate-200 text-slate-600">
+                Inactive
+              </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="4" class="px-4 py-6 text-center text-slate-500">
+            No outgoing email accounts configured.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

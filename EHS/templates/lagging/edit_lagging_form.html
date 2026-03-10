@@ -1,0 +1,455 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<!-- Messages (Optional) -->
+{% if messages %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+  {% for message in messages %}
+  <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+      {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500
+      {% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500
+      {% elif message.tags == 'error' %}bg-red-500{% endif %}">
+    <span class="flex-1">{{ message }}</span>
+    <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+      onclick="this.parentElement.remove()">✖</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Non-field errors -->
+{% if form.non_field_errors %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+  {% for error in form.non_field_errors %}
+  <div class="relative p-4 border-l-4 rounded-md bg-red-50 border-red-500 mb-2">
+    <span class="text-red-700">{{ error }}</span>
+    <button type="button" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 p-1"
+      onclick="this.parentElement.remove()">X</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<small class="text-warning">
+  {% for error in form.errors %}
+      {{ error }}
+  {% endfor %}
+</small>
+
+<div class="flex justify-center items-center min-h-screen bg-gray-100">
+  <div class="w-full max-w-5xl bg-white shadow-md rounded-lg p-6">
+    <!-- Header Section -->
+    <div class="flex items-center justify-between mb-4">
+      <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+        Back to Main Page
+      </a>
+      <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Edit Lagging Indicator</h2>
+      <a href="{% url 'view_lagging' %}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+        View Records
+      </a>
+    </div>
+    <hr class="mb-4">
+
+    <form method="post" class="space-y-6" novalidate>
+      {% csrf_token %}
+
+      <!-- Row 1: record_date, incident_date -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Record Date</label>
+          {{ form.record_date }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Incident Date</label>
+          {{ form.incident_date }}
+        </div>
+      </div>
+
+      <!-- Row 2: incident_time, employee_type -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Incident Time</label>
+          {{ form.incident_time }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Employee Type</label>
+          {{ form.employee_type }}
+        </div>
+         <!-- Contractor Name: hidden unless Contract -->
+        <div id="contractor-name-field" class="hidden">
+          <label class="block text-sm font-medium text-gray-700">Contractor Name</label>
+          {{ form.contractor_name }}
+          </div>
+        </div>
+
+      <!-- Row 3: department, physical_location -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Department</label>
+          {{ form.department }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Physical Location</label>
+          {{ form.physical_location }}
+        </div>
+      </div>
+
+      <!-- Row 4: injury_to_person, hse_lag_indicator -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">HSE Lag Indicator</label>
+          {{ form.hse_lag_indicator }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Type of Injury</label>
+          {{ form.type_of_injury }}
+        </div>
+      </div>
+
+      <!-- Row 5: type_of_injury, injured_body_part -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Injured Body Part</label>
+          {{ form.injured_body_part }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Name of Injured Person</label>
+          {{ form.name_of_injured_person }}
+        </div>
+      </div>
+
+      <!-- Row 6: name_of_injured_person, severity -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Severity</label>
+          {{ form.severity }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Likelihood</label>
+          {{ form.likelihood }}
+        </div>
+      </div>
+
+      <!-- Row 7: likelihood, risk_factor (readonly) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Risk Factor</label>
+          {{ form.risk_factor }}
+        </div>
+        <div class="relative inline-block text-left w-full">
+          <label class="block text-sm font-medium text-gray-700">Select PSM Failure(s)</label>
+          <button type="button" class="inline-flex justify-between items-center w-full px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" onclick="togglePSMMenu()">
+            <span>Select PSM Failure(s)</span>
+          </button>
+          <!-- Dropdown panel -->
+          <div id="psmMenuDropdown" class="hidden absolute left-0 right-0 z-10 mt-2 w-full md:w-80 origin-top-right bg-white border border-gray-200 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+            <div class="py-2 px-4 max-h-56 overflow-auto">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {% for value, label in form.fields.psm_failure.choices %}
+                <label class="flex items-center space-x-2">
+                  <input type="checkbox" name="psm_failure" value="{{ value }}" class="form-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded" 
+                    {% if form.psm_failure.value and value in form.psm_failure.value %} checked {% endif %}>
+                  <span class="text-gray-700">{{ label }}</span>
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 8: incident (textarea), immediate_action (textarea) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Incident</label>
+          {{ form.incident }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Immediate Action</label>
+          {{ form.immediate_action }}
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Investigation Method</label>
+          {{ form.investigation_method }}
+        </div>
+      </div>
+      <!-- Fishbone Fields -->
+      <div id="fishbone_fields" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Fact About Men</label>
+          {{ form.fact_about_men }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Fact About Machine</label>
+          {{ form.fact_about_machine }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Fact About Mother Nature</label>
+          {{ form.fact_about_mother_nature }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Fact About Measurement</label>
+          {{ form.fact_about_measurement }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Fact About Method</label>
+          {{ form.fact_about_method }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Fact About Material</label>
+          {{ form.fact_about_material }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Fact About History</label>
+          {{ form.fact_about_history }}
+        </div>
+      </div>
+
+      <!-- Why-Why Analysis Fields -->
+      <div id="why_why_fields" class="grid grid-cols-1 md:grid-cols-2 gap-4 hidden">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Why One</label>
+          {{ form.why_one }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Why Two</label>
+          {{ form.why_two }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Why Three</label>
+          {{ form.why_three }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Why Four</label>
+          {{ form.why_four }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Why Five</label>
+          {{ form.why_five }}
+        </div>
+      </div>
+
+      <!-- Row 12: root_cause, date_resume_duty -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Date Resume Duty</label>
+          {{ form.date_resume_duty }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">ManDays Lost</label>
+          {{ form.mandays_lost }}
+        </div>
+      </div>
+
+      <!-- Row 13: compliance status and date (readonly) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Compliance Status</label>
+          {{ form.complience_status }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Compliance Status Date</label>
+          {{ form.complience_status_date }}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Direct Root Cause</label>
+          {{ form.direct_root_cause }}
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Indirect Root Cause</label>
+          {{ form.indirect_root_cause }}
+        </div>
+      </div>
+
+      <!-- CAPA Entries Section -->
+      <hr class="my-4">
+      <h3 class="text-lg font-bold mb-2">CAPA Entries</h3>
+      {{ formset.management_form }}
+
+      <div id="capa-container">
+        {% for subform in formset %}
+        <div class="p-4 bg-gray-50 rounded mb-4 capa-entry">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">CAPA Label</label>
+              {{ subform.capa }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Function</label>
+              {{ subform.department }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">FRP Name</label>
+              {{ subform.frp }}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Compliance Status</label>
+              {{ subform.compliance_status }}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Target Date</label>
+              {{ subform.target_date }}
+            </div>
+            <!-- Hidden id field for the formset -->
+            {{ subform.id }}  <!-- This will ensure that the formset ID field is included when the form is submitted -->
+            <div class="flex justify-end items-end">
+              <button type="button" class="bg-red-500 text-white px-4 py-2 rounded remove-capa">Cancel</button>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Add CAPA Button -->
+      <div class="mt-4">
+        <button type="button" id="add-capa" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          Add CAPA
+        </button>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
+        Update
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Include external JavaScript file -->
+<script src="{% static 'lagging/js/lagging.js' %}"></script>
+<script>
+  function toggleContractorName() {
+    const emp = document.getElementById('id_employee_type').value;
+    const div = document.getElementById('contractor-name-field');
+    const input = document.getElementById('id_contractor_name');
+    if (emp === 'Contract') {
+      div.classList.remove('hidden');
+    } else {
+      div.classList.add('hidden');
+      input.value = '';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const sel = document.getElementById('id_employee_type');
+    sel.addEventListener('change', toggleContractorName);
+    toggleContractorName();
+  });
+
+
+
+
+
+  function toggleInvestigationFields() {
+    const method = document.getElementById("id_investigation_method").value;
+    const fishbone = document.getElementById("fishbone_fields");
+    const whywhy   = document.getElementById("why_why_fields");
+    if (method === "Fishbone") {
+      fishbone.classList.remove("hidden");
+      whywhy.classList.add("hidden");
+    } else if (method === "Why-Why-Analysis") {
+      fishbone.classList.add("hidden");
+      whywhy.classList.remove("hidden");
+    } else {
+      fishbone.classList.add("hidden");
+      whywhy.classList.add("hidden");
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const sel = document.getElementById("id_investigation_method");
+    sel.addEventListener("change", toggleInvestigationFields);
+    toggleInvestigationFields();
+  });
+
+
+
+  document.addEventListener("DOMContentLoaded", function () {
+    let capaContainer = document.getElementById("capa-container");
+    let addCapaBtn = document.getElementById("add-capa");
+    let totalForms = document.getElementById("id_{{ formset.prefix }}-TOTAL_FORMS");
+
+    addCapaBtn.addEventListener("click", function () {
+        let formNum = Number(totalForms.value);
+        let newFormHtml = `
+        <div class="p-4 bg-gray-50 rounded mb-4 capa-entry">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">CAPA Label</label>
+              <input type="text" name="{{ formset.prefix }}-${formNum}-capa" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Function</label>
+              <select name="{{ formset.prefix }}-${formNum}-department" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="">Select Department</option>
+                <option value="ACCOUNTS">ACCOUNTS</option>
+                <option value="BOILER UTILITY">BOILER UTILITY</option>
+                <option value="ELECTRICAL">ELECTRICAL</option>
+                <option value="EHS">EHS</option>
+                <option value="HR ADMIN">HR ADMIN</option>
+                <option value="INSTRUMENT">INSTRUMENT</option>
+                <option value="IT">IT</option>
+                <option value="MAINTENANCE">MAINTENANCE</option>
+                <option value="OPERATION">OPERATION</option>
+                <option value="PRODUCTION">PRODUCTION</option>
+                <option value="QA/QC">QA/QC</option>
+                <option value="SECURITY">SECURITY</option>
+                <option value="PROJECT">PROJECT</option>
+                <option value="RM & ENGINEERING STORE">RM & ENGINEERING STORE</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">FRP Name</label>
+              <input type="text" name="{{ formset.prefix }}-${formNum}-frp" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Compliance Status</label>
+              <select name="{{ formset.prefix }}-${formNum}-compliance_status" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                <option value="">Select Compliance Status</option>
+                <option value="Open">Open</option>
+                <option value="Closed">Closed</option>
+                <option value="Overdue">Overdue</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Target Date</label>
+              <input type="date" name="{{ formset.prefix }}-${formNum}-target_date" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <div class="flex items-end justify-end">
+              <button type="button" class="bg-red-500 text-white px-4 py-2 rounded remove-capa mt-4">Cancel</button>
+            </div>
+          </div>
+        </div>
+        `;
+        let div = document.createElement("div");
+        div.classList.add("p-4", "bg-gray-50", "rounded", "mb-4", "capa-entry");
+        div.innerHTML = newFormHtml;
+        capaContainer.appendChild(div);
+        totalForms.value = formNum + 1;
+        addRemoveEvent(div);
+    });
+
+    function addRemoveEvent(div) {
+        let removeBtn = div.querySelector(".remove-capa");
+        if (removeBtn) {
+            removeBtn.addEventListener("click", function () {
+                div.remove();
+                totalForms.value = Number(totalForms.value) - 1;
+            });
+        }
+    }
+    document.querySelectorAll(".capa-entry").forEach(addRemoveEvent);
+});
+</script>
+{% endblock %}

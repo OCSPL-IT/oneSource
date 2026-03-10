@@ -1,0 +1,166 @@
+{% extends "main/index.html" %}
+{% load inr_format %}
+
+{% block title %}Weekly Payment Targets{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-xl font-semibold text-slate-900">Weekly Payment Targets</h1>
+      <p class="text-sm text-slate-500">Create and review expected collections for the week.</p>
+    </div>
+    <a href="{% url 'accounts:payment_target_create' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+      + New Target Week
+    </a>
+  </div>
+
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 text-slate-600">
+        <tr>
+          <th class="text-left font-medium px-4 py-3">Week</th>
+          <th class="text-left font-medium px-4 py-3">Company Group</th>
+          <th class="text-right font-medium px-4 py-3">Targeted</th>
+          <th class="text-right font-medium px-4 py-3">Received</th>
+          <th class="text-right font-medium px-4 py-3">Balance</th>
+          <th class="text-left font-medium px-4 py-3">Created By</th>
+          <th class="text-left font-medium px-4 py-3">Created</th>
+          <th class="text-right font-medium px-4 py-3">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-100">
+        {% for t in targets %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-4 py-3 text-slate-900 font-medium">
+              {{ t.week_start|date:"d-m-Y" }} to {{ t.week_end|date:"d-m-Y" }}
+            </td>
+
+            <td class="px-4 py-3 text-slate-700">
+              {{ t.company_group|default:"ALL" }}
+            </td>
+
+            <td class="px-4 py-3 text-right font-mono text-indigo-700">
+              {{ t.expected_total|default:0|inr }}
+            </td>
+
+            <td class="px-4 py-3 text-right font-mono text-emerald-700">
+              {{ t.received_total|default:0|inr }}
+            </td>
+
+            <td class="px-4 py-3 text-right font-mono text-rose-700">
+              {{ t.balance_total|default:0|inr }}
+            </td>
+
+            <td class="px-4 py-3 text-slate-700">
+              {{ t.created_by.username|default:"-" }}
+            </td>
+
+            <td class="px-4 py-3 text-slate-700">
+              {{ t.created_at|date:"d-m-Y H:i" }}
+            </td>
+
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <a href="{% url 'accounts:payment_target_detail' t.pk %}"
+                 class="text-indigo-600 font-medium hover:underline">
+                View
+              </a>
+
+              <a href="{% url 'accounts:payment_target_select_bills' t.pk %}"
+                 class="ml-4 text-slate-700 font-medium hover:underline">
+                Select Bills
+              </a>
+
+              <a href="{% url 'accounts:payment_target_delete' t.pk %}"
+                 class="ml-4 text-rose-600 font-medium hover:underline">
+                Delete
+              </a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="px-4 py-10 text-center text-slate-500">
+              No weekly targets created yet.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- GLOBAL PAGE LOADER (CONSISTENT UI)                             -->
+<!-- ============================================================== -->
+<div id="pageLoader"
+     class="fixed inset-0 z-[9999] hidden items-center justify-center bg-white/80 backdrop-blur-md transition-opacity duration-300">
+  <div class="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white px-10 py-8 shadow-2xl">
+    <div class="relative flex items-center justify-center">
+      <div class="h-20 w-20 rounded-full border-[6px] border-slate-100 border-t-indigo-600 animate-spin"></div>
+      <div class="absolute flex flex-col items-center justify-center">
+        <span id="pageLoadPct" class="text-lg font-black text-indigo-600 tabular-nums">0%</span>
+      </div>
+    </div>
+    <div class="text-center">
+      <div class="text-[11px] font-black uppercase tracking-widest text-slate-800">Loading Targets</div>
+      <div id="loaderStatusText" class="text-[10px] font-bold text-slate-400 mt-1">Preparing target summaries...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Loader state helper */
+  #pageLoader.is-active { display: flex !important; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+</style>
+
+<script>
+(function() {
+  /**
+   * PROCESSING LOADER LOGIC
+   */
+  const pageLoader = document.getElementById("pageLoader");
+  const pctDisplay = document.getElementById("pageLoadPct");
+  let progressInterval;
+
+  function showProcessingLoader() {
+    if (!pageLoader) return;
+    pageLoader.classList.add("is-active");
+    
+    let progress = 0;
+    if (progressInterval) clearInterval(progressInterval);
+
+    // Simulated progress: starts fast, slows down near 95%
+    progressInterval = setInterval(() => {
+      if (progress < 95) {
+        let increment = progress < 40 ? (Math.random() * 12) : (Math.random() * 2);
+        progress += increment;
+        if (progress > 95) progress = 95;
+        if (pctDisplay) pctDisplay.innerText = Math.floor(progress) + "%";
+      }
+    }, 350);
+  }
+
+  // A) Detect Link Clicks (Sidebar, Nav, Table Actions)
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href") || "";
+    
+    // Trigger loader for internal navigation links
+    if (href && !href.startsWith("#") && !href.startsWith("javascript:") && !a.target) {
+        showProcessingLoader();
+    }
+  });
+
+  // B) Detect Browser Refresh
+  window.addEventListener('beforeunload', () => {
+    showProcessingLoader();
+  });
+
+})();
+</script>
+{% endblock %}

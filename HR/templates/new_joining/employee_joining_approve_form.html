@@ -1,0 +1,247 @@
+{# templates/new_joining/employee_joining_approve_form.html #}
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-gray-50 py-6">
+  <div class="max-w-5xl mx-auto bg-white shadow rounded-xl p-6 sm:p-8">
+
+    {# Messages #}
+    {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for message in messages %}
+          <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                      {% if message.tags == 'success' %}bg-green-600{% else %}bg-red-600{% endif %}">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()">✖</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# Header #}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-semibold text-gray-800">
+          Approve Employee Joining
+        </h1>
+        <p class="text-xs text-gray-500 mt-1">
+          Review the joining details and approve / reject this request for
+          <span class="font-semibold text-gray-700">
+            {{ obj.employee_name }} ({{ obj.employee_id }})
+          </span>
+        </p>
+      </div>
+
+      <a href="{% url 'employee_joining_list' %}"
+         class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                border border-gray-300 text-gray-700 bg-white hover:bg-gray-50">
+        ← Back to List
+      </a>
+    </div>
+
+    {# BASIC DETAILS – same layout as detail page #}
+    <div class="border border-gray-200 rounded-lg mb-6">
+      <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+        <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+          Basic Details
+        </h2>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div>
+          <p class="text-gray-500">Employee Name</p>
+          <p class="font-medium text-gray-900">{{ obj.employee_name }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Employee ID</p>
+          <p class="font-medium text-gray-900">{{ obj.employee_id }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Gender</p>
+          <p class="font-medium text-gray-900">{{ obj.gender|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">Date of Birth</p>
+          <p class="font-medium text-gray-900">
+            {{ obj.date_of_birth|date:"d-M-Y"|default:"-" }}
+          </p>
+        </div>
+        <div>
+          <p class="text-gray-500">Company</p>
+          <p class="font-medium text-gray-900">{{ obj.company }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Location</p>
+          <p class="font-medium text-gray-900">{{ obj.location }}</p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">Department</p>
+          <p class="font-medium text-gray-900">{{ obj.department|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Designation</p>
+          <p class="font-medium text-gray-900">{{ obj.designation|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Date of Joining</p>
+          <p class="font-medium text-gray-900">
+            {{ obj.date_of_joining|date:"d-M-Y" }}
+          </p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">Date of Confirmation</p>
+          <p class="font-medium text-gray-900">
+            {{ obj.date_of_confirmation|date:"d-M-Y"|default:"-" }}
+          </p>
+        </div>
+        <div>
+          <p class="text-gray-500">Requested Email ID</p>
+          <p class="font-medium text-gray-900">{{ obj.email_id|default:"-" }}</p>
+        </div>
+      </div>
+    </div>
+
+    {# ACCESS & IT / INFRA – same grid style as detail page #}
+    <div class="border border-gray-200 rounded-lg mb-6">
+      <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+        <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+          Access & IT / infra requirements
+        </h2>
+      </div>
+      <div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+        <div>
+          <p class="text-gray-500">Biometric Enrollment</p>
+          <p class="font-medium text-gray-900">{{ obj.Biomatric_enrollment|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Attendance Card</p>
+          <p class="font-medium text-gray-900">{{ obj.attendance_card|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Smart Office Entry</p>
+          <p class="font-medium text-gray-900">{{ obj.smart_office_entry|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Mobile Phone</p>
+          <p class="font-medium text-gray-900">{{ obj.mobile_phone|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">SIM Card</p>
+          <p class="font-medium text-gray-900">{{ obj.sim_card|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Telephone Extension</p>
+          <p class="font-medium text-gray-900">{{ obj.telephone_extension|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Device</p>
+          <p class="font-medium text-gray-900">{{ obj.computer|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-gray-500">ERP Login</p>
+          <p class="font-medium text-gray-900">{{ obj.erp_login|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Office 365 ID</p>
+          <p class="font-medium text-gray-900">{{ obj.office_365_id|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">Email ID</p>
+          <p class="font-medium text-gray-900">{{ obj.email_id|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-gray-500">SharePoint Site</p>
+          <p class="font-medium text-gray-900">{{ obj.sharepoint_site|default:"-" }}</p>
+        </div>
+      </div>
+    </div>
+
+    {# ADDITIONAL INFORMATION – same style as detail page #}
+    <div class="border border-gray-200 rounded-lg mb-6">
+      <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+        <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+          Additional Information
+        </h2>
+      </div>
+      <div class="p-4 space-y-4 text-sm">
+        <div>
+          <p class="text-gray-500 mb-1">Specific Folder Rights</p>
+          <div class="px-3 py-2 rounded-md bg-gray-50 border border-gray-200 min-h-[40px]">
+            <p class="text-gray-800 whitespace-pre-line">
+              {{ obj.specific_folder_rights|default:"-" }}
+            </p>
+          </div>
+        </div>
+        <div>
+          <p class="text-gray-500 mb-1">Remark</p>
+          <div class="px-3 py-2 rounded-md bg-gray-50 border border-gray-200 min-h-[40px]">
+            <p class="text-gray-800 whitespace-pre-line">
+              {{ obj.remark|default:"-" }}
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100">
+          <div>
+            <span class="font-medium text-gray-600">Created at:</span>
+            <span class="ml-1">{{ obj.created_at|date:"d-M-Y H:i" }}</span>
+          </div>
+          <div>
+            <span class="font-medium text-gray-600">Last updated:</span>
+            <span class="ml-1">{{ obj.updated_at|date:"d-M-Y H:i" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# APPROVAL FORM – logic unchanged #}
+    {% if form.non_field_errors %}
+      <div class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="border border-gray-200 rounded-lg mb-6">
+        <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+          <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+            Approval Remark
+          </h2>
+        </div>
+        <div class="p-4 space-y-3">
+          <label class="block text-sm font-medium text-gray-700 mb-1">
+            Remark (required for reject, optional for approve)
+          </label>
+          {{ form.approval_remark }}
+          {% if form.approval_remark.errors %}
+            <p class="mt-1 text-xs text-red-600">
+              {{ form.approval_remark.errors|striptags }}
+            </p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button name="action" value="reject"
+                class="inline-flex items-center justify-center px-4 py-2.5 rounded-md text-sm font-semibold
+                       border border-red-500 text-red-600 bg-red-50 hover:bg-red-100">
+          Reject
+        </button>
+        <button name="action" value="approve"
+                class="inline-flex items-center justify-center px-5 py-2.5 rounded-md text-sm font-semibold
+                       bg-emerald-600 text-white hover:bg-emerald-700 focus:outline-none focus:ring-2
+                       focus:ring-offset-2 focus:ring-emerald-500">
+          Approve
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+Dear {{ party.party_name }},
+
+This is a reminder that your PDC cheque is due in 7 days.
+
+Customer: {{ rv.customer_name }} ({{ rv.customer_code }})
+Invoice: {{ rv.invoice_number }}
+Cheque No: {{ rv.cheque_no|default:"-" }}
+Cheque Date: {{ rv.cheque_date|date:"d-m-Y" }}
+Amount: {{ rv.invoice_amount }}
+
+Please ensure timely clearance.
+
+Regards,
+Accounts Team

@@ -1,0 +1,919 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block title %}QC Analytics Dashboard{% endblock %}
+
+{% block maincontent %}
+{# External Libraries: jQuery, Select2, and Chart.js. Load them within the main content block. #}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+
+<style>
+  /* Custom styles for Select2 to better match the Tailwind theme */
+  .select2-container .select2-selection--single {
+    height: 2.5rem; /* 40px */
+    border: 1px solid #d1d5db; /* gray-300 */
+    border-radius: 0.375rem; /* rounded-md */
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 2.5rem;
+    padding-left: 0.75rem;
+    color: #374151; /* gray-700 */
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 2.5rem;
+    right: 0.5rem;
+  }
+  .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: #3b82f6; /* blue-500 */
+    box-shadow: 0 0 0 1px #3b82f6;
+  }
+  .select2-dropdown {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  .select2-results__option--highlighted[aria-selected] {
+    background-color: #3b82f6 !important;
+  }
+</style>
+
+<div class="p-4 sm:p-6 lg:p-8 space-y-6">
+
+  <!-- START: Messages Block -->
+  {% if messages %}
+  <div class="space-y-3">
+    {% for message in messages %}
+    <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md
+                {% if message.tags == 'debug' %}bg-gray-500 text-white
+                {% elif message.tags == 'info' %}bg-blue-500 text-white
+                {% elif message.tags == 'success' %}bg-green-500 text-white
+                {% elif message.tags == 'warning' %}bg-yellow-400 text-yellow-900
+                {% elif message.tags == 'error' %}bg-red-500 text-white
+                {% else %}bg-gray-500 text-white
+                {% endif %}" role="alert">
+      <span>{{ message }}</span>
+      <button type="button" class="ml-3 font-semibold opacity-80 hover:opacity-100" onclick="this.parentElement.remove()">&times;</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <!-- END: Messages Block -->
+
+  <!-- Header -->
+  <header class="bg-white p-5 rounded-lg shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-bold text-slate-800">QC Analytics Dashboard</h1>
+      <p class="text-sm text-slate-500 mt-1">Interactive view of QC outcomes, stages, and latest batches</p>
+    </div>
+    <div class="text-sm text-slate-500 text-right">
+      {% if selected_item and selected_item != 'All' %}Product: <b class="text-slate-700">{{ selected_item }}</b><br>{% endif %}
+      {% now "F d, Y" %}
+    </div>
+  </header>
+
+  <!-- Filters -->
+  <section class="bg-white border border-slate-200 rounded-lg shadow-sm" x-data="{ open: true }">
+    <button @click="open = !open" class="flex w-full items-center justify-between p-4 text-left">
+      <h4 class="flex items-center gap-2 font-semibold text-slate-700">
+        <i class="fa-solid fa-filter text-slate-400"></i>
+        Filters
+      </h4>
+      <i class="fa-solid fa-chevron-down w-3 ml-auto transition-transform" :class="{ 'rotate-180' : !open }"></i>
+    </button>
+    <div x-show="open" x-transition class="border-t border-slate-200 p-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        
+        <div class="space-y-1">
+          <label for="itemFilter" class="text-xs font-medium text-slate-600">Item</label>
+          <select id="itemFilter">
+            <option value="All" {% if not selected_item or selected_item == 'All' %}selected{% endif %}>All</option>
+            {% for p in products %}<option value="{{ p }}" {% if selected_item == p %}selected{% endif %}>{{ p }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="groupFilter" class="text-xs font-medium text-slate-600">Group</label>
+          <select id="groupFilter">
+            <option value="All" {% if not selected_group or selected_group == 'All' %}selected{% endif %}>All</option>
+            {% for g in groups %}<option value="{{ g }}" {% if selected_group == g %}selected{% endif %}>{{ g }}</option>{% endfor %}
+          </select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="testFilter" class="text-xs font-medium text-slate-600">Test</label>
+          <select id="testFilter"><option value="All" selected>All</option></select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="arFilter" class="text-xs font-medium text-slate-600">AR No.</label>
+          <select id="arFilter"><option value="All" selected>All</option></select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="stageFilter" class="text-xs font-medium text-slate-600">Stage</label>
+          <select id="stageFilter">
+            <option value="All" {% if not selected_stage or selected_stage == 'All' %}selected{% endif %}>All</option>
+            {% for s in stages %}<option value="{{ s }}" {% if selected_stage == s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+          </select>
+        </div>
+        
+        <div class="space-y-1">
+          <label for="batchFilter" class="text-xs font-medium text-slate-600">Batch</label>
+          <select id="batchFilter"><option value="All" selected>All</option></select>
+        </div>
+
+        <div class="space-y-1">
+          <label for="monthFilter" class="text-xs font-medium text-slate-600">Month</label>
+          <select id="monthFilter">
+            <option value="All" {% if not selected_month or selected_month == 'All' %}selected{% endif %}>All</option>
+            {% for m in months %}<option value="{{ m|date:'Y-m' }}" {% if selected_month == m|date:'Y-m' %}selected{% endif %}>{{ m|date:"M Y" }}</option>{% endfor %}
+          </select>
+        </div>
+
+        {% if criticality_supported %}
+        <div class="space-y-1">
+          <label for="criticalityFilter" class="text-xs font-medium text-slate-600">Criticality</label>
+          <select id="criticalityFilter">
+            <option value="all" {% if not selected_criticality or selected_criticality == 'all' %}selected{% endif %}>All</option>
+            <option value="critical" {% if selected_criticality == "critical" %}selected{% endif %}>Critical</option>
+            <option value="non_critical" {% if selected_criticality == "non_critical" %}selected{% endif %}>Not Critical</option>
+          </select>
+        </div>
+        {% endif %}
+      </div>
+      
+      <!-- MODIFICATION: Buttons updated -->
+      <div class="flex items-center justify-end gap-2 pt-4 mt-4 border-t border-slate-200">
+          <button class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50" onclick="clearFilters()">Clear Filters</button>
+          <button class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700" onclick="applyFilters()">Apply Filters</button>
+          <button
+              type="button"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-md border border-emerald-500 text-xs sm:text-sm font-medium text-emerald-700 bg-white hover:bg-emerald-200"
+              onclick="downloadDashboardExcel()">
+              <i class="fa-regular fa-file-excel"></i>
+              <span>Download Excel</span>
+            </button>
+      </div>
+        
+
+
+      <div id="activeFilters" class="flex items-center flex-wrap gap-2 pt-4 mt-4 border-t border-slate-200"></div>
+    </div>
+  </section>
+
+
+  <!-- KPI row -->
+  <section class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7 gap-5">
+    {% with sum=summary %}
+    <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-1 transition-transform" onclick="filterByStatus('total')" title="Total records">
+      <p class="text-sm font-medium text-slate-500">Total ARs</p>
+      <h2 id="card-total-ars" class="text-3xl font-bold text-slate-800 mt-1">{{ sum.total }}</h2>
+    </div>
+    <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm">
+      <p class="text-sm font-medium text-slate-500">Batches</p>
+      <h2 id="card-batches" class="text-3xl font-bold text-slate-800 mt-1">{{ sum.distinct_batches }}</h2>
+    </div>
+    <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-1 transition-transform" onclick="filterByStatus('approved')" title="Approved">
+      <p class="text-sm font-medium text-slate-500">Approved</p>
+      <h2 id="card-approved" class="text-3xl font-bold text-green-600 mt-1">{{ sum.approved }}</h2>
+    </div>
+    <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-1 transition-transform" onclick="filterByStatus('approved_under_deviation')" title="Approved under deviation">
+      <p class="text-xs font-medium text-slate-500">Approved under Deviation</p>
+      <h2 id="card-approved-deviation" class="text-3xl font-bold text-amber-500 mt-1">{{ sum.variation }}</h2>
+    </div>
+    <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-1 transition-transform" onclick="filterByStatus('fail')" title="Fail">
+      <p class="text-sm font-medium text-slate-500">Fail</p>
+      <h2 id="card-fail" class="text-3xl font-bold text-rose-600 mt-1">{{ sum.fail }}</h2>
+    </div>
+    <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-1 transition-transform" onclick="filterByStatus('rejected')" title="Rejected">
+      <p class="text-sm font-medium text-slate-500">Rejected</p>
+      <h2 id="card-rejected" class="text-3xl font-bold text-red-600 mt-1">{{ sum.rejected }}</h2>
+    </div>
+    <div class="p-5 bg-white border border-slate-200 rounded-lg shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-1 transition-transform" onclick="filterByStatus('nodecision')" title="No decision (NULL)">
+      <p class="text-xs font-medium text-slate-500">Pending / No Status/ cancelled</p>
+      <h2 id="card-pending" class="text-3xl font-bold text-slate-700 mt-1">{{ sum.pending }}</h2>
+    </div>
+    {% endwith %}
+  </section>
+
+  <!-- Charts row -->
+  <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="lg:col-span-8 bg-white border border-slate-200 rounded-lg shadow-sm">
+      <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <div>
+            <h3 class="font-semibold text-slate-800">Observed vs Spec Limits</h3>
+            <p class="text-xs text-slate-500">Trend across AR entries</p>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-800">Spec Name</h3>
+          <select id="trendSpecSelect" class="text-sm border-slate-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></select>
+        </div>
+        
+      </div>
+      <div class="p-4 h-80 relative">
+        <canvas id="trendChart"></canvas>
+        <div id="trendEmpty" class="absolute inset-0 flex items-center justify-center text-sm text-slate-500" style="display:none;">No trend data available.</div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-4 bg-white border border-slate-200 rounded-lg shadow-sm">
+      <div class="p-4 border-b border-slate-200">
+        <h3 class="font-semibold text-slate-800">QC Status Breakdown</h3>
+        <p class="text-xs text-slate-500">Distribution of outcomes</p>
+      </div>
+      <div class="p-4 h-80 relative">
+        <canvas id="statusDonut"></canvas>
+        <div id="donutEmpty" class="absolute inset-0 flex items-center justify-center text-sm text-slate-500" style="display:none;">No status data for filters.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product stacked bar -->
+  <section class="bg-white border border-slate-200 rounded-lg shadow-sm">
+    <div class="p-4 border-b border-slate-200">
+      <h3 class="font-semibold text-slate-800">Outcomes by Product</h3>
+      <p class="text-xs text-slate-500">Stacked totals (Approved / AUD / Rejected)</p>
+    </div>
+    <div class="p-4 h-96 relative">
+      <canvas id="productStacked"></canvas>
+      <div id="stackedEmpty" class="absolute inset-0 flex items-center justify-center text-sm text-slate-500" style="display:none;">No product-stage data.</div>
+    </div>
+  </section>
+
+  <!-- Latest batch snapshot -->
+  <section class="bg-white border border-slate-200 rounded-lg shadow-sm">
+    <div class="p-4 border-b border-slate-200">
+        <h3 class="font-semibold text-slate-800">Latest Batch Snapshot</h3>
+        <p class="text-xs text-slate-500">A quick look at the most recent entries.</p>
+    </div>
+    <div class="overflow-x-auto">
+        {% if latest_batch_snapshot %}
+        <table class="w-full text-sm text-left text-slate-600">
+          <thead class="text-xs text-slate-500 uppercase bg-slate-50">
+            <tr>
+              <th class="p-3">Product</th><th class="p-3">Group</th><th class="p-3">Stage</th><th class="p-3">Batch</th>
+              <th class="p-3">AR / Entry</th><th class="p-3">Date</th><th class="p-3">Test</th><th class="p-3">Observed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in latest_batch_snapshot %}
+            <tr class="bg-white border-b hover:bg-slate-50">
+              <td class="p-3 font-medium text-slate-800">{{ s.product }}</td>
+              <td class="p-3">
+                  {% if s.group %}
+                      <span class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">{{ s.group }}</span>
+                  {% else %}
+                      <span class="px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">—</span>
+                  {% endif %}
+              </td>
+              <td class="p-3">
+                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                    {% if s.stage_tag == 'ip' %}bg-sky-100 text-sky-800
+                    {% elif s.stage_tag == 'fg' %}bg-purple-100 text-purple-800
+                    {% else %}bg-slate-100 text-slate-700{% endif %}">{{ s.stage_label }}</span>
+              </td>
+              <td class="p-3">Batch <b>{{ s.batch_no }}</b></td>
+              <td class="p-3">#{{ s.entry_no }} / {{ s.ar_no }}</td>
+              <td class="p-3">{{ s.entry_date }}</td>
+              <td class="p-3">{{ s.test }}</td>
+              <td class="p-3">
+                <span class="px-2 py-1 text-xs font-semibold rounded-full
+                  {% if s.result_tag == 'pass' %}bg-green-100 text-green-800
+                  {% elif s.result_tag == 'deviation' %}bg-yellow-100 text-yellow-800
+                  {% elif s.result_tag == 'fail' or s.result_tag == 'rejected' %}bg-red-100 text-red-800
+                  {% else %}bg-indigo-100 text-indigo-800{% endif %}">{{ s.observed }} {{ s.unit }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-center text-slate-500 py-8">No latest batch information available.</p>
+        {% endif %}
+    </div>
+  </section>
+
+  <!-- Critical Specification Results -->
+  <section class="bg-white border border-slate-200 rounded-lg shadow-sm">
+      <div class="p-4 border-b border-slate-200">
+        <h3 class="font-semibold text-slate-800">Critical Specification Results</h3>
+        <p class="text-xs text-slate-500">Stacked counts by status: Pass, AUD, and Fail/Rejected.</p>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-4">
+          <div class="h-96 relative">
+              <canvas id="critBySpec"></canvas>
+              <div id="critBySpecEmpty" class="absolute inset-0 flex items-center justify-center text-sm text-slate-500" style="display:none;">No critical results by specification for current filters.</div>
+          </div>
+          <div class="h-96 relative">
+              <canvas id="critByProduct"></canvas>
+              <div id="critByProductEmpty" class="absolute inset-0 flex items-center justify-center text-sm text-slate-500" style="display:none;">No critical results by product for current filters.</div>
+          </div>
+      </div>
+  </section>
+
+  <!-- AR detail table -->
+  <section class="bg-white border border-slate-200 rounded-lg shadow-sm">
+    <div class="p-4 border-b border-slate-200">
+      <h3 class="font-semibold text-slate-800">AR No. Wise Detailed View</h3>
+      <p class="text-xs text-slate-500">Expand rows to see detailed test results for each entry.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table id="ar-details-table" class="w-full text-sm text-left text-slate-600">
+        <thead class="text-xs text-slate-500 uppercase bg-slate-50">
+          <tr>
+            <th class="p-3 w-12"></th>
+            <th class="p-3">Product</th><th class="p-3">Stage</th><th class="p-3">Date</th><th class="p-3">Entry #</th><th class="p-3">AR #</th><th class="p-3">Batch</th><th class="p-3">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for e in detail_entries %}
+          <tr class="bg-white border-b {% if e.specs %}expandable cursor-pointer{% endif %} hover:bg-slate-50" data-target="entry-{{ e.id }}">
+            <td class="text-center p-3">
+              {% if e.specs %}
+                <button class="toggle-btn w-6 h-6 rounded-full border border-slate-300 text-slate-500 grid place-items-center hover:bg-slate-100">
+                  <i class="fa-solid fa-chevron-right text-xs transition-transform"></i>
+                </button>
+              {% endif %}
+            </td>
+            <td class="p-3">{{ e.product.name }}</td>
+            <td class="p-3">{{ e.stage|default:"—" }}</td>
+            <td class="p-3">{{ e.entry_date|date:"d/m/Y" }}</td>
+            <td class="p-3">#{{ e.entry_no }}</td>
+            <td class="p-3">{{ e.ar_no }}</td>
+            <td class="p-3">{{ e.batch_number|default:"—" }}</td>
+            <td class="p-3">
+                {% if e.decision_status == 'approved' %}<span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">{{ e.get_decision_status_display }}</span>
+                {% elif e.decision_status == 'approved_under_deviation' %}<span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">{{ e.get_decision_status_display }}</span>
+                {% elif e.decision_status == 'rejected' %}<span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">{{ e.get_decision_status_display }}</span>
+                {% elif not e.decision_status %}<span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">Pending / No Status</span>
+                {% else %}<span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">{{ e.get_decision_status_display }}</span>{% endif %}
+            </td>
+          </tr>
+          {% if e.specs %}
+          <tr class="nested-row hidden bg-slate-50" id="entry-{{ e.id }}">
+            <td colspan="8" class="p-0">
+              <div class="p-4">
+                <table class="w-full bg-white text-xs border rounded-md">
+                  <thead class="bg-slate-100">
+                    <tr>
+                      <th class="p-2 text-left">Test</th><th class="p-2 text-left">Spec Range</th><th class="p-2 text-left">Acceptance</th>
+                      <th class="p-2 text-left">Observed</th><th class="p-2 text-left">Unit</th><th class="p-2 text-left">Remark</th><th class="p-2 text-left">Critical?</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {% for se in e.specs %}
+                    <tr class="border-t">
+                      <td class="p-2">{{ se.spec.name }}</td>
+                      <td class="p-2">{% if se.spec.spec_type == "numeric" %}{{ se.spec.min_val }} – {{ se.spec.max_val }}{% elif se.spec.spec_type == "choice" %}{{ se.spec.allowed_choices }}{% else %}Free-text{% endif %}</td>
+                      <td class="p-2">{{ se.spec.acceptance_criteria }}</td>
+                      <td class="p-2">{% with rr=se.remark|default_if_none:""|lower vv=se.value|stringformat:"s"|lower %}<span class="px-2 py-0.5 rounded-full font-medium {% if 'pass' in rr or 'complies' in vv or 'approved' in rr %}bg-green-100 text-green-800{% elif 'deviation' in rr or 'aud' in rr %}bg-yellow-100 text-yellow-800{% elif 'fail' in rr or 'rejected' in rr or 'does_not_comply' in vv %}bg-red-100 text-red-800{% else %}bg-slate-100 text-slate-700{% endif %}">{{ se.value }}</span>{% endwith %}</td>
+                      <td class="p-2">{{ se.spec.unit }}</td>
+                      <td class="p-2">{% with rr=se.remark|default_if_none:""|lower %}<span class="px-2 py-0.5 rounded-full font-medium {% if 'pass' in rr %}bg-green-100 text-green-800{% elif 'deviation' in rr or 'aud' in rr %}bg-yellow-100 text-yellow-800{% elif 'fail' in rr or 'rejected' in rr %}bg-red-100 text-red-800{% else %}bg-slate-100 text-slate-700{% endif %}">{{ se.remark|default:"—" }}</span>{% endwith %}</td>
+                      <td class="p-2">{% if se.is_critical or se.spec.is_critical %}<span class="font-bold text-red-600">Yes</span>{% else %}No{% endif %}</td>
+                    </tr>
+                  {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+        {% empty %}
+          <tr><td colspan="8" class="text-center text-slate-500 py-12">No detailed entries available for the current selection.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- Data passed to JS -->
+{{ mapping|json_script:"mappingData" }}
+{{ trend_data|json_script:"trendData" }}
+{{ stage_status|json_script:"stageStatusData" }}
+{{ latest_batch_snapshot|json_script:"latestBatchData" }}
+<script id="crit-inline-data" type="application/json">
+[
+{% if crit_groups %}{% for prod, rows in crit_groups.items %}{% for r in rows %}{% with e=r.e se=r.se rr=se.remark|default_if_none:""|lower vv=se.value|stringformat:"s"|lower %}
+{"product":"{{ e.product.name|escapejs }}","group":"{{ se.spec.group|default:'—'|escapejs }}","spec":"{{ se.spec.name|escapejs }}","remark":"{{ rr|escapejs }}","value":"{{ vv|escapejs }}","date":"{{ e.entry_date|date:'Y-m-d' }}","spec_type":"{{ se.spec.spec_type|default:'other'|escapejs }}","min": {{ se.spec.min_val|default:'null' }},"max": {{ se.spec.max_val|default:'null' }},"acc":"{{ se.spec.acceptance_criteria|default:''|escapejs }}","entry_status":"{{ e.decision_status|default:'' }}"}{% if not forloop.last or not forloop.parentloop.last %},{% endif %}{% endwith %}{% endfor %}{% endfor %}{% endif %}
+]
+</script>
+
+<script>
+// Store initial summary values from Django context
+const initialSummary = {
+    total: {{ summary.total|default:0 }},
+    batches: {{ summary.distinct_batches|default:0 }},
+    approved: {{ summary.approved|default:0 }},
+    variation: {{ summary.variation|default:0 }},
+    fail: {{ summary.fail|default:0 }},
+    rejected: {{ summary.rejected|default:0 }},
+    pending: {{ summary.pending|default:0 }}
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    /* ================== Helpers ================== */
+    let mapping, trendData, stageStatus, latestBatch;
+    const QS = new URLSearchParams(window.location.search);
+
+    function data(id) {
+        try {
+            const el = document.getElementById(id);
+            const txt = (el?.textContent || '').trim();
+            return txt ? JSON.parse(txt) : null;
+        } catch (e) { console.error('JSON parse failed for #' + id, e); return null; }
+    }
+    const getMapping = () => mapping || (mapping = data("mappingData"));
+    const getTrend = () => trendData || (trendData = data("trendData"));
+    const getStage = () => stageStatus || (stageStatus = data("stageStatusData"));
+
+    /* ================== Select2 Initialization ================== */
+    const FILTER_IDS = ["itemFilter", "groupFilter", "testFilter", "arFilter", "stageFilter", "batchFilter", "monthFilter", "criticalityFilter"];
+    function initAllSelects() {
+        if (!window.jQuery) return;
+        FILTER_IDS.forEach(id => {
+            const $el = $("#" + id);
+            if (!$el.length) return;
+            if ($el.data('select2')) $el.select2('destroy');
+            $el.select2({
+                width: '100%',
+                placeholder: 'All',
+                allowClear: !['itemFilter', 'groupFilter'].includes(id),
+                dropdownParent: $(document.body) // Prevent dropdowns from being clipped
+            }).off('select2:clear._f').on('select2:clear._f', function () {
+                $(this).val('All').trigger('change');
+            });
+        });
+    }
+
+    /* ================== Filter Logic ================== */
+    function listAllGroups() {
+        const m = getMapping() || {}; const set = new Set();
+        Object.values(m).forEach(x => (x.groups || []).forEach(g => set.add(g)));
+        return Array.from(set).sort();
+    }
+    function rebuildSelect(id, values, chosenFromQS) {
+        const sel = document.getElementById(id); if (!sel) return;
+        const keep = sel.value || 'All'; const chosen = (chosenFromQS ?? keep);
+        const arr = ['All'].concat(values || []);
+        if (window.jQuery && $("#" + id).data('select2')) $("#" + id).select2('destroy');
+        sel.innerHTML = ''; arr.forEach(v => sel.appendChild(new Option(v, v, false, false)));
+        sel.value = arr.includes(chosen) ? chosen : 'All';
+        initAllSelects();
+    }
+    function normalize(v) { if (v == null) return ''; const s = String(v).trim(); if (!s) return ''; const l = s.toLowerCase(); return (l === 'all' || l === 'undefined' || l === 'null') ? '' : s; }
+    function serializeFilters() {
+        const get = (id) => document.getElementById(id)?.value ?? '';
+        const vals = {
+            item: normalize(get("itemFilter")), group: normalize(get("groupFilter")), test_name: normalize(get("testFilter")),
+            ar_no: normalize(get("arFilter")), stage: normalize(get("stageFilter")), batch_no: normalize(get("batchFilter")),
+            month: normalize(get("monthFilter")), criticality: normalize(document.getElementById("criticalityFilter")?.value ?? 'all'),
+        };
+        const qs = new URLSearchParams();
+        for (const k in vals) { if (vals[k]) qs.set(k, vals[k]); }
+        const cur = new URLSearchParams(window.location.search);
+        if (cur.has("decision_status")) qs.set("decision_status", cur.get("decision_status"));
+        return qs;
+    }
+    function navigateTo(qs) {
+        const dest = qs.toString() ? (window.location.pathname + "?" + qs.toString()) : window.location.pathname;
+        const here = window.location.pathname + window.location.search;
+        if (dest !== here) window.location.href = dest;
+    }
+    
+    // MODIFICATION: Renamed and simplified this function to only update dropdowns, not navigate.
+    function onPrimaryChange() {
+        const item = document.getElementById("itemFilter").value || 'All';
+        const mAll = getMapping() || {}; const map = (mAll[item] || {});
+        
+        const groups = (item === 'All') ? listAllGroups() : (map.groups || []);
+        rebuildSelect('groupFilter', groups);
+        
+        const group = document.getElementById("groupFilter")?.value || 'All';
+        const tests = (group !== 'All' && map.tests_by_group && map.tests_by_group[group]) ? map.tests_by_group[group] : (map.tests || []);
+        rebuildSelect('testFilter', tests);
+        
+        rebuildSelect('arFilter', map.ars || []);
+        rebuildSelect('stageFilter', map.stages || []);
+        rebuildSelect('batchFilter', map.batches || []);
+        // NOTE: The navigateTo() call has been removed from here.
+    }
+
+    // MODIFICATION: These are the functions called by the buttons
+    window.applyFilters = () => navigateTo(serializeFilters());
+    window.clearFilters = () => window.location.href = window.location.pathname;
+    window.filterByStatus = (s) => { const qs = new URLSearchParams(window.location.search); if (s !== "total") qs.set("decision_status", s); else qs.delete("decision_status"); navigateTo(qs); }
+    // NEW: Download Excel with the same filters as Apply Filters
+    window.downloadDashboardExcel = () => {
+        const qs = serializeFilters();  // read current dropdown selections
+        const baseUrl = "{% url 'qc:qc_dashboard_export_excel' %}";
+        const url = qs.toString() ? `${baseUrl}?${qs.toString()}` : baseUrl;
+        window.location.href = url;
+    };
+    function renderActiveFilters() {
+        const wrap = document.getElementById('activeFilters'); if (!wrap) return;
+        const qs = new URLSearchParams(window.location.search);
+        const meta = [{ key: 'item', label: 'Item' }, { key: 'group', label: 'Group' }, { key: 'test_name', label: 'Test' }, { key: 'ar_no', label: 'AR' }, { key: 'stage', label: 'Stage' }, { key: 'batch_no', label: 'Batch' }, { key: 'month', label: 'Month' }, { key: 'criticality', label: 'Criticality' }, { key: 'decision_status', label: 'QC Status' }];
+        let hasFilters = false; wrap.innerHTML = '';
+        meta.forEach(m => {
+            if (!qs.has(m.key)) return;
+            hasFilters = true;
+            let raw = qs.get(m.key);
+            let value = raw;
+            if (m.key === 'decision_status') {
+                const mapLabels = {
+                    'approved_under_deviation': 'approved under deviation',
+                    'nodecision': 'pending / no status'
+                };
+                value = mapLabels[raw] || raw.replace(/_/g, ' ');
+            }
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center gap-2 bg-blue-100 text-blue-800 text-xs font-medium px-3 py-1 rounded-full';
+            chip.innerHTML = `<span>${m.label}: <b class="font-semibold">${value}</b></span>`;
+            const btn = document.createElement('button');
+            btn.innerHTML = '&times;';
+            btn.title = `Remove ${m.label} filter`;
+            btn.className = "w-4 h-4 rounded-full bg-blue-200 hover:bg-blue-300 grid place-items-center";
+            btn.onclick = () => { qs.delete(m.key); navigateTo(qs); };
+            chip.appendChild(btn); wrap.appendChild(chip);
+        });
+        wrap.style.display = hasFilters ? 'flex' : 'none';
+    }
+
+    /* ================== Expandable Table Rows ================== */
+    document.getElementById('ar-details-table')?.addEventListener('click', (e) => {
+        const row = e.target.closest('.expandable'); if (!row) return;
+        const targetId = row.dataset.target; if (!targetId) return;
+        const nested = document.getElementById(targetId);
+        const btn = row.querySelector('.toggle-btn');
+        if (!nested || !btn) return;
+        
+        const isHidden = nested.classList.toggle('hidden');
+        row.classList.toggle('bg-slate-100', !isHidden);
+        btn.querySelector('i').classList.toggle('rotate-90', !isHidden);
+    });
+
+    /* ================== Card Update Logic ================== */
+    function updateCardsForSpec(specName) {
+        if (specName === 'All Specs') {
+            document.getElementById('card-total-ars').textContent = initialSummary.total;
+            document.getElementById('card-batches').textContent = initialSummary.batches;
+            document.getElementById('card-approved').textContent = initialSummary.approved;
+            document.getElementById('card-approved-deviation').textContent = initialSummary.variation;
+            document.getElementById('card-fail').textContent = initialSummary.fail;
+            document.getElementById('card-rejected').textContent = initialSummary.rejected;
+            document.getElementById('card-pending').textContent = initialSummary.pending;
+            return;
+        }
+        
+        const allTrendData = getTrend() || [];
+        const filteredData = allTrendData.filter(r => r.spec_name === specName);
+        const uniqueARs = new Set(filteredData.map(r => r.ar_no).filter(Boolean));
+        const uniqueBatches = new Set(filteredData.map(r => r.batch_no).filter(Boolean));
+        const arStatusMap = new Map();
+        filteredData.forEach(r => {
+            if (r.ar_no) {
+                arStatusMap.set(r.ar_no, r.decision_status || 'pending');
+            }
+        });
+
+        let approved = 0, variation = 0, rejected = 0, fail = 0, pending = 0;
+        for (const status of arStatusMap.values()) {
+            switch(status) {
+                case 'approved': approved++; break;
+                case 'approved_under_deviation': variation++; break;
+                case 'rejected': rejected++; break;
+                case 'fail': fail++; break;
+                case 'pending': pending++; break;
+            }
+        }
+
+        document.getElementById('card-total-ars').textContent = uniqueARs.size;
+        document.getElementById('card-batches').textContent = uniqueBatches.size;
+        document.getElementById('card-approved').textContent = approved;
+        document.getElementById('card-approved-deviation').textContent = variation;
+        document.getElementById('card-fail').textContent = fail;
+        document.getElementById('card-rejected').textContent = rejected;
+        document.getElementById('card-pending').textContent = pending;
+    }
+
+    /* ================== Charts ================== */
+    let trendChart, donutChart, stackedChart;
+    const chartFont = { family: "'Inter', sans-serif" };
+    const chartColors = {
+        blue: 'rgb(59, 130, 246)', blue_bg: 'rgba(59, 130, 246, 0.1)',
+        red: 'rgb(239, 68, 68)', green: 'rgb(34, 197, 94)',
+        amber: 'rgb(245, 158, 11)', text: '#64748b', grid: '#e2e8f0',
+        neutral: '#64748b',
+    };
+    
+    function buildTrend() {
+        const all = getTrend() || [];
+        const canvas = document.getElementById('trendChart');
+        const empty = document.getElementById('trendEmpty');
+        const select = document.getElementById('trendSpecSelect');
+        if (!canvas || !window.Chart) return;
+
+        const toNum = (v) => {
+            if (v === null || v === undefined || v === '') return null;
+            if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+            const s = String(v).toLowerCase().replaceAll(',', '.').replace(/nmt|not more than|not more then|≤|≥|<|>|~|approx\.?/g, ' ');
+            const m = s.match(/[-+]?\d+(\.\d+)?/);
+            return m ? parseFloat(m[0]) : null;
+        };
+
+        const grouped = {};
+        for (const r of all) {
+            const spec = r.spec_name || 'Unknown';
+            const obs = toNum(r.observed);
+            if (obs === null) continue;
+            (grouped[spec] ||= []).push({ label: r.label, date: r.date || '', obs, min: toNum(r.min_val), max: toNum(r.max_val) });
+        }
+
+        const names = Object.keys(grouped).sort();
+        select.innerHTML = '<option value="All Specs">All Specs</option>';
+        names.forEach(n => select.appendChild(new Option(n, n, false, false)));
+        
+        if (!names.length) {
+            if (trendChart) { trendChart.destroy(); trendChart = null; }
+            empty.style.display = 'flex';
+            select.style.display = 'none';
+            return;
+        }
+        select.style.display = 'block';
+
+        const currentTest = document.getElementById('testFilter')?.value || 'All';
+        let chosenSpec = (currentTest !== 'All' && names.includes(currentTest)) ? currentTest : 'All Specs';
+        select.value = chosenSpec;
+
+        const draw = (specName) => {
+            const effectiveSpec = (specName === 'All Specs' && names.length > 0) ? names[0] : specName;
+            const rows = (grouped[effectiveSpec] || []).slice();
+            if (!rows.length) {
+                if (trendChart) { trendChart.destroy(); trendChart = null; }
+                empty.style.display = 'flex';
+                return;
+            }
+            empty.style.display = 'none';
+            rows.sort((a, b) => (a.date === b.date) ? String(a.label).localeCompare(String(b.label)) : String(a.date).localeCompare(String(b.date)));
+
+            const labels = rows.map(r => r.label);
+            const observed = rows.map(r => r.obs);
+            const vmin = rows.map(r => r.min);
+            const vmax = rows.map(r => r.max);
+
+            if (trendChart) trendChart.destroy();
+            trendChart = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Observed', data: observed, borderColor: chartColors.blue, backgroundColor: chartColors.blue_bg, borderWidth: 2.5, tension: .4, fill: true, pointBackgroundColor: chartColors.blue, pointRadius: 3, pointHoverRadius: 5 },
+                        { label: 'Spec Max', data: vmax, borderColor: chartColors.red, borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false },
+                        { label: 'Spec Min', data: vmin, borderColor: chartColors.red, borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0, fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: chartColors.text, usePointStyle: true, boxHeight: 8, font: chartFont } } },
+                    scales: {
+                        x: { ticks: { color: chartColors.text, font: chartFont }, grid: { color: chartColors.grid } },
+                        y: { ticks: { color: chartColors.text, font: chartFont }, grid: { color: chartColors.grid } }
+                    }
+                }
+            });
+        };
+        draw(select.value);
+        updateCardsForSpec(select.value);
+        select.onchange = (e) => {
+            const selectedSpec = e.target.value;
+            draw(selectedSpec);
+            updateCardsForSpec(selectedSpec);
+        };
+    }
+
+    function buildDonut() {
+    const el = document.getElementById('statusDonut'); if (!el || !window.Chart) return;
+    const empty = document.getElementById('donutEmpty');
+
+    const a = {{ summary.approved|default:0 }};
+    const d = {{ summary.variation|default:0 }};
+    const r = {{ summary.rejected|default:0 }};
+    const f = {{ summary.fail|default:0 }};
+    const p = {{ summary.pending|default:0 }};
+
+    const total = a + d + r + f + p;
+
+    if (donutChart) donutChart.destroy();
+    if (!total) {
+        empty.style.display = 'flex';
+        return;
+    }
+    empty.style.display = 'none';
+
+    donutChart = new Chart(el.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Approved', 'Approved (Deviation)', 'Rejected', 'Fail', 'Pending / No Status'],
+            datasets: [{
+                data: [a, d, r, f, p],
+                backgroundColor: [
+                    chartColors.green,
+                    chartColors.amber,
+                    chartColors.red,
+                    '#991b1b',
+                    chartColors.neutral
+                ],
+                borderColor: '#fff',
+                borderWidth: 4,
+                hoverBorderWidth: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: chartColors.text,
+                        padding: 20,
+                        usePointStyle: true,
+                        boxHeight: 8,
+                        font: chartFont
+                    }
+                }
+            }
+        }
+    });
+}
+
+    function buildStacked() {
+        const rows = getStage();
+        const el = document.getElementById('productStacked'); if (!el || !window.Chart) return;
+        const empty = document.getElementById('stackedEmpty');
+        if (!Array.isArray(rows) || !rows.length) { empty.style.display = 'flex'; return; } empty.style.display = 'none';
+
+        const agg = {};
+        rows.forEach(r => {
+            const p = r["product__name"] || "—";
+            if (!agg[p]) agg[p] = { approved: 0, variation: 0, rejected: 0 };
+            agg[p].approved += (r.approved || 0);
+            agg[p].variation += (r.variation || 0);
+            agg[p].rejected += (r.rejected || 0);
+        });
+        const labels = Object.keys(agg);
+        const approved = labels.map(l => agg[l].approved);
+        const variation = labels.map(l => agg[l].variation);
+        const rejected = labels.map(l => agg[l].rejected);
+
+        if (stackedChart) stackedChart.destroy();
+        stackedChart = new Chart(el.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels, datasets: [
+                    { label: 'Approved', data: approved, stack: 's', backgroundColor: chartColors.green },
+                    { label: 'AUD', data: variation, stack: 's', backgroundColor: chartColors.amber },
+                    { label: 'Rejected', data: rejected, stack: 's', backgroundColor: chartColors.red }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { labels: { color: chartColors.text, usePointStyle: true, boxHeight: 8, font: chartFont } } },
+                scales: {
+                    x: { stacked: true, ticks: { color: chartColors.text, font: chartFont }, grid: { display: false } },
+                    y: { stacked: true, ticks: { color: chartColors.text, font: chartFont }, grid: { color: chartColors.grid } }
+                }
+            }
+        });
+    }
+    
+    function buildCriticalVisuals() {
+        const rawEl = document.getElementById('crit-inline-data');
+        const specEmpty = document.getElementById('critBySpecEmpty');
+        const prodEmpty = document.getElementById('critByProductEmpty');
+        const specCtx = document.getElementById('critBySpec')?.getContext('2d');
+        const prodCtx = document.getElementById('critByProduct')?.getContext('2d');
+        if (!rawEl) { specEmpty && (specEmpty.style.display = 'flex'); prodEmpty && (prodEmpty.style.display = 'flex'); return; }
+
+        let rows = []; try { rows = JSON.parse((rawEl.textContent || '').trim() || '[]'); } catch (e) { rows = []; }
+
+        const NUM_RE = /[-+]?(?:\d+(?:[.,]\d*)?|\.\d+)/;
+        const toNum = (v) => {
+            if (v == null) return null;
+            if (typeof v === 'number' && Number.isFinite(v)) return v;
+            const s = String(v).toLowerCase().replaceAll('%', ' ').replace(/nmt|not more than|not more then|≤|≥|<|>|~/g, ' ');
+            const m = (s.replace(',', '.').match(NUM_RE) || [])[0];
+            const n = m ? parseFloat(m) : NaN;
+            return Number.isFinite(n) ? n : null;
+        };
+        const passPats = [/(^|\b)pass(ed)?(\b|$)/i, /\bapproved\b/i, /\b(comply|complies|compliant|conforms?|meets?)\b/i];
+        const audPats = [/\baud\b/i, /\bdev(?:\.|iation|iat)?\b/i, /\bapproved\s+under\s+deviation\b/i];
+        const failPats = [/\bfail(ed)?\b/i, /\breject(ed)?\b/i, /\bdoes\s*not\s*comply\b/i, /\bnot\s*comply\b/i, /\boos\b/i];
+        const test = (t, pats) => !!t && pats.some(rx => rx.test(t));
+
+        function statusFrom(row) {
+            const hay = `${row.result || ''} ${row.remark || ''} ${row.value || ''}`;
+            if (test(hay, failPats)) return 'fail'; if (test(hay, audPats)) return 'aud'; if (test(hay, passPats)) return 'pass';
+            if (row.entry_status === 'approved_under_deviation') return 'aud';
+            if (row.entry_status === 'rejected' || row.entry_status === 'fail') return 'fail';
+            if (row.entry_status === 'approved') return 'pass';
+            return 'unknown';
+        }
+
+        const bySpec = {}, byProd = {};
+        for (const r of rows) {
+            const st = statusFrom(r); const s = r.spec || '—', p = r.product || '—';
+            (bySpec[s] ||= { pass: 0, aud: 0, fail: 0, unknown: 0 })[st]++;
+            (byProd[p] ||= { pass: 0, aud: 0, fail: 0, unknown: 0 })[st]++;
+        }
+
+        const labelsSpec = Object.keys(bySpec); const labelsProd = Object.keys(byProd);
+        specEmpty && (specEmpty.style.display = labelsSpec.length ? 'none' : 'flex');
+        prodEmpty && (prodEmpty.style.display = labelsProd.length ? 'none' : 'flex');
+
+        const opts = {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: chartColors.text, usePointStyle: true, boxHeight: 8, font: chartFont } } },
+            scales: {
+                x: { stacked: true, ticks: { color: chartColors.text, font: chartFont }, grid: { color: chartColors.grid } },
+                y: { stacked: true, ticks: { color: chartColors.text, font: chartFont }, grid: { color: chartColors.grid } }
+            }
+        };
+
+        if (window.critBySpecChart) window.critBySpecChart.destroy();
+        if (window.critByProductChart) window.critByProductChart.destroy();
+
+        if (specCtx && labelsSpec.length) {
+            window.critBySpecChart = new Chart(specCtx, {
+                type: 'bar', data: {
+                    labels: labelsSpec,
+                    datasets: [
+                        { label: 'Pass', data: labelsSpec.map(l => bySpec[l].pass), backgroundColor: chartColors.green, stack: 's' },
+                        { label: 'AUD', data: labelsSpec.map(l => bySpec[l].aud), backgroundColor: chartColors.amber, stack: 's' },
+                        { label: 'Fail/Rejected', data: labelsSpec.map(l => bySpec[l].fail), backgroundColor: chartColors.red, stack: 's' },
+                        { label: 'Unknown', data: labelsSpec.map(l => bySpec[l].unknown), backgroundColor: chartColors.neutral, stack: 's' }
+                    ]
+                }, options: opts
+            });
+        }
+        if (prodCtx && labelsProd.length) {
+            window.critByProductChart = new Chart(prodCtx, {
+                type: 'bar', data: {
+                    labels: labelsProd,
+                    datasets: [
+                        { label: 'Pass', data: labelsProd.map(l => byProd[l].pass), backgroundColor: chartColors.green, stack: 'p' },
+                        { label: 'AUD', data: labelsProd.map(l => byProd[l].aud), backgroundColor: chartColors.amber, stack: 'p' },
+                        { label: 'Fail/Rejected', data: labelsProd.map(l => byProd[l].fail), backgroundColor: chartColors.red, stack: 'p' },
+                        { label: 'Unknown', data: labelsProd.map(l => byProd[l].unknown), backgroundColor: chartColors.neutral, stack: 'p' }
+                    ]
+                }, options: opts
+            });
+        }
+    }
+
+    /* ================== Initial Execution ================== */
+    initAllSelects();
+    renderActiveFilters();
+    buildTrend();
+    buildDonut();
+    buildStacked();
+    buildCriticalVisuals();
+
+    // MODIFICATION: Event listeners updated to NOT auto-filter.
+    // They now only update dependent dropdowns. Filtering is handled by the "Apply Filters" button.
+    document.getElementById('itemFilter').addEventListener('change', onPrimaryChange);
+    document.getElementById('groupFilter').addEventListener('change', onPrimaryChange);
+    
+    if (window.jQuery) {
+        // These listeners handle changes via the Select2 UI
+        $('#itemFilter').on('select2:select select2:clear', onPrimaryChange);
+        $('#groupFilter').on('select2:select select2:clear', onPrimaryChange);
+    }
+
+
+    // Populate dependent dropdowns on load
+    const item = document.getElementById('itemFilter')?.value || 'All';
+    const mappingData = getMapping();
+    if (mappingData) {
+        const map = (mappingData[item] || {});
+        rebuildSelect('groupFilter', (item === 'All') ? listAllGroups() : (map.groups || []), QS.get('group'));
+        const curGroup = document.getElementById('groupFilter')?.value || 'All';
+        const tests = (curGroup !== 'All' && map.tests_by_group && map.tests_by_group[curGroup]) ? map.tests_by_group[curGroup] : (map.tests || []);
+        rebuildSelect('testFilter', tests, QS.get('test_name'));
+        rebuildSelect('arFilter', map.ars || [], QS.get('ar_no'));
+        rebuildSelect('stageFilter', map.stages || [], QS.get('stage'));
+        rebuildSelect('batchFilter', map.batches || [], QS.get('batch_no'));
+        if (QS.get('month')) document.getElementById('monthFilter').value = QS.get('month');
+        if (QS.get('criticality')) document.getElementById('criticalityFilter').value = QS.get('criticality');
+        initAllSelects();
+    }
+});
+</script>
+
+{% endblock maincontent %}

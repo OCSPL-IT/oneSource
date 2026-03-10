@@ -1,0 +1,214 @@
+{% extends "main/index.html" %}
+{% block title %}Packing Budget | Inputs{% endblock %}
+{% block maincontent %}
+<div class="p-6 space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold text-slate-900">Packing Budget</h1>
+      <p class="text-slate-600 mt-1">Step 2: Select packing materials and compute requirements + values.</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'accounts_budget:packing_products' %}"
+         class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold">
+        ← Back to Products
+      </a>
+      <a href="{% url 'accounts_budget:packing_summary' %}"
+         class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold">
+        Summary →
+      </a>
+    </div>
+  </div>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+    <input type="hidden" name="line_count" value="{{ line_count }}">
+
+    <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-100 font-bold text-slate-800">
+        Inputs (master-driven packing size + rate)
+      </div>
+
+      <div class="overflow-auto">
+        <table class="min-w-full text-sm" id="pm-table">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="px-4 py-2 text-left">Product</th>
+              <th class="px-4 py-2 text-right">Annual MT</th>
+              <th class="px-4 py-2 text-right">Annual KG</th>
+              <th class="px-4 py-2 text-left">Packing Material</th>
+              <th class="px-4 py-2 text-right">Pack Size</th>
+              <th class="px-4 py-2 text-right">Rate</th>
+              <th class="px-4 py-2 text-right">Wastage %</th>
+              <th class="px-4 py-2 text-right">Req (Annual)</th>
+              <th class="px-4 py-2 text-right">Value (Annual)</th>
+              <th class="px-4 py-2 text-center">Del</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for r in rows %}
+            <tr class="border-t border-slate-100 pm-row">
+              <td class="px-4 py-2 font-semibold text-slate-900">
+                {{ r.product }}
+                <input type="hidden" name="product__{{ forloop.counter0 }}" value="{{ r.product }}">
+                <input type="hidden" name="line_id__{{ forloop.counter0 }}" value="{{ r.id }}">
+              </td>
+
+              <td class="px-4 py-2 text-right">{{ r.annual_mt }}</td>
+
+              <td class="px-4 py-2 text-right">
+                <span class="annual-kg">{{ r.annual_kg }}</span>
+              </td>
+
+              <td class="px-4 py-2">
+                <select name="packing_material__{{ forloop.counter0 }}"
+                        class="w-[520px] rounded-lg border border-slate-300 px-3 py-2 pm-select">
+                  <option value="">— Select —</option>
+                  {% for pm in pack_choices %}
+                    <option value="{{ pm.id }}"
+                            data-size="{{ pm.packing_size|default_if_none:'' }}"
+                            data-rate="{{ pm.rate|default_if_none:'' }}"
+                            {% if r.packing_material_id == pm.id %}selected{% endif %}>
+                      {{ pm.item_name }} ({{ pm.item_code }})
+                    </option>
+                  {% endfor %}
+                </select>
+              </td>
+
+              <td class="px-4 py-2 text-right">
+                <input type="text"
+                       class="w-28 rounded-lg border border-slate-200 px-3 py-2 text-right pm-size"
+                       value="{{ r.packing_size }}" readonly>
+              </td>
+
+              <td class="px-4 py-2 text-right">
+                <input type="text"
+                       class="w-28 rounded-lg border border-slate-200 px-3 py-2 text-right pm-rate"
+                       value="{{ r.rate }}" readonly>
+              </td>
+
+              <td class="px-4 py-2 text-right">
+                <input type="number" step="0.01" name="wastage__{{ forloop.counter0 }}"
+                       class="w-24 rounded-lg border border-slate-300 px-3 py-2 text-right pm-wastage"
+                       value="{{ r.wastage }}">
+              </td>
+
+              <td class="px-4 py-2 text-right">
+                <span class="pm-preview">{{ r.req_total }}</span>
+              </td>
+
+              <td class="px-4 py-2 text-right">
+                <span class="pm-value-preview">{{ r.val_total }}</span>
+              </td>
+
+              <td class="px-4 py-2 text-center">
+                {% if r.id %}
+                  <input type="checkbox" name="delete__{{ forloop.counter0 }}" value="1" class="h-4 w-4">
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button name="action" value="save"
+              class="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 font-semibold text-sm">
+        Save Draft
+      </button>
+      <button name="action" value="summary"
+              class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm">
+        Save & View Summary
+      </button>
+      <button name="action" value="submit"
+              class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm">
+        Submit for Approval
+      </button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function(){
+  function toNum(v){
+    if(v === null || v === undefined) return 0;
+    const s = String(v).replace(/,/g,'').trim();
+    if(!s) return 0;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function fmt2(n){
+    if(!Number.isFinite(n)) return "—";
+    return n.toFixed(2);
+  }
+  function fmt6(n){
+    if(!Number.isFinite(n)) return "—";
+    return n.toFixed(6);
+  }
+
+  function previewRow(tr){
+    const annualKg = toNum(tr.querySelector('.annual-kg')?.textContent);
+    const size = toNum(tr.querySelector('.pm-size')?.value);
+    const rate = toNum(tr.querySelector('.pm-rate')?.value);
+    const w = toNum(tr.querySelector('.pm-wastage')?.value);
+
+    const outReq = tr.querySelector('.pm-preview');
+    const outVal = tr.querySelector('.pm-value-preview');
+    if(!outReq) return;
+
+    if(!size || size <= 0){
+      outReq.textContent = "—";
+      if(outVal) outVal.textContent = "—";
+      return;
+    }
+
+    const factor = 1 + (w/100);
+    const req = (annualKg * factor) / size;
+
+    outReq.textContent = fmt6(req);
+
+    if(outVal){
+      const val = req * rate;
+      outVal.textContent = fmt2(val);
+    }
+  }
+
+  function applyMasterSelection(sel){
+    const tr = sel.closest('tr');
+    const opt = sel.options[sel.selectedIndex];
+    const size = opt?.dataset?.size || "";
+    const rate = opt?.dataset?.rate || "";
+
+    const sizeInput = tr.querySelector('.pm-size');
+    const rateInput = tr.querySelector('.pm-rate');
+
+    if(sizeInput) sizeInput.value = size;
+    if(rateInput) rateInput.value = rate;
+
+    previewRow(tr);
+  }
+
+  document.querySelectorAll('.pm-select').forEach(sel=>{
+    sel.addEventListener('change', () => applyMasterSelection(sel));
+    // set initial (for pre-selected values)
+    if(sel.value) applyMasterSelection(sel);
+  });
+
+  document.querySelectorAll('.pm-wastage').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const tr = e.target.closest('tr');
+      previewRow(tr);
+    });
+  });
+
+  // initial compute
+  document.querySelectorAll('tr.pm-row').forEach(previewRow);
+})();
+</script>
+{% endblock %}

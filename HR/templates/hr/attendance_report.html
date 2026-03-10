@@ -1,0 +1,69 @@
+{% extends 'main/index.html' %}
+
+{% block maincontent %}
+<div class="container mx-auto py-6 px-4">
+    <form method="GET" action="{% url 'attendance_report' %}" class="mb-6 bg-white shadow-md rounded-lg p-4 flex flex-wrap items-center gap-4">
+        <!-- Date Filters -->
+        <div class="flex-1 min-w-[150px]">
+            <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date:</label>
+            <input type="date" id="start_date" name="start_date" class="w-full p-2 border border-gray-300 rounded-lg" value="{{ start_date }}">
+        </div>
+        <div class="flex-1 min-w-[150px]">
+            <label for="end_date" class="block text-sm font-medium text-gray-700">End Date:</label>
+            <input type="date" id="end_date" name="end_date" class="w-full p-2 border border-gray-300 rounded-lg" value="{{ end_date }}">
+        </div>
+
+        <!-- Employee Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label for="full_name" class="block text-sm font-medium text-gray-700">Employee Name:</label>
+            <input type="text" id="full_name" name="full_name" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Type to filter..." value="{{ full_name }}">
+        </div>
+
+        <!-- Company Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label for="company" class="block text-sm font-medium text-gray-700">Company:</label>
+            <select id="company" name="company" class="w-full p-2 border border-gray-300 rounded-lg">
+                <option value="">All</option>
+                {% for company in companies %}
+                <option value="{{ company }}">{{ company }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Department Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label for="department" class="block text-sm font-medium text-gray-700">Department:</label>
+            <select id="department" name="department" class="w-full p-2 border border-gray-300 rounded-lg">
+                <option value="">All</option>
+                {% for department in departments %}
+                <option value="{{ department }}">{{ department }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Branch Filter -->
+        <div class="flex-1 min-w-[150px]">
+            <label for="branch" class="block text-sm font-medium text-gray-700">Branch:</label>
+            <select id="branch" name="branch" class="w-full p-2 border border-gray-300 rounded-lg">
+                <option value="">All</option>
+                {% for branch in branches %}
+                <option value="{{ branch }}">{{ branch }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Filter Button -->
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition duration-300">Filter</button>
+    </form>
+
+    <!-- Display Charts -->
+    <div class="flex gap-4">
+        <div class="w-1/2">
+            {{ pie_chart|safe }}
+        </div>
+        <div class="w-1/2">
+            {{ bar_chart|safe }}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "main/index.html" %}
+{% block title %}{% if mode == "edit" %}Edit Lead{% else %}New Lead{% endif %} | Sales CRM{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <div class="text-xs font-black text-slate-500 uppercase tracking-widest">Sales CRM</div>
+      <div class="mt-1 text-2xl font-black text-slate-900">
+        {% if mode == "edit" %}Edit Lead{% else %}New Lead{% endif %}
+      </div>
+      <div class="mt-1 text-sm text-slate-600">Capture lead details and assignment.</div>
+    </div>
+    <a href="{% url 'sales_crm:lead_list' %}" class="text-sm font-semibold text-slate-700 hover:text-slate-900">← Back</a>
+  </div>
+
+  <form method="post" class="mt-5 rounded-3xl border border-slate-200 bg-white p-6">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for field in form %}
+      <div class="{% if field.name == 'remarks' %}md:col-span-2{% endif %}">
+        <label class="text-xs font-semibold text-slate-600">{{ field.label }}</label>
+        <div class="mt-1">
+          {{ field }}
+        </div>
+        {% if field.errors %}
+          <div class="mt-1 text-xs text-red-600">{{ field.errors|striptags }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-6 flex items-center justify-end gap-2">
+      <a href="{% if mode == 'edit' %}{% url 'sales_crm:lead_detail' obj.pk %}{% else %}{% url 'sales_crm:lead_list' %}{% endif %}"
+         class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+        Cancel
+      </a>
+      <button class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+        Save
+      </button>
+    </div>
+  </form>
+
+</div>
+
+<style>
+  /* Make Django default widgets match Tailwind */
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid rgb(226,232,240);
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    outline: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    box-shadow: 0 0 0 2px rgba(148,163,184,.35);
+  }
+</style>
+{% endblock %}

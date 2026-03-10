@@ -1,0 +1,539 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Production Budget{% endblock %}
+
+{% block maincontent %}
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  /* Form controls consistency */
+  input[type="text"], select {
+    border: 1px solid rgb(203 213 225);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    width: 100%;
+    transition: all 0.2s ease;
+  }
+  
+  input[type="text"]:focus, select:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+  
+  select { 
+    background-color: white;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  /* Smooth hover transitions */
+  .card-hover {
+    transition: all 0.2s ease;
+  }
+  
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  /* Table row hover effect */
+  .table-row-hover {
+    transition: background-color 0.15s ease;
+  }
+
+  /* Badge animation */
+  .badge-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: .8;
+    }
+  }
+
+  /* Status indicator dot */
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+  }
+
+  /* Custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 py-8">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+    <!-- HERO HEADER -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 px-8 py-8">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          
+          <!-- Left: Title & Description -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-3">
+              <div class="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+                <i class="fa-solid fa-industry text-white text-2xl"></i>
+              </div>
+              <div>
+                <h1 class="text-3xl font-bold text-white">Production Budget</h1>
+                <p class="text-indigo-100 text-sm mt-1">
+                  Select FG, enter monthly plan quantities — RM auto-computed from norms
+                </p>
+              </div>
+            </div>
+
+            {# Status badge #}
+            {% if mc %}
+              <div class="inline-flex">
+                {% if mc.status == "SUBMITTED" %}
+                  <span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-semibold shadow-lg badge-pulse">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                    Pending Approval
+                  </span>
+                {% elif mc.status == "APPROVED" %}
+                  <span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-500 text-white text-sm font-semibold shadow-lg">
+                    <i class="fa-solid fa-circle-check"></i>
+                    Approved
+                  </span>
+                {% elif mc.status == "REJECTED" %}
+                  <span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-500 text-white text-sm font-semibold shadow-lg">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                    Disapproved
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-600 text-white text-sm font-semibold shadow-lg">
+                    <i class="fa-solid fa-pen"></i>
+                    Draft Mode
+                  </span>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Right: Action Buttons -->
+          <div class="flex flex-wrap items-center gap-3">
+            
+            <a href="{% url 'accounts_budget:production_bom_list' %}"
+               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-medium backdrop-blur-sm transition-all border border-white/20">
+              <i class="fa-solid fa-database"></i>
+              BOM Master
+            </a>
+
+            <a href="{% url 'accounts_budget:production_budget_create' %}"
+               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white text-indigo-600 hover:bg-indigo-50 font-semibold transition-all shadow-lg hover:shadow-xl
+                      {% if is_locked %}opacity-50 pointer-events-none{% endif %}">
+              <i class="fa-solid fa-plus"></i>
+              New FG Budget
+            </a>
+
+            {# Approval Actions #}
+            {% if can_approve and mc %}
+              {% if mc.status == "SUBMITTED" %}
+                <a href="{% url 'accounts_budget:mc_approve' model_label mc.object_id scope %}?next={{ next_url|urlencode }}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 font-semibold transition-all shadow-lg hover:shadow-xl">
+                  <i class="fa-solid fa-check"></i>
+                  Approve
+                </a>
+
+                <a href="{% url 'accounts_budget:mc_reject' model_label mc.object_id scope %}?next={{ next_url|urlencode }}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-rose-500 text-white hover:bg-rose-600 font-semibold transition-all shadow-lg hover:shadow-xl">
+                  <i class="fa-solid fa-xmark"></i>
+                  Disapprove
+                </a>
+              {% elif mc.status == "APPROVED" %}
+                <a href="{% url 'accounts_budget:mc_reject' model_label mc.object_id scope %}?next={{ next_url|urlencode }}"
+                   class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-rose-500 text-white hover:bg-rose-600 font-semibold transition-all shadow-lg hover:shadow-xl">
+                  <i class="fa-solid fa-rotate-left"></i>
+                  Disapprove
+                </a>
+              {% endif %}
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+
+      {# Approval Remarks Section #}
+      {% if mc and mc.remarks %}
+        <div class="px-8 py-5 bg-gradient-to-r from-blue-50 to-indigo-50 border-t border-indigo-100">
+          <div class="flex items-start gap-4">
+            <div class="h-11 w-11 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+              <i class="fa-solid fa-message text-lg"></i>
+            </div>
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-slate-800 mb-1">Approval Remarks</div>
+              <div class="text-sm text-slate-700 whitespace-pre-line mb-2">{{ mc.remarks }}</div>
+              <div class="flex items-center gap-3 text-xs text-slate-500">
+                {% if mc.updated_by %}
+                  <span class="inline-flex items-center gap-1">
+                    <i class="fa-solid fa-user"></i>
+                    {{ mc.updated_by }}
+                  </span>
+                {% endif %}
+                {% if mc.updated_at %}
+                  <span class="inline-flex items-center gap-1">
+                    <i class="fa-regular fa-clock"></i>
+                    {{ mc.updated_at|date:"d-M-Y H:i" }}
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- PLAN SELECTOR CARD -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        
+        <!-- Current Plan Info -->
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center">
+            <i class="fa-solid fa-calendar-days text-indigo-600 text-xl"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 font-medium uppercase tracking-wide">Current Plan</div>
+            <div class="text-base font-bold text-slate-900 mt-0.5">
+              {{ plan.fy }}{% if plan.company_group %} <span class="text-slate-400">·</span> {{ plan.company_group }}{% endif %}
+            </div>
+          </div>
+          {% if plan.is_active %}
+            <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 border border-emerald-200">
+              <span class="status-dot bg-emerald-500"></span>
+              Active
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Plan Selector -->
+        {% if plans %}
+          <form method="get" class="flex items-center gap-3">
+            <label class="text-sm font-semibold text-slate-700">Switch Plan:</label>
+            <div class="min-w-[240px]">
+              <select name="plan" onchange="this.form.submit()" class="cursor-pointer">
+                {% for p in plans %}
+                  <option value="{{ p.id }}" {% if p.id == plan.id %}selected{% endif %}>
+                    {{ p.fy }}{% if p.company_group %} ({{ p.company_group }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- SEARCH & FILTER BAR -->
+    <form method="get" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+      {% if plan %}
+        <input type="hidden" name="plan" value="{{ plan.id }}">
+      {% endif %}
+
+      <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+        
+        <!-- Search Input -->
+        <div class="flex-1">
+          <label class="sr-only">Search FG</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-4 flex items-center text-slate-400">
+              <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input
+              type="text"
+              name="q"
+              value="{{ q|default:'' }}"
+              placeholder="Search by FG name, code, or category..."
+              class="w-full pl-11 pr-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all"
+            >
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-3">
+          <button type="submit"
+                  class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-slate-900 text-white hover:bg-slate-800 font-medium transition-all shadow-sm hover:shadow-md">
+            <i class="fa-solid fa-filter"></i>
+            Apply Filter
+          </button>
+
+          <a href="{% url 'accounts_budget:production_budget_home' %}{% if plan %}?plan={{ plan.id }}{% endif %}"
+             class="inline-flex items-center gap-2 px-6 py-3 rounded-lg border-2 border-slate-200 bg-white hover:bg-slate-50 font-medium transition-all">
+            <i class="fa-solid fa-rotate-right"></i>
+            Reset
+          </a>
+        </div>
+      </div>
+    </form>
+
+    <!-- DATA TABLE -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      
+      <!-- Table Header -->
+      <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center">
+              <i class="fa-solid fa-table-list text-indigo-600"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-slate-900">FG Budget Entries</h2>
+              <div class="text-xs text-slate-500 mt-0.5">Manage finished goods production budgets</div>
+            </div>
+          </div>
+          <div class="text-sm text-slate-600">
+            Total: <span class="inline-flex items-center justify-center min-w-[2rem] px-2 py-1 rounded-lg bg-indigo-100 text-indigo-700 font-bold">{{ budgets|length }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Content -->
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 border-b-2 border-slate-200">
+            <tr>
+              <th class="px-6 py-4 text-left font-semibold text-slate-700">
+                <div class="flex items-center gap-2">
+                  <i class="fa-solid fa-box text-slate-400"></i>
+                  FG Details
+                </div>
+              </th>
+              <th class="px-6 py-4 text-right font-semibold text-slate-700">
+                <div class="flex items-center justify-end gap-2">
+                  <i class="fa-solid fa-weight-scale text-slate-400"></i>
+                  Total Quantity
+                </div>
+              </th>
+              <th class="px-6 py-4 text-left font-semibold text-slate-700">
+                <div class="flex items-center gap-2">
+                  <i class="fa-regular fa-clock text-slate-400"></i>
+                  Last Updated
+                </div>
+              </th>
+              <th class="px-6 py-4 text-center font-semibold text-slate-700">
+                <div class="flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-flag text-slate-400"></i>
+                  Status
+                </div>
+              </th>
+              <th class="px-6 py-4 text-right font-semibold text-slate-700">
+                <div class="flex items-center justify-end gap-2">
+                  <i class="fa-solid fa-bolt text-slate-400"></i>
+                  Actions
+                </div>
+              </th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for b in budgets %}
+            <tr class="table-row-hover hover:bg-slate-50">
+              
+              <!-- FG Details -->
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center flex-shrink-0">
+                    <i class="fa-solid fa-cube text-indigo-600"></i>
+                  </div>
+                  <div>
+                    <div class="font-semibold text-slate-900">{{ b.fg_name }}</div>
+                    <div class="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                      <span class="inline-flex items-center gap-1">
+                        <i class="fa-solid fa-calendar-days text-slate-400"></i>
+                        {{ b.plan.fy }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Total Quantity -->
+              <td class="px-6 py-4 text-right">
+                <div class="inline-flex flex-col items-end">
+                  <div class="text-lg font-bold text-slate-900">{{ b.total_fg_qty|floatformat:2 }}</div>
+                  <div class="text-xs text-slate-500 font-medium">MT</div>
+                </div>
+              </td>
+
+              <!-- Last Updated -->
+              <td class="px-6 py-4">
+                <div class="flex items-center gap-2">
+                  <i class="fa-regular fa-calendar text-slate-400"></i>
+                  <div>
+                    <div class="text-sm font-medium text-slate-700">{{ b.updated_at|date:"d-M-Y" }}</div>
+                    <div class="text-xs text-slate-500">{{ b.updated_at|time:"H:i" }}</div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Status Badge -->
+              <td class="px-6 py-4 text-center">
+                {% if b.mc.status == "SUBMITTED" %}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold border border-amber-200">
+                    <span class="status-dot bg-amber-500"></span>
+                    Pending
+                  </span>
+                {% elif b.mc.status == "APPROVED" %}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                    <span class="status-dot bg-emerald-500"></span>
+                    Approved
+                  </span>
+                {% elif b.mc.status == "REJECTED" %}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-100 text-rose-700 text-xs font-semibold border border-rose-200">
+                    <span class="status-dot bg-rose-500"></span>
+                    Disapproved
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200">
+                    <span class="status-dot bg-slate-500"></span>
+                    Draft
+                  </span>
+                {% endif %}
+              </td>
+
+              <!-- Actions -->
+              <td class="px-6 py-4">
+                <div class="flex items-center justify-end gap-2">
+
+                  <!-- Edit/View Button -->
+                  <a href="{% url 'accounts_budget:production_budget_edit' b.id %}"
+                     class="inline-flex items-center gap-2 px-4 py-2 rounded-lg {% if b.mc.status == 'APPROVED' or b.mc.status == 'SUBMITTED' %}border-2 border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100{% else %}border-2 border-slate-200 bg-white text-slate-700 hover:bg-slate-50{% endif %} font-medium transition-all">
+                    <i class="fa-solid {% if b.mc.status == 'APPROVED' or b.mc.status == 'SUBMITTED' %}fa-eye{% else %}fa-pen-to-square{% endif %}"></i>
+                    {% if b.mc.status == "APPROVED" or b.mc.status == "SUBMITTED" %}
+                      View
+                    {% else %}
+                      Edit
+                    {% endif %}
+                  </a>
+
+                  <!-- Delete Button -->
+                  {% if b.mc.status != "APPROVED" and b.mc.status != "SUBMITTED" %}
+                    <a href="{% url 'accounts_budget:production_budget_delete' b.id %}?next={{ request.get_full_path|urlencode }}"
+                       onclick="return confirm('Are you sure you want to delete this budget entry?')"
+                       class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 font-medium transition-all">
+                      <i class="fa-solid fa-trash"></i>
+                      Delete
+                    </a>
+                  {% else %}
+                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed font-medium" title="Cannot delete approved or submitted entries">
+                      <i class="fa-solid fa-lock"></i>
+                      Delete
+                    </span>
+                  {% endif %}
+
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            
+            <!-- Empty State -->
+            <tr>
+              <td colspan="5" class="px-6 py-20 text-center">
+                <div class="max-w-md mx-auto space-y-4">
+                  <div class="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                    <i class="fa-solid fa-inbox text-slate-400 text-3xl"></i>
+                  </div>
+                  <div>
+                    <div class="text-lg font-bold text-slate-900">No Production Budgets Found</div>
+                    <div class="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
+                      Get started by creating a new FG budget. Input data will populate from ERP BOM (Key Raw Material / Raw Material) and you can configure norms.
+                    </div>
+                  </div>
+                  <div class="pt-4">
+                    <a href="{% url 'accounts_budget:production_budget_create' %}"
+                       class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 font-semibold transition-all shadow-md hover:shadow-lg
+                              {% if is_locked %}opacity-50 pointer-events-none{% endif %}">
+                      <i class="fa-solid fa-plus"></i>
+                      Create Your First Budget
+                    </a>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick Stats Footer (Optional - can be added if needed) -->
+    {% if budgets %}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 card-hover">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+            <i class="fa-solid fa-clipboard-list text-blue-600 text-xl"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 font-medium uppercase tracking-wide">Total Budgets</div>
+            <div class="text-2xl font-bold text-slate-900 mt-0.5">{{ budgets|length }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 card-hover">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+            <i class="fa-solid fa-check-circle text-emerald-600 text-xl"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 font-medium uppercase tracking-wide">Approved</div>
+            <div class="text-2xl font-bold text-slate-900 mt-0.5">
+              {% widthratio budgets|length 1 1 as total %}
+              {{ budgets|length }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 card-hover">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 rounded-lg bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center">
+            <i class="fa-solid fa-hourglass-half text-amber-600 text-xl"></i>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 font-medium uppercase tracking-wide">Pending</div>
+            <div class="text-2xl font-bold text-slate-900 mt-0.5">
+              {{ budgets|length }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}
+</document_content>

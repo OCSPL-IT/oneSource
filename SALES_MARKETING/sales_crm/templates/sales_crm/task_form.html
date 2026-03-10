@@ -1,0 +1,107 @@
+{% extends "main/index.html" %}
+
+{% block maincontent %}
+
+<div class="max-w-3xl mx-auto mt-10 bg-white shadow-2xl rounded-2xl p-10">
+
+    <!-- Header with top-right button -->
+    <div class="flex justify-between items-center mb-8">
+        <!-- Page Title -->
+        <div>
+            <h2 class="text-2xl font-bold text-slate-800">
+                Create Task
+            </h2>
+            <p class="text-sm text-gray-500 mt-1">
+                For Customer: <span class="font-medium text-blue-600">{{ visit.customer }}</span>
+            </p>
+        </div>
+
+        <!-- Task List Button -->
+        <a href="{% url 'sales_crm:task_list' %}"
+           class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium flex items-center gap-2">
+            <i data-lucide="list" class="w-4 h-4"></i> Task List
+        </a>
+    </div>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Title -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Task Title <span class="text-red-500">*</span>
+            </label>
+            {{ form.title }}
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Description
+            </label>
+            {{ form.description }}
+        </div>
+
+        <!-- Grid Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Assigned To -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Assign To
+                </label>
+                {{ form.assigned_to }}
+            </div>
+
+            <!-- Due Date -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Due Date <span class="text-red-500">*</span>
+                </label>
+                {{ form.due_date }}
+            </div>
+
+        </div>
+
+        <!-- Grid Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <!-- Priority -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Priority
+                </label>
+                {{ form.priority }}
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Status
+                </label>
+                {{ form.status }}
+            </div>
+
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-end gap-4 pt-4">
+
+            <a href="{% url 'sales_crm:task_list' %}"
+               class="px-5 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition">
+                Cancel
+            </a>
+
+            <button type="submit"
+                class="px-6 py-2 rounded-lg bg-blue-600 text-white font-medium 
+                       hover:bg-blue-700 active:scale-95 transition duration-200 shadow-md">
+                Save Task
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

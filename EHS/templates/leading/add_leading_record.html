@@ -1,0 +1,279 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="{% static 'leading/css/leading.css' %}">
+
+<!-- Messages Section -->
+{% if messages %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+    <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+       {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500
+       {% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500
+       {% elif message.tags == 'error' %}bg-red-500{% endif %}">
+        <span class="flex-1">{{ message }}</span>
+        <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+            onclick="this.parentElement.remove()">
+            ✖
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if form.non_field_errors %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for error in form.non_field_errors %}
+    <div class="relative p-4 border-l-4 rounded-md bg-red-50 border-red-500">
+        <span class="text-red-700">{{ error }}</span>
+        <button type="button" class="absolute top-2 right-2 text-gray-500 hover:text-gray-700 p-1"
+            onclick="this.parentElement.remove()">
+            X
+        </button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex justify-center items-center min-h-screen bg-gray-100">
+    <div class="w-full max-w-4xl bg-white shadow-md rounded-lg px-5">
+        <div class="container mx-auto px-6 mt-4 ">
+            <div class="flex items-center justify-between mb-4">
+                <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                    Back to Main Page
+                </a>
+                <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Add Leading Record</h2>
+                <a href="{% url 'view_leading' %}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                    View Records
+                </a>
+                <!-- ...existing header section... -->
+                {% if perms.EHS.add_physical_location %}
+                <button type="button" id="openLocationModal"
+                class="bg-sky-500 hover:bg-sky-600 text-white font-bold mx-2 py-3 px-4 rounded shadow-md flex items-center">
+                <i class="fa-solid fa-location-dot"></i>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        <hr>
+
+        <form method="POST" class="space-y-4 mb-4" novalidate>
+            {% csrf_token %}
+
+            <!-- Row with two fields: Observation Date and Department -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Observation Date</label>
+                    {{ form.observation_date }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Department</label>
+                    {{ form.department }}
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Physical Location</label>
+                    {{ form.physical_location }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Leading Abnormality</label>
+                    {{ form.leading_abnormality }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Initiated By</label>
+                  {{ form.initiated_by }}
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Severity</label>
+                  {{ form.severity }}
+                </div>
+              </div>
+            
+
+            <!-- Severity, Likelihood, Risk Factor -->
+            <div class="grid grid-cols-2 gap-4">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Likelihood</label>
+                    {{ form.likelihood }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Risk Factor</label>
+                    {{ form.risk_factor }}
+                </div>
+            </div>
+
+            <!-- Observation Description, Corrective Action -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Observation Description</label>
+                    {{ form.observation_description }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Corrective Action</label>
+                    {{ form.corrective_action }}
+                </div>
+            </div>
+
+            <!-- PSL Member, Responsible Person -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">PSL Member Name</label>
+                    {{ form.psl_member_name }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Responsible Person</label>
+                    {{ form.responsible_person }}
+                </div>
+            </div>
+
+            <!-- Root Cause, Preventive Action -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Root Cause</label>
+                    {{ form.root_cause }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Preventive Action</label>
+                    {{ form.preventive_action }}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Target Date</label>
+                  {{ form.target_date }}
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Status</label>
+                  {{ form.status }}
+                </div>
+              </div>
+              
+            <!-- Target Date, Remark, Status -->
+            <div class="grid grid-cols-3 gap-4">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Remark</label>
+                    {{ form.remark }}
+                </div>
+                
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
+                Submit
+            </button>
+        </form>
+    </div>
+</div>
+
+
+<!-- MODAL BACKDROP & MODAL FORM -->
+<div id="locationModalBackdrop" class="fixed inset-0 bg-black bg-opacity-30 hidden z-40"></div>
+    <div id="locationModal"
+            class="fixed top-1/2 left-1/2 z-50 w-full max-w-md bg-white rounded-xl shadow-lg p-6
+            border border-gray-200 transform -translate-x-1/2 -translate-y-1/2 hidden">
+    <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-semibold text-gray-800">Add Physical Location</h3>
+        <button type="button" class="text-gray-600 hover:text-gray-900 text-2xl font-bold" onclick="closeLocationModal()">&times;</button>
+    </div>
+ 
+    <form id="locationForm" autocomplete="off">
+        {% csrf_token %}
+        <label class="block text-sm font-medium text-gray-700 mb-2" for="id_location_name">Location Name</label>
+        <input name="name" id="id_location_name" type="text"
+               class="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+               placeholder="Enter location name" maxlength="128" required>
+        <div id="loc_form_error" class="text-red-500 text-sm mb-2 hidden"></div>
+        <button type="submit"
+                class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-semibold">
+            Add Location
+        </button>
+    </form>
+ 
+</div>
+<!-- Toast Message (hidden by default) -->
+<div id="locationToast"
+     class="fixed top-10 left-1/2 z-50 transform -translate-x-1/2 bg-green-500 text-white font-semibold px-5 py-3 rounded shadow-lg hidden">
+    Location added successfully!
+</div>
+
+<!-- JavaScript for Risk Factor Calculation -->
+<script src="{% static 'leading/js/leading.js' %}"></script>
+<script>
+    function closeLocationModal() {
+        document.getElementById('locationModal').classList.add('hidden');
+        document.getElementById('locationModalBackdrop').classList.add('hidden');
+        document.getElementById('id_location_name').value = '';
+        document.getElementById('loc_form_error').classList.add('hidden');
+    }
+    
+    document.getElementById('openLocationModal').onclick = function() {
+        document.getElementById('locationModal').classList.remove('hidden');
+        document.getElementById('locationModalBackdrop').classList.remove('hidden');
+        document.getElementById('id_location_name').focus();
+    };
+    
+    // Dismiss modal on backdrop click
+    document.getElementById('locationModalBackdrop').onclick = closeLocationModal;
+    
+    // AJAX submit
+    document.getElementById('locationForm').onsubmit = async function(e) {
+    e.preventDefault();
+    const name = document.getElementById('id_location_name').value;
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const errorDiv = document.getElementById('loc_form_error');
+    errorDiv.classList.add('hidden');
+    errorDiv.innerText = '';
+
+    const res = await fetch("{% url 'add_physical_location' %}", {
+        method: "POST",
+        headers: {
+            'X-CSRFToken': csrf,
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams({name})
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        // Optionally, update the select without reload
+        const select = document.querySelector('select[name="physical_location"]');
+        if (select) {
+            const opt = document.createElement('option');
+            opt.value = data.location.id;
+            opt.innerText = data.location.name;
+            opt.selected = true;
+            select.appendChild(opt);
+        }
+        closeLocationModal();
+        // Show toast message
+        const toast = document.getElementById('locationToast');
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+            toast.classList.add('hidden');
+        }, 2200);
+        } else {
+            let msg = 'Failed to add location.';
+            if (data.error) {
+                try {
+                    const errors = JSON.parse(data.error);
+                    if (errors.name) msg = errors.name[0].message;
+                } catch {
+                    msg = data.error;
+                }
+            }
+            errorDiv.innerText = msg;
+            errorDiv.classList.remove('hidden');
+        }
+    };
+    </script>
+    
+{% endblock maincontent %}

@@ -1,0 +1,58 @@
+{% extends "main/index.html" %}
+{% block title %}Upload Maintenance Schedule{% endblock %}
+
+{% block maincontent %}
+<div class="container py-4" style="max-width: 760px;">
+
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} mb-2" role="alert">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <h3 class="mb-3">Upload Schedule (Excel)</h3>
+
+  <p class="text-muted mb-3">
+    Expected columns (any order): <code>Equipment ID</code>, <code>Location</code>, <code>Date</code>.<br>
+    Date formats accepted: <code>01-04-2025</code>, <code>01/04/2025</code>, <code>2025-04-01</code>, or Excel date cells.
+  </p>
+
+  <div class="card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Excel file (.xlsx / .xls)</label>
+          <input class="form-control" type="file" name="file" accept=".xlsx,.xls" required>
+        </div>
+
+        <details class="mb-2">
+          <summary class="text-muted">See sample rows</summary>
+          <div class="table-responsive mt-2">
+            <table class="table table-sm table-bordered mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Equipment ID</th>
+                  <th>Location</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>AR-101</td><td>A Block</td><td>01-04-2025</td></tr>
+                <tr><td>AR-102</td><td>A Block</td><td>02-04-2025</td></tr>
+                <tr><td>AR-103</td><td>A Block</td><td>03-04-2025</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+      <div class="card-footer d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Upload & Import</button>
+        <a class="btn btn-outline-secondary" href="{% url 'maintenance:dashboard' %}">Back</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

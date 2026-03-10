@@ -1,0 +1,753 @@
+{# TEMPLATE MARKER: receivable_dashboard v7.3 (Overdue Tabs Restored + Incoming Below Aging + Sync % + Company UI Stable) #}
+{% extends "main/index.html" %}
+{% load static inr_format %}
+
+{% block title %}Receivables Analytics{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50 text-slate-900 pb-10">
+
+  {% url 'accounts:receivables_snapshot_sync' as sync_url %}
+
+  <!-- 1) TOP NAV -->
+  <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-md">
+    <div class="max-w-[98rem] mx-auto px-4 py-2 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md">
+          <i class="fa-solid fa-chart-pie text-white text-sm"></i>
+        </div>
+        <div class="leading-tight">
+          <h1 class="text-base font-black tracking-tight text-slate-800 uppercase">
+            Receivables <span class="text-indigo-600">Analytics</span>
+          </h1>
+          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            Live Financial Pulse • {% now "F d, Y" %}
+          </p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        {% if sync_url %}
+        <form method="post" action="{{ sync_url }}" id="syncForm"
+              class="flex items-center"
+              data-start-url="{% url 'accounts:receivables_snapshot_sync_start' %}"
+              data-status-url="{% url 'accounts:receivables_snapshot_sync_status' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <input type="hidden" name="as_of" value="{% now 'Y-m-d' %}">
+          <button type="submit" id="syncBtn"
+                  class="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-indigo-100 transition-all">
+            <i id="syncStaticIcon" class="fa-solid fa-arrows-rotate mr-1"></i>
+            <i id="syncSpinner" class="fa-solid fa-rotate hidden animate-spin mr-1"></i>
+            Sync ERP Data
+          </button>
+        </form>
+        {% endif %}
+
+        {# ✅ Excel shortcut (keeps current filters) + download completion handling #}
+        <a id="excelDownloadLink"
+           data-download="excel"
+           href="{% url 'accounts:receivables_dashboard_excel' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
+           class="px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-emerald-100 transition-all">
+          <i class="fa-solid fa-file-excel mr-1"></i>
+          Excel
+        </a>
+
+        <a href="{% url 'accounts:receivable_dashboard' %}"
+           class="px-3 py-1.5 bg-white border border-slate-200 text-slate-500 rounded-lg text-[10px] font-black uppercase hover:bg-rose-50 hover:text-rose-600">
+          Reset
+        </a>
+      </div>
+    </div>
+
+    <!-- Sync Progress (BAR + % + Step) -->
+    <div id="syncProgressWrap" class="hidden border-t border-slate-200 bg-white">
+      <div class="max-w-[98rem] mx-auto px-4 py-2 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2 min-w-[240px]">
+          <span id="syncStep" class="text-[10px] font-black uppercase tracking-widest text-indigo-700">Syncing…</span>
+          <span class="text-[10px] font-bold text-slate-300">|</span>
+          <span id="syncPct" class="text-[10px] font-black text-slate-700 tabular-nums">0%</span>
+        </div>
+        <div class="flex-1">
+          <div class="h-1.5 bg-slate-100 w-full overflow-hidden rounded-full">
+            <div id="syncBar" class="h-full bg-indigo-600 transition-all duration-500" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-[98rem] mx-auto px-4 mt-4 space-y-4">
+
+    <!-- 2) FILTER BAR -->
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <form method="get" id="filterForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+
+        <!-- Company Group -->
+        <div class="space-y-1">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Group</label>
+          <select name="company_group" id="companyGroupSelect"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold py-2">
+            <option value="">All Companies</option>
+            <option value="OCSPL" {% if filters.company_group == "OCSPL" %}selected{% endif %}>OCSPL</option>
+            <option value="OCCHEM" {% if filters.company_group == "OCCHEM" %}selected{% endif %}>OCCHEM</option>
+          </select>
+        </div>
+
+        <!-- Company (Legal Entity) -->
+        <div class="space-y-1">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Company</label>
+          <select name="company" id="companySelect"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold py-2">
+            <option value="" {% if not filters.company %}selected{% endif %}>All</option>
+
+            <option value="OC Specialities Pvt. Ltd."
+                    {% if filters.company == "OC Specialities Pvt. Ltd." %}selected{% endif %}>
+              OC Specialities Pvt. Ltd. (Specialities)
+            </option>
+
+            <option value="OC Specialities Chemicals Pvt. Ltd."
+                    {% if filters.company == "OC Specialities Chemicals Pvt. Ltd." %}selected{% endif %}>
+              OC Specialities Chemicals Pvt. Ltd. (Chemicals)
+            </option>
+          </select>
+
+          <p class="text-[10px] text-slate-400">
+            Tip: Use <span class="font-bold">Company Group</span> for OCSPL/OCCHEM, and <span class="font-bold">Company</span> for legal entity selection.
+          </p>
+        </div>
+
+        <!-- Customer -->
+        <div class="space-y-1">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</label>
+          <div class="relative">
+            <input type="text" name="customer" value="{{ filters.customer }}" list="party_datalist"
+                   placeholder="Search customer..."
+                   class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs pl-9 font-bold py-2">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-300 text-[10px]"></i>
+            <datalist id="party_datalist">
+              {% for name in party_options %}<option value="{{ name }}">{% endfor %}
+            </datalist>
+          </div>
+        </div>
+
+        <!-- Aging -->
+        <div class="space-y-1">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aging</label>
+          <select name="aging" class="w-full bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold py-2">
+            <option value="">All Buckets</option>
+            <option value="Not due" {% if filters.aging == "Not due" %}selected{% endif %}>Not due</option>
+            <option value="0-30 days" {% if filters.aging == "0-30 days" %}selected{% endif %}>0–30 days</option>
+            <option value="31-60 days" {% if filters.aging == "31-60 days" %}selected{% endif %}>31–60 days</option>
+            <option value="61-90 days" {% if filters.aging == "61-90 days" %}selected{% endif %}>61–90 days</option>
+            <option value="91-120 days" {% if filters.aging == "91-120 days" %}selected{% endif %}>91–120 days</option>
+            <option value="121-180 days" {% if filters.aging == "121-180 days" %}selected{% endif %}>121–180 days</option>
+            <option value=">180 days" {% if filters.aging == ">180 days" %}selected{% endif %}>&gt;180 days</option>
+          </select>
+        </div>
+
+        <!-- Date Range -->
+        <div class="space-y-1 lg:col-span-2">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Range</label>
+          <div class="flex items-center gap-2">
+            <input type="date" name="from_date" value="{{ filters.from_date }}"
+                   class="flex-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold py-2">
+            <span class="text-slate-300 font-bold">—</span>
+            <input type="date" name="to_date" value="{{ filters.to_date }}"
+                   class="flex-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold py-2">
+          </div>
+        </div>
+
+        <!-- Apply -->
+        <div class="space-y-1">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">&nbsp;</label>
+          <button type="submit"
+                  class="w-full px-3 py-2 bg-slate-900 text-white rounded-lg text-[10px] font-black uppercase hover:bg-black transition-all">
+            Apply Filters
+          </button>
+        </div>
+
+      </form>
+
+      {% if filters.company_group or filters.company or filters.customer or filters.aging or filters.from_date or filters.to_date or filters.overdue %}
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest mr-1">Active:</span>
+
+        {% if filters.overdue %}
+        <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-50 text-slate-700 border border-slate-200">
+          <i class="fa-solid fa-circle-dot opacity-60"></i> {{ filters.overdue|upper }}
+        </span>
+        {% endif %}
+
+        {% if filters.company_group %}
+        <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-indigo-50 text-indigo-700 border border-indigo-100">
+          <i class="fa-solid fa-building opacity-60"></i> {{ filters.company_group }}
+        </span>
+        {% endif %}
+
+        {% if filters.company %}
+        <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-slate-50 text-slate-700 border border-slate-200">
+          <i class="fa-solid fa-landmark opacity-60"></i> {{ filters.company }}
+        </span>
+        {% endif %}
+
+        {% if filters.customer %}
+        <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-100">
+          <i class="fa-solid fa-user opacity-60"></i> {{ filters.customer }}
+        </span>
+        {% endif %}
+
+        {% if filters.aging %}
+        <span class="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-rose-50 text-rose-700 border border-rose-100">
+          <i class="fa-solid fa-clock opacity-60"></i> {{ filters.aging }}
+        </span>
+        {% endif %}
+
+        <button id="btnClearSlicers" type="button"
+                class="ml-auto text-[10px] font-black uppercase text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg border border-rose-100">
+          Clear All
+        </button>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- 2B) ALL / CLEAN / OVERDUE TABS (RESTORED) -->
+    <section class="flex items-center justify-between gap-3">
+      <div class="inline-flex items-center p-1 bg-slate-100 border border-slate-200 rounded-xl">
+        {% with cur=filters.overdue %}
+          <a href="{% url 'accounts:receivable_dashboard' %}{% if query_string_no_overdue %}?{{ query_string_no_overdue }}{% endif %}"
+             class="px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all
+             {% if not cur %}bg-white text-slate-900 shadow-sm{% else %}text-slate-500 hover:text-slate-800{% endif %}">
+            All
+          </a>
+
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}overdue=not_overdue"
+             class="px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all
+             {% if cur == 'not_overdue' or cur == '0' %}bg-emerald-600 text-white shadow-sm{% else %}text-slate-500 hover:text-emerald-700{% endif %}">
+            Clean
+          </a>
+
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}overdue=overdue"
+             class="px-5 py-2 rounded-lg text-[10px] font-black uppercase transition-all
+             {% if cur == 'overdue' or cur == '1' %}bg-rose-600 text-white shadow-sm{% else %}text-slate-500 hover:text-rose-700{% endif %}">
+            Overdue
+          </a>
+        {% endwith %}
+      </div>
+
+      {% if filters.overdue %}
+      <div class="text-[10px] font-black uppercase text-slate-500">
+        View: <span class="ml-1 px-2 py-1 rounded-lg border border-slate-200 bg-white text-slate-900">{{ filters.overdue|upper }}</span>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- 3) KPI SUMMARY -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Invoiced</p>
+        <h3 class="text-lg font-black text-slate-800 tabular-nums">{{ summary.total_invoiced|default:0|inr }}</h3>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total Collected</p>
+        <h3 class="text-lg font-black text-emerald-700 tabular-nums">
+          {{ summary.total_received|default:0|inr }}
+        </h3>
+        {% if summary.received_snapshot_date %}
+        <p class="text-[10px] text-slate-400 mt-1">
+          Snapshot: <span class="font-bold">{{ summary.received_snapshot_date }}</span>
+        </p>
+        {% endif %}
+      </div>
+
+      <div class="bg-indigo-600 p-4 rounded-xl shadow-lg shadow-indigo-100 relative overflow-hidden">
+        <p class="text-[9px] font-black text-indigo-100 uppercase tracking-widest relative z-10">Net Outstanding</p>
+        <div class="flex items-baseline gap-2 relative z-10">
+          <h3 class="text-lg font-black text-white tabular-nums">{{ summary.total_outstanding|default:0|inr }}</h3>
+          <span class="text-[11px] font-bold text-indigo-200">
+            ({{ summary.total_outstanding_crore|default:0|floatformat:2 }} Cr)
+          </span>
+        </div>
+        <i class="fa-solid fa-indian-rupee-sign absolute -right-2 -bottom-2 text-white/10 text-4xl"></i>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Received (7D)</p>
+        <h3 class="text-lg font-black text-slate-800 tabular-nums">{{ previous_week_received|default:0|inr }}</h3>
+      </div>
+    </section>
+
+    <!-- 4) INSIGHTS GRID (Incoming moved BELOW Aging) -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- LEFT COLUMN: Monthly + Top Debtors -->
+      <div class="space-y-4">
+
+        <!-- Monthly -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+            <div>
+              <h2 class="text-[11px] font-extrabold uppercase tracking-widest text-slate-700">Monthly</h2>
+              <p class="text-[10px] text-slate-400">Click to filter registry</p>
+            </div>
+            <span class="text-[10px] font-extrabold text-slate-400 uppercase">O/S</span>
+          </div>
+          <div class="overflow-y-auto max-h-64 custom-scrollbar">
+            <table class="w-full text-left text-[12px]">
+              <tbody class="divide-y divide-slate-100">
+                {% for row in monthly_data %}
+                <tr class="js-slicer-month cursor-pointer hover:bg-indigo-50/70" data-month="{{ row.month|date:'Y-m' }}">
+                  <td class="px-4 py-2.5 font-semibold text-slate-700">{{ row.month|date:"M Y" }}</td>
+                  <td class="px-4 py-2.5 text-right font-extrabold tabular-nums">{{ row.outstanding|inr }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="px-4 py-10 text-center text-slate-400 text-[11px] italic">No monthly data.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top Debtors -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+            <div>
+              <h2 class="text-[11px] font-extrabold uppercase tracking-widest text-slate-700">Top Debtors</h2>
+              <p class="text-[10px] text-slate-400">Click party to filter</p>
+            </div>
+            <span class="text-[10px] font-extrabold text-slate-400 uppercase">O/S</span>
+          </div>
+          <div class="overflow-y-auto max-h-64 custom-scrollbar">
+            <table class="w-full text-left text-[12px]">
+              <tbody class="divide-y divide-slate-100">
+                {% for row in customer_data|slice:":20" %}
+                <tr class="js-slicer-party cursor-pointer hover:bg-slate-50"
+                    data-party="{{ row.party_name|default:row.display_party|default:row.customer_name }}">
+                  <td class="px-4 py-2.5 font-extrabold text-slate-800 uppercase truncate max-w-[420px]">
+                    {{ row.party_name|default:row.display_party|default:row.customer_name|default:"-" }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-extrabold tabular-nums">{{ row.outstanding|inr }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="px-4 py-10 text-center text-slate-400 text-[11px] italic">No debtors.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Aging + Incoming (Below Aging) -->
+      <div class="space-y-4">
+
+        <!-- Aging -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+            <div>
+              <h2 class="text-[11px] font-extrabold uppercase tracking-widest text-slate-700">Aging</h2>
+              <p class="text-[10px] text-slate-400">Click bucket to filter</p>
+            </div>
+            <span class="text-[10px] font-extrabold text-slate-400 uppercase">O/S</span>
+          </div>
+          <div class="overflow-y-auto max-h-64 custom-scrollbar">
+            <table class="w-full text-left text-[12px]">
+              <tbody class="divide-y divide-slate-100">
+                {% for row in aging_data %}
+                <tr class="js-slicer-bucket cursor-pointer hover:bg-rose-50/70" data-bucket="{{ row.aging_bucket }}">
+                  <td class="px-4 py-2.5 font-semibold text-slate-700">{{ row.aging_bucket }}</td>
+                  <td class="px-4 py-2.5 text-right font-extrabold text-rose-700 tabular-nums">{{ row.outstanding|inr }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="px-4 py-10 text-center text-slate-400 text-[11px] italic">No aging data.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Incoming (Now BELOW Aging) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+          <div class="px-4 py-3 border-b border-slate-100 bg-emerald-50/50 flex items-center justify-between">
+            <div>
+              <h2 class="text-[11px] font-extrabold uppercase tracking-widest text-emerald-800">Incoming</h2>
+              <p class="text-[10px] text-emerald-900/60">This week • Due-based</p>
+            </div>
+            <span class="text-[10px] font-extrabold text-emerald-800 uppercase">
+              {{ this_week_incoming_total|default:0|inr }}
+            </span>
+          </div>
+
+          <div class="overflow-y-auto max-h-64 custom-scrollbar">
+            <table class="w-full text-left text-[12px]">
+              <thead class="bg-white sticky top-0 z-10">
+                <tr class="text-[10px] font-black uppercase text-emerald-900/60">
+                  <th class="px-4 py-2">Party</th>
+                  <th class="px-4 py-2 text-center">Due</th>
+                  <th class="px-4 py-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                {% for row in this_week_incoming %}
+                <tr class="hover:bg-emerald-50/40">
+                  <td class="px-4 py-2.5 font-extrabold text-slate-800 uppercase truncate max-w-[360px]">
+                    {{ row.party_name|default:row.display_party|default:row.customer_name|default:"-" }}
+                  </td>
+                  <td class="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                    {{ row.due_date_display|default:row.due_date|default:"-" }}
+                  </td>
+                  <td class="px-4 py-2.5 text-right font-extrabold text-emerald-700 tabular-nums">
+                    {{ row.outstanding_amt|default:row.outstanding_amount|default:row.balance_amount|default:0|inr }}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="px-4 py-10 text-center text-slate-400 text-[11px] italic">No incoming data.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 5) RECENT SETTLEMENTS -->
+    <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+        <h2 class="text-[11px] font-black uppercase tracking-widest text-slate-700">Recently Cleared Bills</h2>
+        <span class="text-[10px] font-bold text-slate-400">Sum: {{ received_total|default:0|inr }}</span>
+      </div>
+
+      <div class="overflow-x-auto max-h-56 overflow-y-auto custom-scrollbar">
+        <table class="w-full text-left text-[11px]">
+          <thead class="bg-slate-50 sticky top-0 font-black text-slate-400 uppercase text-[9px]">
+            <tr>
+              <th class="px-4 py-2">Customer</th>
+              <th class="px-4 py-2">Invoice</th>
+              <th class="px-4 py-2">PO No</th>
+              <th class="px-4 py-2">PO Date</th>
+              <th class="px-4 py-2 text-right">Received</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            {% for r in received_rows %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-4 py-2 font-bold uppercase">
+                {{ r.party_name|default:r.display_party|default:r.customer_name|default:"-" }}
+              </td>
+              <td class="px-4 py-2 font-mono text-indigo-600 font-black">#{{ r.trans_no|default:r.invoice_number|default:"-" }}</td>
+              <td class="px-4 py-2 text-slate-600">{{ r.customer_po_no|default:"" }}</td>
+              <td class="px-4 py-2 text-slate-600">{{ r.customer_po_date|default:"" }}</td>
+              <td class="px-4 py-2 text-right font-black text-emerald-600">
+                {{ r.received_amount|default:r.received_amt|default:r.paid_amount|default:r.paid_amt|default:0|inr }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="px-4 py-10 text-center text-slate-400 text-[11px] italic">No received rows.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 6) MASTER REGISTRY -->
+    <section class="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
+      <div class="px-4 py-3 bg-slate-900 flex items-center justify-between">
+        <h2 class="text-xs font-black uppercase text-white tracking-widest">Transaction Registry</h2>
+        <div class="text-right">
+          <span class="text-[9px] font-bold text-indigo-300 uppercase block">Filtered Total</span>
+          <span class="text-sm font-black text-white">{{ detail_filtered_total_outstanding|default:0|inr }}</span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto overflow-y-auto max-h-[32rem] custom-scrollbar">
+        <table class="w-full text-left text-[11px] min-w-[1100px]">
+          <thead class="bg-slate-100 sticky top-0 z-10 font-black text-slate-500 uppercase text-[9px]">
+            <tr>
+              <th class="px-4 py-3">Customer / Item</th>
+              <th class="px-4 py-3">Invoice</th>
+              <th class="px-4 py-3">Bill Date</th>
+              <th class="px-4 py-3">Due Date</th>
+              <th class="px-4 py-3 text-right">Bill</th>
+              <th class="px-4 py-3 text-right">Received</th>
+              <th class="px-4 py-3 text-right">O/S</th>
+              <th class="px-4 py-3 text-center">Status</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for r in page_obj.object_list %}
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-4 py-2">
+                <div class="font-black uppercase leading-tight">
+                  {{ r.party_name|default:r.display_party|default:r.customer_name|default:"-" }}
+                </div>
+                <div class="text-[10px] text-slate-400 italic">{{ r.item_name|default:"-"|truncatechars:40 }}</div>
+              </td>
+
+              <td class="px-4 py-2">
+                <div class="font-mono font-black text-indigo-600">#{{ r.trans_no|default:r.invoice_number|default:"-" }}</div>
+                <div class="text-[9px] text-slate-400">PO: {{ r.customer_po_no|default:"N/A" }}</div>
+              </td>
+
+              <td class="px-4 py-2 text-slate-600 whitespace-nowrap">
+                {{ r.bill_date|default:r.trans_date|default:r.invoice_date|default:"-" }}
+              </td>
+
+              <td class="px-4 py-2 whitespace-nowrap">
+                <div class="text-slate-600">{{ r.due_date|default:r.overdue_date|default:"-" }}</div>
+              </td>
+
+              <td class="px-4 py-2 text-right font-mono font-bold text-slate-500 tabular-nums">
+                {{ r.bill_amt|default:r.bill_amount|default:0|inr }}
+              </td>
+
+              <td class="px-4 py-2 text-right font-mono font-black text-emerald-700 tabular-nums">
+                {{ r.received_amt|default:r.received_amount|default:r.paid_amt|default:r.paid_amount|default:0|inr }}
+              </td>
+
+              <td class="px-4 py-2 text-right font-mono font-black text-slate-900 tabular-nums">
+                {{ r.outstanding_amt|default:r.outstanding_amount|default:r.os_amt|default:r.balance_amount|default:0|inr }}
+              </td>
+
+              <td class="px-4 py-2 text-center">
+                {% with od=r.overdue_days|default:r.days_overdue|default:0 %}
+                  {% if od|floatformat:0|add:"0" > 0 %}
+                  <span class="px-2 py-0.5 bg-rose-600 text-white text-[9px] font-black uppercase rounded">{{ od }}d</span>
+                  {% else %}
+                  <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase rounded">OK</span>
+                  {% endif %}
+                {% endwith %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="px-4 py-10 text-center text-slate-400 text-[11px] italic">No transactions found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if page_obj.paginator.num_pages > 1 %}
+      <div class="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <span class="text-[10px] font-bold text-slate-400 uppercase">
+          Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+        <div class="flex gap-1">
+          {% if page_obj.has_previous %}
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.previous_page_number }}"
+             class="px-3 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black uppercase hover:bg-slate-100">
+            Prev
+          </a>
+          {% endif %}
+          {% if page_obj.has_next %}
+          <a href="?{% if query_string %}{{ query_string }}&{% endif %}page={{ page_obj.next_page_number }}"
+             class="px-3 py-1.5 bg-white border border-slate-200 rounded text-[10px] font-black uppercase hover:bg-slate-100">
+            Next
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </section>
+
+  </main>
+</div>
+
+<!-- Global Page Loading Overlay (template-only) -->
+<div id="pageLoader"
+     class="fixed inset-0 z-[9999] hidden items-center justify-center bg-white/70 backdrop-blur-sm">
+  <div class="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-lg">
+    <div class="h-10 w-10 rounded-full border-4 border-slate-200 border-t-indigo-600 animate-spin"></div>
+    <div class="text-[11px] font-black uppercase tracking-widest text-slate-700">
+      Processing…
+    </div>
+    <div class="text-[10px] font-bold text-slate-400">
+      Please wait
+    </div>
+  </div>
+</div>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+  /* Page loader visibility helper */
+  #pageLoader.is-active { display: flex !important; }
+</style>
+
+<script>
+(function () {
+
+  // ----------------------------
+  // Global page loading overlay
+  // ----------------------------
+  const pageLoader = document.getElementById("pageLoader");
+  function showLoader() {
+    if (pageLoader) pageLoader.classList.add("is-active");
+  }
+  function hideLoader() {
+    if (pageLoader) pageLoader.classList.remove("is-active");
+  }
+
+  // ----------------------------
+  // Excel download completion helpers (cookie poll)
+  // Requires backend: resp.set_cookie("excel_download","1",max_age=60,path="/")
+  // ----------------------------
+  function getCookie(name) {
+    const m = document.cookie.match(
+      new RegExp('(?:^|; )' + name.replace(/([$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)')
+    );
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+  function clearCookie(name) {
+    document.cookie = `${name}=; Max-Age=0; path=/`;
+  }
+
+  const excelLink = document.getElementById("excelDownloadLink");
+  if (excelLink) {
+    excelLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const COOKIE = "excel_download";
+      clearCookie(COOKIE); // remove stale cookie
+      showLoader();
+
+      // start download
+      window.location.href = excelLink.href;
+
+      // poll until cookie appears
+      const startedAt = Date.now();
+      const maxWaitMs = 90 * 1000; // fail-safe timeout
+
+      const poller = setInterval(() => {
+        if (getCookie(COOKIE) === "1") {
+          clearInterval(poller);
+          clearCookie(COOKIE);
+          hideLoader();
+          return;
+        }
+        if (Date.now() - startedAt > maxWaitMs) {
+          clearInterval(poller);
+          hideLoader();
+        }
+      }, 400);
+    }, true);
+  }
+
+  // Show loader on any form submit (including your filter form)
+  document.querySelectorAll("form").forEach(f => {
+    f.addEventListener("submit", () => showLoader());
+  });
+
+  // Show loader when clicking links (tabs, pagination, etc.)
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (!a) return;
+
+    // ✅ ignore download links handled separately
+    if (a.dataset && a.dataset.download) return;
+
+    // ignore anchors that don't navigate
+    const href = a.getAttribute("href") || "";
+    if (!href || href === "#" || href.startsWith("javascript:")) return;
+
+    showLoader();
+  });
+
+  // Auto-submit company group & company change
+  const filterForm = document.getElementById("filterForm");
+  const companyGroupSelect = document.getElementById("companyGroupSelect");
+  const companySelect = document.getElementById("companySelect");
+
+  if (companyGroupSelect && filterForm) companyGroupSelect.addEventListener("change", () => filterForm.submit());
+  if (companySelect && filterForm) companySelect.addEventListener("change", () => filterForm.submit());
+
+  // Clear all filters
+  document.getElementById("btnClearSlicers")?.addEventListener("click", () => {
+    window.location.href = window.location.pathname;
+  });
+
+  // Slicer navigation
+  function applySlicer(key, val) {
+    showLoader();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("page");
+    ["month", "bucket", "party"].forEach(k => { if (k !== key) url.searchParams.delete(k); });
+    if (url.searchParams.get(key) === val) url.searchParams.delete(key);
+    else url.searchParams.set(key, val);
+    window.location.href = url.toString();
+  }
+  document.querySelectorAll(".js-slicer-month").forEach(el => el.onclick = () => applySlicer("month", el.dataset.month));
+  document.querySelectorAll(".js-slicer-bucket").forEach(el => el.onclick = () => applySlicer("bucket", el.dataset.bucket));
+  document.querySelectorAll(".js-slicer-party").forEach(el => el.onclick = () => applySlicer("party", el.dataset.party));
+
+  // Sync progress (BAR + % + Step)
+  const syncForm = document.getElementById("syncForm");
+  const btn = document.getElementById("syncBtn");
+  if (syncForm && btn) {
+    syncForm.onsubmit = async (e) => {
+      e.preventDefault();
+
+      btn.disabled = true;
+      document.getElementById("syncStaticIcon")?.classList.add("hidden");
+      document.getElementById("syncSpinner")?.classList.remove("hidden");
+
+      const wrap = document.getElementById("syncProgressWrap");
+      const bar = document.getElementById("syncBar");
+      const pct = document.getElementById("syncPct");
+      const step = document.getElementById("syncStep");
+
+      wrap?.classList.remove("hidden");
+      if (bar) bar.style.width = "0%";
+      if (pct) pct.innerText = "0%";
+      if (step) step.innerText = "Starting…";
+
+      try {
+        const startUrl = syncForm.dataset.startUrl;
+        const statusUrl = syncForm.dataset.statusUrl;
+
+        const startRes = await fetch(startUrl, {
+          method: "POST",
+          headers: { "X-CSRFToken": syncForm.querySelector('[name=csrfmiddlewaretoken]').value },
+          body: new FormData(syncForm)
+        });
+        const startData = await startRes.json();
+
+        if (startData.ok) {
+          const poller = setInterval(async () => {
+            try {
+              const statusRes = await fetch(`${statusUrl}?run_id=${encodeURIComponent(startData.run_id)}`);
+              const statusData = await statusRes.json();
+
+              if (statusData.ok) {
+                const s = statusData.state || {};
+                const percent = Number(s.percent || 0);
+
+                if (bar) bar.style.width = `${percent}%`;
+                if (pct) pct.innerText = `${percent}%`;
+                if (step) step.innerText = (s.step || s.message || "Syncing…");
+
+                if ((s.status || "").toLowerCase() === "done") {
+                  clearInterval(poller);
+                  window.location.reload();
+                }
+              }
+            } catch (pollErr) {
+              // ignore a single poll error
+            }
+          }, 1500);
+        } else {
+          syncForm.submit(); // fallback
+        }
+      } catch (err) {
+        syncForm.submit(); // fallback
+      }
+    };
+  }
+})();
+</script>
+{% endblock %}

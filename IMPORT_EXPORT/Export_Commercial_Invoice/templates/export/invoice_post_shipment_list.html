@@ -1,0 +1,176 @@
+{% extends "main/index.html" %}
+
+{% block maincontent %}
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-6 space-y-4">
+    {% if messages %}
+      <div class="space-y-2 mb-4">
+        {% for message in messages %}
+          <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                      {% if message.tags == 'success' %}bg-emerald-600{% else %}bg-rose-600{% endif %}">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()">✖</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 class="text-lg font-semibold text-slate-800">Export – Post Shipments</h1>
+        <p class="text-xs text-slate-500">Search and print Invoice / Packing List.</p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+        <!-- Search (keeps tab) -->
+        <form method="get" class="flex gap-2">
+          <input type="hidden" name="tab" value="{{ tab }}">
+          <input
+            type="text"
+            name="search"
+            value="{{ search }}"
+            placeholder="Search by Invoice / Buyer / Consignee"
+            class="w-52 border border-slate-300 rounded-md px-2 py-1 text-sm
+                   focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+          <button type="submit"
+            class="px-3 py-1.5 text-sm rounded-md bg-slate-700 text-white hover:bg-slate-800">
+            Search
+          </button>
+
+          {% if search %}
+            <a href="?tab={{ tab }}"
+               class="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100">
+              Clear
+            </a>
+          {% endif %}
+        </form>
+        {% if perms.Export_Commercial_Invoice.add_invoicepostshipment  %}
+        <a href="{% url 'invoice_post_shipment_form' %}"
+           class="px-3 py-1.5 text-sm rounded-md bg-emerald-600 text-white hover:bg-emerald-700 text-center">
+          + New Invoice
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ✅ Tabs -->
+    <div class="bg-white border border-slate-200 rounded-lg p-2 flex gap-2">
+      <a href="?tab=invoice{% if search %}&search={{ search }}{% endif %}"
+         class="px-3 py-2 text-sm rounded-md border
+                {% if tab == 'invoice' %}
+                  bg-emerald-600 text-white border-emerald-600
+                {% else %}
+                  bg-white text-slate-700 border-slate-300 hover:bg-slate-50
+                {% endif %}">
+        Invoice Post Shipment
+      </a>
+
+      <a href="?tab=packing{% if search %}&search={{ search }}{% endif %}"
+         class="px-3 py-2 text-sm rounded-md border
+                {% if tab == 'packing' %}
+                  bg-emerald-600 text-white border-emerald-600
+                {% else %}
+                  bg-white text-slate-700 border-slate-300 hover:bg-slate-50
+                {% endif %}">
+        Post Shipment Packing List
+      </a>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-x-auto">
+      <table class="min-w-full text-xs">
+        <thead class="bg-slate-100 border-b border-slate-200">
+          <tr class="text-left">
+            <th class="px-3 py-2 font-semibold text-slate-700">Invoice No.</th>
+            <th class="px-3 py-2 font-semibold text-slate-700">Invoice Date</th>
+            <th class="px-3 py-2 font-semibold text-slate-700">Buyer’s Order No.</th>
+            <th class="px-3 py-2 font-semibold text-slate-700">Consignee</th>
+            <th class="px-3 py-2 font-semibold text-slate-700">Destination</th>
+            <th class="px-3 py-2 font-semibold text-slate-700 text-right">Amount US$</th>
+            {% if perms.Export_Commercial_Invoice.view_invoicepostshipment or perms.Export_Commercial_Invoice.change_invoicepostshipment or perms.Export_Commercial_Invoice.delete_invoicepostshipment %}
+            <th class="px-3 py-2 font-semibold text-slate-700 text-center">Actions</th>
+            {% endif %}
+          </tr>
+        </thead>
+
+        <tbody>
+          {% if page_obj.object_list %}
+            {% for inv in page_obj %}
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="px-3 py-2 whitespace-nowrap">{{ inv.invoice_number }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ inv.invoice_date|date:"d-M-Y" }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ inv.buyers_order_no }}</td>
+                <td class="px-3 py-2">{{ inv.consignee_name }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ inv.country_destination }}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap">{{ inv.amount_usd }}</td>
+                {% if perms.Export_Commercial_Invoice.view_invoicepostshipment or perms.Export_Commercial_Invoice.change_invoicepostshipment or perms.Export_Commercial_Invoice.delete_invoicepostshipment %}
+                <td class="px-3 py-2 text-center whitespace-nowrap">
+                  {% if perms.Export_Commercial_Invoice.view_invoicepostshipment  %}
+                    {% if tab == 'invoice' %}
+                      <a href="{% url 'invoice_post_shipment_detail_simple' inv.pk %}"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-300 text-[11px]
+                                text-slate-700 hover:bg-blue-200 bg-blue-100"
+                        target="_blank" title="View / Print Invoice">
+                        <i class="fa-solid fa-eye"></i>
+                        <i class="fa-solid fa-print"></i>
+                      </a>
+                    {% else %}
+                      <a href="{% url 'invoice_post_shipment_packing_list' inv.pk %}"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-300 text-[11px]
+                                text-slate-700 hover:bg-blue-200 bg-blue-100"
+                        target="_blank" title="View / Print Packing List">
+                        <i class="fa-solid fa-eye"></i>
+                        <i class="fa-solid fa-print"></i>
+                      </a>
+                    {% endif %}
+                  {% endif %}            
+                  {% if perms.Export_Commercial_Invoice.change_invoicepostshipment  %}
+                  <a href="{% url 'invoice_post_shipment_edit' inv.pk %}"
+                     class="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-400 text-[11px]
+                            text-slate-700 hover:bg-yellow-200 bg-yellow-100"
+                     title="Edit">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                  </a>
+                  {% endif %}
+                {% if perms.Export_Commercial_Invoice.delete_invoicepostshipment  %}  
+                  <a href="{% url 'invoice_post_shipment_delete' inv.pk %}"
+                     class="inline-flex items-center gap-1 px-2 py-1 rounded border border-slate-300 text-[11px]
+                            text-rose-700 hover:bg-rose-200 bg-rose-100"
+                     title="Delete">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </a>
+                  {% endif %}
+                </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" class="px-3 py-4 text-center text-slate-500">No invoices found.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination (keeps tab + search) -->
+    {% if page_obj.paginator.num_pages > 1 %}
+      <div class="flex justify-between items-center text-xs text-slate-600 mt-2">
+        <div>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</div>
+        <div class="flex gap-1">
+          {% if page_obj.has_previous %}
+            <a href="?tab={{ tab }}&page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}"
+               class="px-2 py-1 border border-slate-300 rounded hover:bg-slate-100">Previous</a>
+          {% endif %}
+          {% if page_obj.has_next %}
+            <a href="?tab={{ tab }}&page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}"
+               class="px-2 py-1 border border-slate-300 rounded hover:bg-slate-100">Next</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

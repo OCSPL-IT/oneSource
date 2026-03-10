@@ -1,0 +1,25 @@
+{% extends "main/index.html" %}
+
+{% block title %}Delete BOM{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50 pb-10">
+  <div class="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
+      <h1 class="text-xl font-bold text-slate-900">Delete BOM</h1>
+      <p class="text-sm text-slate-600">
+        Are you sure you want to delete:
+        <span class="font-semibold">{{ bom.fg_name }}</span>
+        {% if bom.fg_alpha_name %} ({{ bom.fg_alpha_name }}){% endif %} ?
+      </p>
+
+      <form method="post" class="flex items-center gap-2">
+        {% csrf_token %}
+        <button class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm">Yes, Delete</button>
+        <a href="{% url 'accounts_budget:production_bom_edit' bom.id %}"
+           class="px-4 py-2 rounded-lg border border-slate-300 bg-white text-sm">Cancel</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

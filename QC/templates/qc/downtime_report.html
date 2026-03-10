@@ -1,0 +1,401 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Analytical Downtime – Report{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+<style>
+  :root {
+    --bg-primary: #f8fafc; /* White background */
+    --bg-secondary: #ffffff; /* Card background - still white */
+    --text-color-light: #1e293b; /* Dark text for titles */
+    --text-color-medium: #475569; /* Medium dark text for general content */
+    --text-color-dark: #64748b; /* Lighter dark text for info/less prominent */
+    --border-color: #e2e8f0; /* Light border for cards, table dividers */
+    --accent-blue-500: #3b82f6; /* Primary blue for charts, buttons */
+    --accent-blue-600: #2563eb; /* Darker blue for hover */
+    --accent-purple-500: #a855f7; /* Chart color */
+    --accent-red-500: #ef4444; /* Chart color */
+    --accent-orange-500: #f97316; /* Chart color */
+    --accent-green-500: #22c55e; /* Chart color */
+    --accent-teal-500: #14b8a6; /* Chart color */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .wrap {
+    max-width: 1300px;
+    margin: 32px auto;
+    padding: 0 24px;
+    color: var(--text-color-medium);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 20px 28px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+  }
+
+  .header-bar h2 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-color-light);
+    letter-spacing: -0.025em;
+  }
+
+  .toolbar {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 10px;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.95rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .btn-primary {
+    background: var(--accent-blue-500);
+    color: var(--bg-secondary);
+    border: 1px solid var(--accent-blue-500);
+  }
+  .btn-primary:hover {
+    background: var(--accent-blue-600);
+    border-color: var(--accent-blue-600);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent-blue-500);
+    border: 1px solid var(--accent-blue-500);
+  }
+  .btn-secondary:hover {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-blue-600);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .grid-dashboard {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    padding: 24px;
+    color: var(--text-color-medium);
+  }
+
+  .card h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-color-light);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 14px;
+    letter-spacing: -0.01em;
+  }
+
+  .chart-container {
+    position: relative;
+    height: 280px;
+    width: 100%;
+    margin-bottom: 15px;
+  }
+
+  .chart-info {
+    margin-top: 16px;
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--text-color-dark);
+    text-align: right;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-top: 15px;
+    font-size: 0.9rem;
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+  }
+
+  th {
+    background: #f1f5f9;
+    color: var(--text-color-light);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) { background-color: #f8fafc; }
+  tbody tr:hover { background-color: #eff6ff; }
+
+  /* Chart.js Specific Overrides */
+  .chartjs-render-monitor { width: 100% !important; height: 100% !important; }
+
+  @media (max-width: 1024px) { .grid-dashboard { grid-template-columns: 1fr; } }
+  @media (max-width: 768px) {
+    .wrap { padding: 0 16px; margin: 24px auto; }
+    .header-bar { flex-direction: column; align-items: flex-start; padding: 16px 20px; }
+    .header-bar h2 { font-size: 1.6rem; margin-bottom: 12px; }
+    .toolbar { width: 100%; justify-content: stretch; }
+    .btn { flex-grow: 1; padding: 10px 15px; font-size: 0.9rem; }
+    .card { padding: 20px; }
+    .card h3 { font-size: 1.4rem; margin-bottom: 15px; }
+    th, td { padding: 12px 15px; font-size: 0.85rem; }
+  }
+  @media (max-width: 480px) {
+    th, td { padding: 10px; font-size: 0.8rem; }
+    th:nth-child(5), td:nth-child(5) { display: none; }
+  }
+</style>
+
+<div class="wrap">
+  <div class="header-bar">
+    <h2>Analytical Instrument Downtime – Dashboard</h2>
+    <div class="toolbar">
+      <a class="btn btn-secondary" href="{% url 'qc:downtime_list' %}">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+      <a class="btn btn-primary" href="{% url 'qc:qc_home' %}">
+        <i class="fas fa-home"></i> Home
+      </a>
+      <a class="btn btn-secondary"
+         href="{% url 'qc:downtime_export' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}">
+        <i class="fas fa-file-excel"></i> Download Excel
+      </a>
+    </div>
+  </div>
+
+  <div class="grid-dashboard">
+    <div class="card">
+      <h3>Status Overview</h3>
+      <div class="chart-container">
+        <canvas id="statusChart"></canvas>
+      </div>
+      <div class="chart-info">
+        Total Downtime Minutes (all incidents):
+        <span style="color: var(--text-color-light); font-weight: 600;">{{ totals.minutes|default:0 }}</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Downtime by Category</h3>
+      <div class="chart-container">
+        <canvas id="catChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Recent Incidents</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Incident No.</th>
+          <th>Instrument</th>
+          <th>Status</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Short Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.incident_no }}</td>
+          <td>{{ r.instrument_id }}</td>
+          <td>{{ r.get_status_display }}</td>
+          <td>{{ r.start_at|date:"d-m-Y H:i" }}</td>
+          <td>{% if r.end_at %}{{ r.end_at|date:"d-m-Y H:i" }}{% else %}Ongoing{% endif %}</td>
+          <td>{{ r.short_reason }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 30px;">No recent incidents found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const chartColors = {
+    blue:'#3b82f6', purple:'#a855f7', red:'#ef4444',
+    orange:'#f97316', green:'#22c55e', teal:'#14b8a6', yellow:'#facc15', gray:'#cbd5e1'
+  };
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  const statusData = {
+    labels: ["Open", "In Progress", "Closed"],
+    values: [
+      Number({{ totals.open|default:0 }}),
+      Number({{ totals.progress|default:0 }}),
+      Number({{ totals.closed|default:0 }})
+    ],
+  };
+  const catLabels = [{% for r in by_cat %}"{{ r.category|escapejs|title }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  const catValues = [{% for r in by_cat %}Number({{ r.total|default:0 }}){% if not forloop.last %},{% endif %}{% endfor %}];
+
+  const statusEl = document.getElementById('statusChart');
+  const catEl    = document.getElementById('catChart');
+  if (!statusEl || !catEl || typeof Chart === 'undefined') return;
+
+  // Plugin to draw centered "No data" text when total is 0
+  const NoDataPlugin = {
+    id: 'noData',
+    afterDraw(chart, args, opts) {
+      const ds = chart.data.datasets?.[0];
+      if (!ds) return;
+      const total = (ds.data || []).reduce((a,b)=>a + (Number(b)||0), 0);
+      if (total > 0) return;
+
+      const { ctx, chartArea } = chart;
+      const text = opts?.text || 'No data';
+      ctx.save();
+      ctx.fillStyle = css('--text-color-dark') || '#64748b';
+      ctx.font = '500 14px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, (chartArea.left + chartArea.right)/2, (chartArea.top + chartArea.bottom)/2);
+      ctx.restore();
+    }
+  };
+
+  // ── Status (bar)
+  (function () {
+    const sum = statusData.values.reduce((a,b)=>a+(Number(b)||0),0);
+    const dataVals = sum === 0 ? [0,0,0] : statusData.values;
+
+    new Chart(statusEl, {
+      type: 'bar',
+      data: {
+        labels: statusData.labels,
+        datasets: [{
+          label: 'Number of Incidents',
+          data: dataVals,
+          backgroundColor: [chartColors.blue, chartColors.orange, chartColors.green],
+          borderColor: [css('--border-color'), css('--border-color'), css('--border-color')],
+          borderWidth: 1.5,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: sum === 0 ? { enabled: false } : {
+            backgroundColor: css('--bg-secondary'),
+            titleColor: css('--text-color-light'),
+            bodyColor: css('--text-color-medium'),
+            borderColor: css('--border-color'),
+            borderWidth: 1, cornerRadius: 6, padding: 12,
+          }
+        },
+        scales: {
+          x: {
+            grid: { display: false, borderColor: css('--border-color') },
+            ticks: { color: css('--text-color-medium'), font: { size: 13, weight: '600' } }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: css('--border-color'), drawBorder: false },
+            ticks: { color: css('--text-color-medium'), font: { size: 12 } }
+          }
+        }
+      },
+      plugins: [NoDataPlugin]
+    });
+  })();
+
+  // ── Category (pie)
+  (function () {
+    const sum = catValues.reduce((a,b)=>a+(Number(b)||0),0);
+    const labels = sum === 0 ? ['No data'] : catLabels;
+    const values = sum === 0 ? [1] : catValues;
+    const colors = sum === 0 ? [chartColors.gray] : [
+      chartColors.blue, chartColors.purple, chartColors.red,
+      chartColors.orange, chartColors.green, chartColors.teal, chartColors.yellow
+    ];
+
+    new Chart(catEl, {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Downtime by Category',
+          data: values,
+          backgroundColor: colors,
+          borderColor: css('--bg-secondary'),
+          borderWidth: 3,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: { color: css('--text-color-medium'), boxWidth: 14, padding: 20, font: { size: 13 } }
+          },
+          tooltip: sum === 0 ? { enabled: false } : {
+            backgroundColor: css('--bg-secondary'),
+            titleColor: css('--text-color-light'),
+            bodyColor: css('--text-color-medium'),
+            borderColor: css('--border-color'),
+            borderWidth: 1, cornerRadius: 6, padding: 12,
+          }
+        }
+      },
+      plugins: [NoDataPlugin]
+    });
+  })();
+});
+</script>
+{% endblock maincontent %}

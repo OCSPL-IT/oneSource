@@ -1,0 +1,1309 @@
+/* Page-specific styling */
+
+@font-face {
+    font-family: "Segoe UI Light";
+    src: url("../fonts/segoeui-light.woff") format("woff");
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Segoe UI Semilight";
+    src: url("../fonts/segoeui-semilight.woff") format("woff"), url("../fonts/segoeui-semilight.ttf") format("truetype");
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Segoe UI Regular";
+    src: url("../fonts/segoeui-regular.woff") format("woff"), url("../fonts/segoeui-regular.ttf") format("truetype");
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "Segoe UI Semibold";
+    src: url("../fonts/segoeui-semibold.woff") format("woff"), url("../fonts/segoeui-semibold.ttf") format("truetype");
+    font-style: normal;
+}
+
+@font-face {
+    font-family: "office365icons";
+    src: url("../fonts/office365icons_v10.eot?");
+    src: url("../fonts/office365icons_v10.eot?#iefix") format("embedded-opentype"),
+        url("../fonts/office365icons_v10.woff?") format("woff");
+    font-weight: normal;
+    font-style: normal;
+}
+
+[class^="ms-Icon--"]:before,
+[class*=" ms-Icon--"]:before {
+    font-family: "office365icons";
+    font-style: normal;
+    font-weight: normal;
+    speak: none;
+    display: inline-block;
+    text-decoration: inherit;
+    width: 1em;
+    margin-right: 0.2em;
+    text-align: center;
+    /* opacity: .8; */
+    /* For safety - reset parent styles, that can break glyph codes*/
+    font-variant: normal;
+    text-transform: none;
+    /* Animation center compensation - margins should be symmetric */
+    /* remove if not needed */
+    margin-left: 0.2em;
+}
+
+.ms-Icon--star:before {
+    content: "\e003";
+}
+/* '' */
+.ms-Icon--mail:before {
+    content: "\e009";
+}
+/* '' */
+.ms-Icon--mailOpen:before {
+    content: "\e00d";
+}
+/* '' */
+.ms-Icon--pencil:before {
+    content: "\e027";
+}
+/* '' */
+.ms-Icon--starEmpty:before {
+    content: "\e073";
+}
+/* '' */
+.ms-Icon--checkbox:before {
+    content: "\e18a";
+}
+/* '' */
+.ms-Icon--checkboxEmpty:before {
+    content: "\e21c";
+}
+/* '' */
+.ms-Icon--chevronThinUp:before {
+    content: "\e231";
+}
+/* '' */
+.ms-Icon--chevronThinDown:before {
+    content: "\e232";
+}
+/* '' */
+.ms-Icon--chevronThinLeft:before {
+    content: "\e233";
+}
+/* '' */
+.ms-Icon--chevronThinRight:before {
+    content: "\e234";
+}
+/* '' */
+.ms-Icon--chevronThickUp:before {
+    content: "\e235";
+}
+/* '' */
+.ms-Icon--chevronThickDown:before {
+    content: "\e236";
+}
+/* '' */
+.ms-Icon--chevronThickLeft:before {
+    content: "\e237";
+}
+/* '' */
+.ms-Icon--circleInfo:before {
+    content: "\e27d";
+}
+/* '' */
+.ms-Icon--groups:before {
+    content: "\e305";
+}
+/* '' */
+.ms-Icon--lightBulb2:before {
+    content: "\e313";
+}
+/* '' */
+.ms-Icon--delveAnalytics:before {
+    content: "\e318";
+}
+/* '' */
+.ms-Icon--groupingDescending:before {
+    content: "\e31e";
+}
+/* '' */
+.ms-Icon--eventAdd2:before {
+    content: "\e34d";
+}
+/* '' */
+.ms-Icon--refresh2:before {
+    content: "\e352";
+}
+/* '' */
+.ms-Icon--x2:before {
+    content: "\e353";
+}
+/* '' */
+.ms-Icon--gear2:before {
+    content: "\e35c";
+}
+/* '' */
+.ms-Icon--check2:before {
+    content: "\e35e";
+}
+/* '' */
+.ms-Icon--circleCheck2:before {
+    content: "\e35f";
+}
+/* '' */
+.ms-Icon--starPlus:before {
+    content: "\e371";
+}
+/* '' */
+.ms-Icon--favoriteList:before {
+    content: "\e37c";
+}
+/* '' */
+.ms-Icon--miniExpand:before {
+    content: "\e37d";
+}
+/* '' */
+.ms-Icon--mailOpen2:before {
+    content: "\e37f";
+}
+/* '' */
+.ms-Icon--word2:before {
+    content: "\e387";
+}
+/* '' */
+.ms-Icon--powerpoint2:before {
+    content: "\e388";
+}
+/* '' */
+.ms-Icon--excel2:before {
+    content: "\e389";
+}
+/* '' */
+.ms-Icon--smiley2:before {
+    content: "\e38d";
+}
+/* '' */
+.ms-Icon--calendar2:before {
+    content: "\e38e";
+}
+/* '' */
+.ms-Icon--mail2:before {
+    content: "\e399";
+}
+/* '' */
+.ms-Icon--alert3:before {
+    content: "\e39a";
+}
+/* '' */
+.ms-Icon--barChartVertical:before {
+    content: "\e402";
+}
+/* '' */
+.ms-Icon--circlePlus2:before {
+    content: "\e403";
+}
+/* '' */
+.ms-Icon--myAnalytics:before {
+    content: "\e409";
+}
+/* '' */
+.ms-Icon--circleX:before {
+    content: "\e40c";
+}
+/* '' */
+
+.ms-Icon--circleCheck2:hover,
+.ms-Icon--circlePlus2:hover {
+    color: #212838 !important;
+}
+
+.peopleFirstRunIcon:hover .ms-Icon--star:before {
+    content: "\e40c"; /*ms-Icon--circleX*/
+}
+
+.peopleFirstRunIcon:hover .ms-Icon--starPlus:before {
+    content: "\e403"; /*ms-Icon--circlePlus2*/
+}
+
+.hidden {
+    visibility: hidden;
+}
+
+@media screen and (-ms-high-contrast: active) {
+    canvas {
+        background-color: white;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+    overflow: auto;
+    margin: 0;
+    padding: 0px;
+}
+
+body {
+    height: 100%;
+    overflow: auto;
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+}
+
+h1,
+h2 {
+    margin-top: 0;
+    margin-bottom: 4px;
+}
+
+hr {
+    border: none;
+    height: 1px;
+    color: #ebebeb;
+    background-color: #ebebeb;
+}
+
+button {
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+label {
+    cursor: inherit;
+}
+
+#content-main {
+    /*background-color: lightgray;*/
+    background-color: white;
+    max-width: 100%;
+    overflow-x: hidden;
+    height: 100%;
+}
+
+#Scenario {
+    height: 100%;
+}
+
+#Debugger {
+    position: absolute;
+    width: 100%;
+    max-height: 32px;
+}
+
+#TridentMessage {
+    display: none;
+    font-family: "Segoe UI";
+    font-size: 14px;
+    padding: 30px;
+    background-color: #fff;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+}
+
+#TridentMessage h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 24px;
+}
+
+#TridentMessage p {
+    color: #585858;
+    margin: 24px 0;
+    white-space: normal;
+}
+
+#TridentButton {
+    color: #fff;
+    background-color: #335ccc;
+    padding: 8px;
+    border-radius: 4px;
+    align-self: center;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+#TridentButton span {
+    margin-left: 4px;
+}
+
+.errorMessage {
+    padding-top: 5px;
+}
+
+@keyframes loading_firstrun_logotext_push {
+    0% {
+        opacity: 1;
+        animation-timing-function: linear;
+    }
+
+    100% {
+        opacity: 1;
+        animation-timing-function: linear;
+    }
+}
+
+.firstrun_loading_logotext-appear {
+    animation: loading_firstrun_logotext_push 1667ms;
+}
+
+@keyframes footer_button_pulse {
+    0% {
+        opacity: 1;
+        animation-timing-function: cubic-bezier(0.17, 0.17, 0, 1);
+    }
+
+    45% {
+        opacity: 0.5;
+        animation-timing-function: cubic-bezier(0.17, 0.17, 0, 1);
+    }
+
+    90% {
+        opacity: 1;
+    }
+}
+
+.tutorialCardBase:hover .ms-Icon--x2,
+.tutorialCardBase:focus .ms-Icon--x2 {
+    visibility: visible;
+}
+
+.emailConversationItemHover:hover,
+.emailConversationItemHover:focus {
+    background-color: #f9f9f9;
+}
+
+a:hover,
+a:focus {
+    color: #0078d7;
+    text-decoration: none;
+}
+
+.learnMore:hover,
+.learnMore:focus {
+    color: #004578;
+}
+
+.InsightCardContainer {
+    width: 100%;
+    height: auto;
+    margin-bottom: 0px;
+    position: relative;
+}
+
+.InsightCardContainer:hover .ms-Icon--x2,
+.InsightCardContainer:focus .ms-Icon--x2 {
+    visibility: visible;
+    animation: hover_fade_in 0.2s;
+}
+
+.Clickable {
+    cursor: pointer;
+}
+
+.FocusBlocks-confirm:hover,
+.ProtectedTime-confirm:hover,
+.ReduceMeetingLoadInfobar-button:hover,
+.MeetingOverloadActionableMessage-button:hover,
+.MoveMeeting-button:hover,
+.MoveMeeting-confirm:hover,
+.ShortenMeeting-button:hover,
+.ShortenMeetingActionableMessage-button:hover {
+    border: 1px solid #1d7070;
+}
+
+.FocusBlocks-button:hover,
+.ProtectedTime-button:hover {
+    border: solid 1px #a8ce38;
+    background-color: #eaf3e0;
+}
+
+.FocusBlocks-button:active,
+.ProtectedTime-button:active,
+.FocusBlocks-button:focus,
+.ProtectedTime-button:focus {
+    border: solid 1px #a8ce38;
+    background-color: #d4e79c;
+}
+
+.ms-Icon--x2:focus {
+    visibility: visible;
+}
+
+/**
+ * Color palettes
+ * prefix is same to Rollup Category of insight
+ * sorted alphabetically
+ */
+
+/* AfterHoursImpact */
+
+.AfterHoursImpact-visual {
+    color: #9a80e4;
+}
+
+.AfterHoursImpact-text {
+    color: #57487f;
+}
+
+.AfterHoursImpact-container:hover,
+.InsightCardContainer:focus .AfterHoursImpact-container {
+    border: 1px solid #9a80e4;
+}
+
+.ReduceAfterHoursLoadInfobar-button,
+.AfterHoursImpact-button,
+.AfterHoursImpactInfobar-button {
+    color: #57487f;
+    border: solid 1px #9a80e4;
+}
+
+.AfterHoursImpactUserCard-background {
+    background-color: #f6f4fc;
+}
+
+.ReduceAfterHoursLoadInfobar-confirm,
+.AfterHoursImpact-confirm {
+    background-color: #f6f4fc;
+}
+
+.AfterHoursImpact-button:hover,
+.AfterHoursImpactInfobar-button:hover,
+.ReduceAfterHoursLoadInfobar-button:hover {
+    border: 1px solid #57487f;
+}
+
+.AfterHoursTimeSlot-booked {
+    background-color: #dcd3f5;
+    cursor: default;
+}
+
+.AfterHoursTimeSlot-toggle-booked {
+    background-color: #dcd3f5;
+}
+
+.AfterHoursTimeSlot-toggle-booked.Clickable:hover {
+    border: 1px solid #212838;
+}
+
+/* Dashboard */
+
+.Dashboard-visual {
+    color: #c075cd;
+}
+
+.Dashboard-text {
+    color: #6d4173;
+}
+
+.Dashboard-container:hover,
+.InsightCardContainer:focus .Dashboard-container {
+    border: 1px solid #c075cd;
+}
+
+/* FocusBlocks */
+
+.FocusBlocks-visual {
+    color: #a8ce38;
+}
+
+.FocusBlocks-text {
+    color: #6e7f3b;
+}
+
+.FocusBlocks-container:hover,
+.InsightCardContainer:focus .FocusBlocks-container {
+    border: 1px solid #a8ce38;
+}
+
+.FocusBlocks-button,
+.ProtectedTime-button {
+    color: #212838;
+    border: solid 1px #a8ce38;
+}
+
+.FocusBlocks-confirm {
+    background-color: #d4e79c;
+    border: solid 1px #a8ce38;
+}
+
+.FocusBlocks-booked {
+    background-color: #beda6a;
+    cursor: default;
+}
+
+/* ImportantUnreadMail */
+.ImportantUnreadMail-visual {
+    color: #34b1e2;
+}
+
+.ImportantUnreadMail-text {
+    color: #1d627e;
+}
+
+.ImportantUnreadMail-confirmation {
+    background-color: #eef9fa !important;
+    color: #016677;
+}
+
+.ImportantUnreadMail-container:hover,
+.InsightCardContainer:focus .ImportantUnreadMail-container {
+    border: 1px solid #34b1e2;
+}
+
+.ImportantUnreadMail-button {
+    color: #1d627e;
+    border: solid 1px #34b1e2;
+}
+
+.ImportantUnreadMail-button:hover {
+    border: 1px solid #1d627e;
+}
+
+/* CatchUpImportantMail*/
+.CatchUpImportantMail-visual {
+    color: #34b1e2;
+}
+
+.CatchUpImportantMail-container:hover {
+    border: 1px solid #34b1e2;
+}
+
+.CatchUpImportantMail-button {
+    color: #1d627e;
+    border: solid 1px #34b1e2;
+}
+
+.CatchUpImportantMail-button:hover {
+    border: 1px solid #1d627e;
+}
+
+/* TrackEmail */
+
+.TrackEmail-button {
+    color: #1d627e;
+    border: 1px solid #34b1e2;
+}
+
+.TrackEmail-button:hover {
+    border: 1px solid #1d627e;
+}
+
+.ShortenMeeting-button,
+.ShortenMeetingActionableMessage-button {
+    color: #1d7070;
+    border: 1px solid #36ccb6;
+}
+
+/* AfterHoursMeetingOrganizer */
+
+.AfterHoursMeetingOrganizerInfobar-button:hover,
+.AfterHoursMeetingAttendeeActionableMessage-button:hover {
+    border: 1px solid #57487f;
+}
+
+.AfterHoursMeetingOrganizerInfobar-button,
+.AfterHoursMeetingAttendeeActionableMessage-button {
+    color: #57487f;
+    border: 1px solid #9a80e4;
+}
+
+/* Settings-Feedback */
+.Settings-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+}
+
+.Settings-switch input {
+    display: none;
+}
+
+.Settings-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #9bc1cc;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+}
+
+.Settings-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 10px;
+    width: 10px;
+    left: 5px;
+    bottom: 5px;
+    background-color: white;
+    -webkit-transition: 0.4s;
+    transition: 0.4s;
+}
+
+input:checked + .Settings-toggle-slider {
+    background-color: #344b59;
+}
+
+input:checked + .Settings-toggle-slider:before {
+    -webkit-transform: translateX(20px);
+    -ms-transform: translateX(20px);
+    transform: translateX(20px);
+}
+
+.Settings-toggle-slider.Settings-toggle-round {
+    border-radius: 10px;
+}
+
+.Settings-toggle-slider.Settings-toggle-round:before {
+    border-radius: 50%;
+}
+
+.Setting-button {
+    color: #385868;
+    border: 1px solid #9bc1cc;
+    background-color: #ffffff;
+}
+
+.Setting-button:hover {
+    border: 1px solid #344b59;
+}
+
+.Feedback-comment:focus {
+    color: #212838;
+}
+
+/* MeetingReadiness */
+
+.MeetingReadiness-headline {
+    color: #1d7070;
+    font-weight: 600;
+}
+
+.MeetingReadiness-button {
+    color: #1d627e;
+    border: solid 1px #36ccb6;
+}
+
+.MeetingReadiness-button:hover {
+    border: solid 1px #1d7070;
+}
+
+.MeetingReadiness-confirm {
+    background-color: #b8eddb;
+}
+
+.MeetingReadiness-subject {
+    text-align: left;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    flex: 0 1 auto;
+}
+
+.MeetingReadiness-container:hover,
+.InsightCardContainer:focus .MeetingReadiness-container {
+    border: 1px solid #36ccb6;
+}
+
+.MeetingReadiness-AttendeesView {
+    flex: 0 1 auto;
+    display: inline-block;
+    margin-left: 10px;
+    margin-right: 10px;
+    line-height: 15px;
+    padding-bottom: 8px;
+    vertical-align: top;
+    height: 23px;
+    color: #385868;
+}
+
+.MeetingReadiness-NotInView {
+    border-bottom: 2px solid transparent;
+}
+
+.MeetingReadiness-NotInView:hover {
+    color: #212838;
+}
+
+.MeetingReadiness-InView {
+    color: #212838;
+    border-bottom: 2px solid #36ccb6;
+}
+
+.MeetingReadiness-AttendeesOverlayControl {
+    flex: 1 1 auto;
+    display: inline-block;
+    padding-left: 10px;
+    padding-right: 10px;
+    line-height: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid transparent;
+    vertical-align: top;
+    color: #385868;
+}
+
+.MeetingReadiness-AttendeesOverlayNotInView {
+    border-bottom: 2px solid transparent;
+}
+
+.MeetingReadiness-AttendeesOverlayNotInView:hover {
+    color: #212838;
+    cursor: pointer;
+}
+
+.MeetingReadiness-AttendeesOverlayInView {
+    color: #212838;
+    border-bottom: 2px solid #36ccb6;
+}
+
+/* PeopleSuggestions */
+
+.PeopleSuggestions-visual {
+    color: #34b1e2;
+}
+
+.PeopleSuggestions-text {
+    color: #1d6677;
+}
+
+.PeopleSuggestions-confirmation {
+    border: 1px solid #34b1e2;
+    color: #1d6677;
+}
+
+.PeopleSuggestions-container:hover,
+.InsightCardContainer:focus .PeopleSuggestions-container {
+    border: 1px solid #34b1e2;
+}
+
+.PeopleSuggestionsFirstRun-container:hover,
+.InsightCardContainer:focus .PeopleSuggestionsFirstRun-container {
+    border: 1px solid #34b1e2;
+}
+
+.PeopleSuggestionsFirstRun-title {
+    font-family: "Segoe UI Semilight";
+    font-size: 12pt;
+    color: #212838;
+}
+
+.PeopleSuggestions-button,
+.PeopleSuggestionsFirstRun-button,
+.TopCollaboratorMeetingTime-button {
+    color: #016677;
+    border: solid 1px #64c8d8;
+}
+
+.PeopleSuggestions-button:hover,
+.PeopleSuggestionsFirstRun-button:hover,
+.TopCollaboratorMeetingTime-button:hover {
+    border: solid 1px #016677;
+}
+
+/* SentMailStats */
+
+.SentMailStats-headline {
+    color: #1d627e;
+}
+
+.SentMailStats-visual {
+    color: #63c8d7;
+}
+
+.SentMailStats-text {
+    color: #2f8cb0;
+}
+
+.SentMailStatsInContext-button {
+    color: #1d627e;
+    border: solid 1px #71c8ea;
+}
+
+.SentMailStatsInContext-button:hover {
+    border: 1px solid #1d627e;
+}
+
+.SentMailStats-container:hover,
+.InsightCardContainer:focus .SentMailStats-container {
+    border: 1px solid #63c8d7;
+}
+
+.SentMailStats-visual {
+    color: #63c8d7;
+}
+
+.SentMailStatsInContext-text {
+    color: #2f8cb0;
+}
+
+.SentMailStats-button {
+    background-color: #ffffff;
+    border: 1px solid #34b1e2;
+}
+
+.SentMailStats-button:hover,
+.SentMailStats-confirm:hover {
+    border: 1px solid #1d627e;
+}
+
+.SentMailStats-confirm {
+    background-color: #b8e3f5;
+    color: #1d627e;
+    border: 1px solid #34b1e2;
+    border-right: none;
+}
+
+.SentMailStats-confirm:hover + .SentMailStats-button {
+    border-left: none;
+}
+
+/* ToDos */
+
+.ToDos-visual {
+    color: #63c8d7;
+}
+
+.ToDos-headline {
+    color: #016677;
+    font-weight: 600;
+}
+
+.ToDos-container:hover,
+.InsightCardContainer:focus .ToDos-container {
+    border: 1px solid #63c8d7;
+}
+
+.ToDos-button {
+    color: #016677;
+    border: 1px solid #64c8d8;
+    border-right: none;
+}
+
+.ToDos-button:last-child {
+    border: 1px solid #64c8d8;
+}
+
+.ToDos-button:hover + .ToDos-button {
+    border-left: none;
+}
+
+.ToDos-button:hover {
+    border: 1px solid #016677;
+}
+
+.ToDos-confirm {
+    background-color: #c9ecf1;
+}
+
+/* meeting suggestion */
+.MeetingSuggestion-button {
+    color: #1d7070;
+    border: 1px solid #36ccb6;
+}
+
+.MeetingSuggestion-button:hover {
+    border: 1px solid #1d7070;
+}
+
+/* Product Personality Cards */
+.UpcomingMeeting-background {
+    background-color: #b9eedc;
+}
+
+.UpcomingMeeting-title,
+.UpcomingMeeting-subtitle {
+    color: #1d7070;
+}
+
+.MeetingOverload-background {
+    background-color: #fdc9c9;
+}
+
+.MeetingOverload-title,
+.MeetingOverload-subtitle {
+    color: #a80202;
+}
+
+.ReduceMeetingLoadInfobar-button,
+.MeetingOverloadActionableMessage-button {
+    color: #1d7070;
+    border: 1px solid #36ccb6;
+}
+/* End of Product Personality Cards */
+
+/* normal footer button styles */
+
+.Feedback-button-submit {
+    border: 1px solid #fcba03;
+    background-color: rgba(255, 223, 123, 0.3);
+    color: #db8509;
+}
+
+.Feedback-button-submit:hover {
+    border: 1px solid #db8509;
+}
+
+.Feedback-button-cancel {
+    border: 1px solid #9bc1cc;
+    background-color: #ffffff;
+    color: #385868;
+}
+
+.Feedback-button-cancel:hover {
+    border: 1px solid #344b59;
+}
+
+.Feedback-button {
+    border-right: 1px solid #64c8d8;
+    background-color: rgba(201, 236, 241, 0.2); /*#C9ECF1*/
+}
+
+.LearnMore-button {
+    background-color: rgba(201, 236, 241, 0.2); /*#C9ECF1*/
+}
+
+.LearnMore-button:hover,
+.LearnMore-button:focus,
+.Feedback-button:hover,
+.Feedback-button:focus {
+    background-color: rgba(201, 236, 241, 0.6); /*#C9ECF1*/
+}
+
+.Cancel-button {
+    background-color: #ffffff;
+    border: solid 1px #e6e6e6;
+}
+
+/* *** End of Color palettes *** */
+
+/*Document detail CSS*/
+
+.SentDocumentDetailError-box {
+    border: 1px solid #e6e6e6;
+}
+
+.SentDocumentDetail-box {
+    border: 1px solid #e6e6e6;
+}
+
+.SentDocumentDetail-box:hover {
+    border: 1px solid #7295a5;
+}
+
+/* Remove IE specific 'X' button on input fields to clear them */
+::-ms-clear {
+    display: none;
+}
+
+/* Round container with fixing Chrome bug: "overflow:hidden + position:absolute" */
+.RoundMaskContainer {
+    border-radius: 50%;
+    overflow: hidden;
+    -webkit-mask-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAA5JREFUeNpiYGBgAAgwAAAEAAGbA+oJAAAAAElFTkSuQmCC");
+}
+
+.DarkBoldTitle {
+    font-family: "Segoe UI Semibold";
+    color: #212838;
+}
+
+.BoldTitle {
+    font-family: "Segoe UI Semibold";
+}
+
+.Underline {
+    text-decoration: underline;
+    cursor: pointer;
+    color: #212838;
+}
+
+.HoverUnderline:hover {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.AnimationButton:hover,
+.AnimationButton:focus {
+    color: #016677;
+}
+
+@keyframes insight_main_page_in {
+    0% {
+        transform: translate(-100%, 0px);
+    }
+
+    100% {
+        transform: translate(0px, 0px);
+    }
+}
+
+@keyframes insight_main_page_out {
+    0% {
+        transform: translate(0px, 0px);
+    }
+
+    100% {
+        transform: translate(100%, 0px);
+    }
+}
+
+.LeftEnterPage-enter {
+    animation: insight_main_page_in 500ms cubic-bezier(0.17, 0.17, 0, 1) backwards;
+    -webkit-animation: insight_main_page_in 500ms cubic-bezier(0.17, 0.17, 0, 1) backwards;
+    -moz-animation: insight_main_page_in 500ms cubic-bezier(0.17, 0.17, 0, 1) backwards;
+}
+
+.LeftEnterPage-exit {
+    animation: insight_main_page_out 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+    -webkit-animation: insight_main_page_out 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+    -moz-animation: insight_main_page_out 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+}
+
+@keyframes nonInsight_page_in {
+    0% {
+        transform: translate(100%, 0px);
+    }
+
+    100% {
+        transform: translate(0px, 0px);
+    }
+}
+
+@keyframes nonInsight_page_out {
+    0% {
+        transform: translate(0px, 0px);
+    }
+
+    100% {
+        transform: translate(-100%, 0px);
+    }
+}
+
+.RightEnterPage-enter {
+    animation: nonInsight_page_in 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+    -webkit-animation: nonInsight_page_in 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+    -moz-animation: nonInsight_page_in 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+}
+
+.RightEnterPage-exit {
+    animation: nonInsight_page_out 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+    -webkit-animation: nonInsight_page_out 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+    -moz-animation: nonInsight_page_out 500ms cubic-bezier(0.17, 0.17, 0, 1) forwards;
+}
+
+.StaticSlotCard {
+    border-bottom: 1px solid #cbd6eb;
+    border-top: 1px solid #cbd6eb;
+    border-radius: 0px;
+    margin-top: 0px;
+}
+
+.TimeSlotCard-background {
+    background-color: #f6f9fa;
+}
+
+.TimeSlotCard-selected-background {
+    background-color: #9a80e4;
+}
+
+.TimeSlotCard-background.Clickable:hover {
+    border: 1px solid #212838;
+}
+
+.MoveMeeting-booked {
+    background-color: #b8eddb;
+    cursor: default;
+}
+
+.MoveMeeting-button {
+    color: #1d7070;
+    border: solid 1px #36ccb6;
+}
+
+.MoveMeeting-confirm {
+    background-color: #b8eddb;
+    border: solid 1px #36ccb6;
+}
+
+.msIcon-noLeftMargin:before {
+    margin-left: 0px;
+}
+
+.TopCollaboratorMeetingTime-title {
+    font-family: "Segoe UI Semilight";
+    font-size: 12pt;
+    color: #212838;
+}
+
+.MeetingSuggestion-container:hover,
+.InsightCardContainer:focus .MeetingSuggestion-container {
+    border: 1px solid #34b1e2;
+}
+
+.TopCollaboratorMeetingTime-container:hover,
+.InsightCardContainer:focus .TopCollaboratorMeetingTime-container {
+    border: 1px solid #34b1e2;
+}
+
+.focusable-transparent {
+    outline: 1px solid transparent;
+}
+
+@keyframes topLoading_OneLineCaption_in {
+    0% {
+        opacity: 0;
+    }
+
+    80% {
+        opacity: 0.2;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.TopLoadingCaption-enter {
+    animation: topLoading_OneLineCaption_in 500ms ease-in;
+}
+
+@keyframes topLoading_OneLineCaption_out {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(30px);
+        opacity: 0;
+    }
+}
+
+.TopLoadingCaption-exit {
+    animation: topLoading_OneLineCaption_out 500ms cubic-bezier(0.17, 0.17, 0, 1);
+}
+
+@keyframes hover_fade_in {
+    0% {
+        opacity: 0.3;
+        animation-timing-function: linear;
+    }
+
+    100% {
+        opacity: 1;
+        animation-timing-function: linear;
+    }
+}
+
+@keyframes PeopleFirstRun_Border_Focus {
+    0% {
+        border-color: rgb(241, 241, 241);
+    }
+
+    10% {
+        border-color: rgb(100, 200, 216);
+    }
+
+    20% {
+        border-color: rgb(241, 241, 241);
+    }
+
+    30% {
+        border-color: rgb(100, 200, 216);
+    }
+
+    40% {
+        border-color: rgb(241, 241, 241);
+    }
+
+    50% {
+        border-color: rgb(100, 200, 216);
+    }
+
+    60% {
+        border-color: rgb(241, 241, 241);
+    }
+}
+
+.TopLoading:after {
+    width: 0px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: bottom;
+    content: "\2026";
+    animation: ellipsis steps(4, end) 2000ms infinite;
+    padding-left: 2px;
+    letter-spacing: 1px;
+}
+
+@keyframes ellipsis {
+    to {
+        width: 11px;
+    }
+}
+
+.Insighttransition-appear {
+    opacity: 0.01;
+    transform: scale(0.95);
+}
+
+.Insighttransition-appear.Insighttransition-appear-active {
+    opacity: 1;
+    transition: opacity 0.466s ease-in, transform 0.466s ease-in;
+    transform: scale(1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0, 1);
+}
+
+.FadePage-enter {
+    opacity: 0.01;
+    transform: translate(0px, -100px);
+}
+
+.FadePage-enter.FadePage-enter-active {
+    opacity: 1;
+    transform: translate(0px, 0px);
+    transition: opacity 150ms ease-out 200ms, transform 300ms ease-out 150ms;
+}
+
+.FadePage-exit {
+    display: none;
+}
+
+.FadePage-exit.FadePage-exit-active {
+    display: none;
+}
+
+.PushFade-enter {
+    opacity: 0.01;
+    max-height: 1px;
+    transform: translate(316px, 0px);
+}
+
+.PushFade-enter.PushFade-enter-active {
+    opacity: 1;
+    max-height: 500px;
+    transform: translate(0px, 0px);
+    transition: opacity 250ms ease-out 200ms, max-height 250ms ease-out 200ms, transform 250ms ease-out 200ms;
+}
+
+.PushFade-exit {
+    opacity: 1;
+    max-height: 500px;
+}
+
+.PushFade-exit.PushFade-exit-active {
+    opacity: 0.01;
+    max-height: 1px;
+    transition: opacity 250ms ease-in 200ms, max-height 250ms ease-in 200ms;
+}

@@ -1,0 +1,224 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}QC Entry Details – QC Project{% endblock %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<style>
+  /* ─── VARIABLES & BASE (ALIGNED) ────────────────────────────────── */
+  :root {
+    --font-sans: "Inter", -apple-system, sans-serif;
+    --color-primary: #2563eb; /* blue-600 */
+    --color-primary-hover: #1d4ed8; /* blue-700 */
+    --color-success: #16a34a; /* green-600 */
+    --color-danger: #dc2626; /* red-600 */
+    --color-warning: #facc15; /* yellow-400 */
+    --color-orange: #f97316; /* orange-500 */
+    --text-heading: #111827; /* slate-900 */
+    --text-body: #374151; /* slate-700 */
+    --text-muted: #6b7280; /* slate-500 */
+    --color-border: #e5e7eb; /* slate-200 */
+    --color-bg-subtle: #f8fafc; /* slate-50 */
+    --color-surface: #ffffff;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  .qc-detail-page { font-family: var(--font-sans); color: var(--text-body); padding: 1.5rem; }
+
+  /* --- MESSAGES (ALIGNED) --- */
+  .messages-container { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .message-box { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-radius: var(--radius-md); color: #fff; font-weight: 500; }
+  .message-box.success { background: var(--color-success); }
+  .message-box.error { background: var(--color-danger); }
+  .message-box.warning { background: var(--color-warning); color: var(--text-heading); }
+  .message-box.info { background: var(--color-primary); }
+  .message-box .close-btn { background: none; border: none; color: inherit; opacity: 0.8; font-size: 1.2rem; cursor: pointer; }
+
+  /* --- HEADER & TOOLBAR (ALIGNED) --- */
+  .erp-topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+  .breadcrumbs { font-size: 0.875rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.5rem; }
+  .breadcrumbs a { color: var(--text-muted); text-decoration: none; }
+  .breadcrumbs a:hover { color: var(--color-primary); }
+  .breadcrumbs .sep { color: #d1d5db; }
+  .top-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: var(--radius-md); font-weight: 500; font-size: 0.875rem; text-decoration: none; border: 1px solid transparent; transition: .15s; box-shadow: var(--shadow-sm); }
+  .btn:hover { opacity: .92; }
+  .btn-primary { background: var(--color-primary); color: #fff; }
+  .btn-muted { background: var(--color-surface); color: var(--text-body); border-color: var(--color-border); }
+  .btn-success { background: var(--color-success); color: #fff; }
+  .btn-danger { background: var(--color-danger); color: #fff; }
+  .btn-orange { background: var(--color-orange); color: #fff; }
+
+  .erp-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 0.5rem 0 1.25rem; border-bottom: 1px solid var(--color-border); }
+  .erp-title h1 { margin: 0; font-size: 1.875rem; font-weight: 700; }
+  .meta-chips { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .chip { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.625rem; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: 9999px; font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
+  
+  .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-weight: 600; font-size: 0.75rem; text-transform: uppercase; color: #fff; }
+  .status-draft { background: var(--text-muted); }
+  /* Match DB value 'pending_qc' */
+  .status-pending_qc { background: var(--color-warning); color: #422006; } 
+  /* Match DB value 'qc_completed' */
+  .status-qc_completed { background: var(--color-success); }
+  .status-cancelled { background: var(--color-danger); }
+
+  /* --- DECISION & INFO (ALIGNED) --- */
+  .decision-card { margin: 1.25rem 0; background: var(--color-bg-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 1rem; text-align: center; }
+  .decision-card .label { display: block; font-weight: 500; color: var(--text-muted); margin-bottom: 0.25rem; font-size: 0.875rem; }
+  .decision-pill { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; font-size: 1rem; color: #fff; }
+  .decision-approved { background: var(--color-success); }
+  .decision-approved_under_deviation { background: var(--color-orange); }
+  .decision-rejected { background: var(--color-danger); }
+
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; margin-top: 1.5rem; }
+  .card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+  .card-head { background: var(--color-bg-subtle); padding: 0.625rem 1rem; font-weight: 600; color: var(--text-heading); border-bottom: 1px solid var(--color-border); }
+  .kv { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.625rem 1rem; border-bottom: 1px solid var(--color-border); font-size: 0.875rem; }
+  .kv:last-child { border-bottom: none; }
+  .kv .k { color: var(--text-muted); font-weight: 500; }
+  .kv .v { color: var(--text-body); font-weight: 500; text-align: right; }
+
+  /* --- TABLE & ACTIONS (ALIGNED) --- */
+  .section-title { margin: 2rem 0 1rem; font-size: 1.25rem; font-weight: 700; color: var(--text-heading); }
+  .table-wrap { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; background: #fff; box-shadow: var(--shadow-sm); }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { background: var(--color-bg-subtle); color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+  tbody td { padding: 0.75rem; border-bottom: 1px solid var(--color-border); vertical-align: middle; font-size: 0.875rem; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--color-bg-subtle); }
+
+  .remark { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.625rem; border-radius: 9999px; font-weight: 600; font-size: 0.75rem; }
+  .remark.pass { background: #dcfce7; color: #166534; }
+  .remark.fail { background: #fee2e2; color: #991b1b; }
+  .remark.dev { background: #ffedd5; color: #9a3412; }
+
+  .actions-bar { display: flex; gap: 0.75rem; flex-wrap: wrap; padding-top: 1.5rem; margin-top: 1.5rem; border-top: 1px solid var(--color-border); }
+  .actions-bar .spacer { flex: 1; }
+</style>
+
+<div class="qc-detail-page">
+
+  {% if messages %}
+  <div class="messages-container">
+    {% for message in messages %}<div class="message-box {{ message.tags }}" role="alert"><span>{{ message }}</span><button type="button" class="close-btn" onclick="this.parentElement.remove()">&times;</button></div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="erp-topbar">
+    <div class="breadcrumbs"><a href="{% url 'qc:qc_list' %}"><i class="fa-solid fa-list"></i> QC</a><span class="sep">/</span><span>Entry #{{ entry.entry_no }}</span></div>
+    <div class="top-actions">
+      <a href="{% url 'qc:generate_coa' pk=entry.id %}" class="btn btn-primary"><i class="fa-solid fa-file-pdf"></i> Generate COA</a>
+      <a href="{% url 'qc:qc_list' %}" class="btn btn-muted"><i class="fa-solid fa-arrow-left-long"></i> Back</a>
+    </div>
+  </div>
+
+  <div class="erp-header">
+    <div class="erp-title">
+      <h1>QC Entry #{{ entry.entry_no }}</h1>
+      <div class="meta-chips">
+        <span class="chip"><i class="fa-solid fa-box"></i> {{ entry.product.name }}</span>
+        <span class="chip"><i class="fa-solid fa-hashtag"></i> Batch {{ entry.batch_no|default:"—" }}</span>
+        <span class="chip"><i class="fa-solid fa-diagram-project"></i> {{ entry.get_stage_display }}</span>
+        {% if entry.ar_no %}<span class="chip"><i class="fa-solid fa-clipboard"></i> AR {{ entry.ar_no }}</span>{% endif %}
+      </div>
+    </div>
+    <div>
+      {# Use the DB value for the class name to match the CSS #}
+      <span class="status-badge status-{{ entry.status }}">{{ entry.get_status_display }}</span>
+    </div>
+  </div>
+
+  <!-- Decision -->
+  {% if entry.status == 'qc_completed' and entry.decision_status %}
+    <div class="decision-card">
+      <span class="label">Final QC Decision</span>
+      {# ** FIX IS HERE **: Reverted to using an if/elif block to avoid the invalid 'replace' filter #}
+      {% if entry.decision_status == 'approved' %}
+        <span class="decision-pill decision-approved"><i class="fa-solid fa-check-circle"></i> {{ entry.get_decision_status_display }}</span>
+      {% elif entry.decision_status == 'approved_under_deviation' %}
+        <span class="decision-pill decision-approved_under_deviation"><i class="fa-solid fa-exclamation-triangle"></i> {{ entry.get_decision_status_display }}</span>
+      {% elif entry.decision_status == 'rejected' %}
+        <span class="decision-pill decision-rejected"><i class="fa-solid fa-times-circle"></i> {{ entry.get_decision_status_display }}</span>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- Info grid -->
+  <div class="info-grid">
+    <div class="card"><div class="card-head">Key Info</div><div class="kv"><span class="k">Product</span><span class="v">{{ entry.product.name }}</span></div><div class="kv"><span class="k">Batch No.</span><span class="v">{{ entry.batch_no|default:"—" }}</span></div><div class="kv"><span class="k">Stage</span><span class="v">{{ entry.get_stage_display }}</span></div><div class="kv"><span class="k">Remarks</span><span class="v">{{ entry.general_remarks|default:"—" }}</span></div></div>
+    <div class="card"><div class="card-head">Timeline</div><div class="kv"><span class="k">Created By</span><span class="v">{% if entry.created_by %}{{ entry.created_by.get_full_name|default:entry.created_by.username }}{% else %}—{% endif %}</span></div><div class="kv"><span class="k">Entry Date</span><span class="v">{{ entry.entry_date|date:"Y-m-d H:i" }}</span></div><div class="kv"><span class="k">Sample Sent</span><span class="v">{{ entry.sample_sent_at|date:"Y-m-d H:i"|default:"—" }}</span></div><div class="kv"><span class="k">Sample Received</span><span class="v">{{ entry.sample_received_at|date:"Y-m-d H:i"|default:"—" }}</span></div><div class="kv"><span class="k">Completed By</span><span class="v">{% if entry.qc_completed_by %}{{ entry.qc_completed_by.get_full_name|default:entry.qc_completed_by.username }}{% else %}—{% endif %}</span></div><div class="kv"><span class="k">Released by QC</span><span class="v">{{ entry.release_by_qc_at|date:"Y-m-d H:i"|default:"—" }}</span></div></div>
+    <div class="card"><div class="card-head">Details</div>
+    <div class="kv"><span class="k">AR No.</span><span class="v">{{ entry.ar_no|default:"—" }}</span></div>
+    <div class="kv"><span class="k">Equipment</span>
+      <span class="v">{{ entry.equipment_id|default:"—" }}</span></div
+      ><div class="kv"><span class="k">Block</span><span class="v">{{ entry.block|default:"—" }}</span></div>
+      <div class="kv"><span class="k">Sample Desc</span><span class="v">{{ entry.sample_description|default:"—" }}</span></div>
+      <div class="kv"><span class="k">Frequency</span><span class="v">{{ entry.frequency|default:"—" }}</span></div>
+      <div class="kv"><span class="k">Test For</span><span class="v">{{ entry.test_required_for|default:"—" }}</span></div>
+      <div class="kv"><span class="k">Parameters</span><span class="v">{{ entry.test_parameters|default:"—" }}</span></div>
+      <div class="kv"><span class="k">Quantity</span><span class="v">{{ entry.qty|default:"—" }}</span></div>
+    </div>
+  </div>
+
+  <!-- Test Parameter Results -->
+  <h2 class="section-title">Test Parameter Results</h2>
+  {% if group_rows %}
+    {% for groupinfo in group_rows %}
+      <h3 class="section-title" style="font-size:1rem; margin-top:1rem; color: var(--text-muted);">Group: {{ groupinfo.group|default:"General" }}</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Parameter</th><th>Specification</th><th>Acceptance</th><th>Result</th><th>Unit</th><th>Remark</th></tr></thead>
+          <tbody>
+          {% for row in groupinfo.rows %}{% with spec=row.spec se=row.entry %}
+            <tr>
+              <td>{{ forloop.counter }}</td><td>{{ spec.name }}</td>
+              <td>{% if spec.min_val is not None and spec.max_val is not None %}{{ spec.min_val }} – {{ spec.max_val }}{% elif spec.allowed_choices %}{{ spec.allowed_choices }}{% else %}—{% endif %}</td>
+              <td>{{ spec.acceptance_criteria|default:"—" }}</td>
+              <td><strong>{% if se %}{{ se.value }}{% else %}—{% endif %}</strong></td>
+              <td>{{ spec.unit|default:"—" }}</td>
+              <td>{% if se %}{% if se.remark == 'Pass' or se.value|lower == 'complies' %}<span class="remark pass"><i class="fa-solid fa-check"></i> Pass</span>{% elif se.remark == 'Fail' or se.value|lower == 'does_not_comply' %}<span class="remark fail"><i class="fa-solid fa-xmark"></i> Fail</span>{% elif se.remark == 'Approved under deviation' %}<span class="remark dev"><i class="fa-solid fa-triangle-exclamation"></i> Deviation</span>{% else %}—{% endif %}{% else %}—{% endif %}</td>
+            </tr>
+          {% endwith %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p style="color:var(--text-muted);">No test parameters recorded.</p>
+  {% endif %}
+
+  <!-- Actions -->
+    <div class="actions-bar">
+      <a href="{% url 'qc:qc_list' %}" class="btn btn-muted">
+        <i class="fa-solid fa-list"></i> Back to List
+      </a>
+      {% if perms.QC.change_qcentry %}
+        {% if entry.status == 'draft' %}
+          <a href="{% url 'qc:qc_update' entry.id %}" class="btn btn-primary">
+            <i class="fa-solid fa-pencil"></i> Edit (Prod)
+          </a>
+        {% endif %}
+        {% if entry.status == 'pending_qc' %}
+          <a href="{% url 'qc:qc_update' entry.id %}" class="btn btn-primary">
+            <i class="fa-solid fa-pencil"></i> Enter QC Results
+          </a>
+        {% endif %}
+      {% endif %}
+      {% if entry.status == 'qc_completed' %}
+        <a href="{% url 'qc:qc_reopen_for_qc' entry.id %}" class="btn btn-success">
+          <i class="fa-solid fa-vial-circle-check"></i> Reopen for QC
+        </a>
+      {% endif %}
+      <div class="spacer"></div>
+      {% if perms.QC.delete_qcentry and entry.status != 'cancelled' %}
+        <a href="{% url 'qc:qc_cancel' entry.id %}" class="btn btn-danger"
+          onclick="return confirm('Cancel QC entry #{{ entry.entry_no }}?');">
+          <i class="fa-solid fa-trash"></i> Cancel
+        </a>
+      {% endif %}
+    </div>
+
+</div>
+{% endblock maincontent %}

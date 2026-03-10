@@ -1,0 +1,187 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}{% if product %}{{ product.name }} - {% endif %}QC Monitoring Report{% endblock %}
+
+{% block maincontent %}
+<div class="p-4 sm:p-6 lg:p-8 space-y-6">
+
+  {# Page Header #}
+  <header>
+    <h1 class="text-2xl font-bold text-slate-800">QC Monitoring Report</h1>
+    <p class="text-sm text-slate-500 mt-1">
+      {% if product %}
+        Showing results for: <strong>{{ product.name }}</strong>
+      {% else %}
+        Please select a product to generate a report.
+      {% endif %}
+    </p>
+  </header>
+
+  <!-- Filter Panel -->
+  <div class="bg-white p-5 border border-slate-200 rounded-lg shadow-sm">
+  <form method="get"
+        action=""
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 items-end">
+
+    <!-- PRODUCT SEARCH (datalist) -->
+    <div class="lg:col-span-2">
+      <label for="product_search" class="block text-xs font-medium text-slate-600 mb-1">
+        Product
+      </label>
+      <!-- visible searchable box -->
+      <input type="text"
+             id="product_search"
+             list="product_list"
+             value="{{ selected_product_label|default:'' }}"
+             placeholder="Search product..."
+             class="w-full text-sm rounded-md shadow-sm  border-2 py-1.5 px-1">
+      <!-- datalist with all products -->
+      <datalist id="product_list">
+        {% for p in all_products %}
+          {% if p.stages %}
+            <option value="{{ p.id }} - {{ p.name }} - {{ p.stages }}"></option>
+          {% else %}
+            <option value="{{ p.id }} - {{ p.name }}"></option>
+          {% endif %}
+        {% endfor %}
+      </datalist>
+      <!-- hidden real field used by backend -->
+      <input type="hidden"
+             id="product_id"
+             name="product_id"
+             value="{{ selected_product_id|default:'' }}"
+             >
+    </div>
+
+    <!-- BATCH NO (dropdown + search) -->
+    <div>
+      <label for="batch_no" class="block text-xs font-medium text-slate-600 mb-1">
+        Batch No.
+      </label>
+      <input
+          type="text"
+          id="batch_no"
+          name="batch_no"
+          list="batch_no_list"
+          value="{{ batch_no|default:'' }}"
+          placeholder="Search batch..."
+          class="w-full text-sm border-slate-300 rounded-md shadow-sm  border-2 py-1.5 px-1 ">
+      <datalist id="batch_no_list">
+        {% for bn in batch_no_choices %}
+          <option value="{{ bn }}"></option>
+        {% endfor %}
+      </datalist>
+    </div>
+
+    <!-- START DATE -->
+    <div>
+      <label for="start_date" class="block text-xs font-medium text-slate-600 mb-1">
+        Start Date
+      </label>
+      <input type="date" id="start_date" name="start_date"
+             value="{{ start_date|default:'' }}"
+             class="w-full text-sm border-slate-300 rounded-md shadow-sm  border-2 py-1.5 px-1">
+    </div>
+
+    <!-- END DATE -->
+    <div>
+      <label for="end_date" class="block text-xs font-medium text-slate-600 mb-1">
+        End Date
+      </label>
+      <input type="date" id="end_date" name="end_date"
+             value="{{ end_date|default:'' }}"
+             class="w-full text-sm border-slate-300 rounded-md shadow-sm  border-2 py-1.5 px-1">
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="flex items-center gap-2">
+      <button type="submit"
+              class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        <i class="fa-solid fa-filter"></i>
+        <span>Apply</span>
+      </button>
+
+      {% if selected_product_id %}
+        <a href="{% url 'qc:download_qc_report_excel' %}?product_id={{ selected_product_id }}&start_date={{ start_date }}&end_date={{ end_date }}&batch_no={{ batch_no }}"
+           class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+          <i class="fa-solid fa-file-excel"></i>
+          <span>Excel</span>
+        </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+
+
+  <!-- Data Panel -->
+  <div class="bg-white border border-slate-200 rounded-lg shadow-sm">
+    {% if report_rows %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          
+          {# MULTI-LEVEL HEADER #}
+          <thead class="text-xs text-slate-600 uppercase">
+            <tr class="bg-slate-50">
+              <th rowspan="2" class="p-3 border border-slate-200" style="vertical-align: middle;">Date</th>
+              <th rowspan="2" class="p-3 border border-slate-200" style="vertical-align: middle;">Batch No.</th>
+              <th class="p-3 text-center border border-slate-200">Qty.</th>
+              {% for header in header_info %}
+                <th class="p-3 text-center border border-slate-200">{{ header.main }}</th>
+              {% endfor %}
+            </tr>
+            <tr class="bg-slate-50">
+              <th class="p-2 font-medium bg-green-50 text-green-800 border border-slate-200">in Kg</th>
+              {% for header in header_info %}
+                <th class="p-2 font-medium bg-orange-50 text-orange-800 border border-slate-200">{{ header.sub|default:'NA' }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for row in report_rows %}
+              <tr class="bg-white border-b border-slate-200 hover:bg-slate-50">
+                {% for cell in row %}
+                  <td class="p-3 text-center text-slate-700 border-r border-slate-200">{{ cell|default:"-" }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% elif selected_product_id %}
+      <div class="text-center p-12">
+        <div class="text-5xl text-slate-300 mb-4"><i class="fa-solid fa-inbox"></i></div>
+        <h3 class="text-lg font-semibold text-slate-700">No Matching QC Data Found</h3>
+        <p class="text-slate-500 mt-1">There are no records for the selected product and date range.</p>
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const prodSearch = document.getElementById('product_search');
+    const prodIdInput = document.getElementById('product_id');
+
+    if (prodSearch && prodIdInput) {
+      prodSearch.addEventListener('change', function () {
+        const val = this.value || "";
+        // Expecting "123 - Product name - Stage"
+        const idPart = val.split('-')[0].trim();
+        if (idPart && !isNaN(idPart)) {
+          prodIdInput.value = idPart;
+        } else {
+          // if user types random text, clear product_id so backend doesn't crash
+          prodIdInput.value = "";
+        }
+      });
+    }
+  });
+</script>
+{% endblock maincontent %}

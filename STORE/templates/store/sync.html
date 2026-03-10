@@ -1,0 +1,126 @@
+{% extends "main/index.html" %}
+{% block title %}Sync ERP{% endblock %}
+
+{% block maincontent %}
+<div class="container mx-auto px-4 py-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+    <a href="{% url 'rack_dashboard' %}"
+       class="inline-flex items-center bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-3 rounded shadow-sm transition">
+      <i class="bi bi-arrow-left mr-2"></i> Back to Rack Balances
+    </a>
+    <h4 class="text-2xl font-bold text-gray-700 flex-1 text-center sm:text-left">Sync ERP – GRN &amp; Issues</h4>
+    <span class="hidden sm:block w-32"></span> {# spacer to balance layout #}
+  </div>
+
+  <!-- Card -->
+  <div class="bg-white shadow-md rounded-lg border border-gray-200">
+    <div class="p-4">
+      <form method="post" id="syncForm" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-8 gap-4 items-end">
+        {% csrf_token %}
+        <!-- From -->
+        <div class="md:col-span-3">
+          <label for="fromDate" class="block text-sm font-semibold text-gray-600 mb-1">From Date</label>
+          <input type="date" name="from" id="fromDate"
+                 class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-indigo-200 focus:border-indigo-600"
+                 required>
+        </div>
+
+        <!-- To -->
+        <div class="md:col-span-3">
+          <label for="toDate" class="block text-sm font-semibold text-gray-600 mb-1">To Date</label>
+          <input type="date" name="to" id="toDate"
+                 class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-4 focus:ring-indigo-200 focus:border-indigo-600"
+                 required>
+        </div>
+
+        <!-- Button -->
+        <div class="md:col-span-2">
+          <button id="syncBtn" type="submit"
+                  class="w-full inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-3 rounded-lg shadow-sm transition">
+            <i class="bi bi-arrow-repeat mr-2"></i> Sync
+          </button>
+        </div>
+      </form>
+
+      <!-- Status -->
+      <div id="statusArea" class="mt-3 text-sm text-gray-500"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const form       = document.getElementById('syncForm');
+  const fromDate   = document.getElementById('fromDate');
+  const toDate     = document.getElementById('toDate');
+  const statusArea = document.getElementById('statusArea');
+  const btn        = document.getElementById('syncBtn');
+
+  // tiny inline SVG spinner (works without Bootstrap)
+  const spinnerSVG = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>';
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function fmt(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+
+  // Autofill default range (last 7 days) only when fields are empty
+  (function initDates(){
+    if (!fromDate.value || !toDate.value) {
+      const today = new Date();
+      const prior = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 7);
+      fromDate.value = fmt(prior);
+      toDate.value   = fmt(today);
+    }
+  })();
+
+  // Client-side sanity checks without changing server flow
+  form.addEventListener('submit', function(e){
+    const from = new Date(fromDate.value);
+    const to   = new Date(toDate.value);
+
+    // Basic validations
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+      e.preventDefault();
+      alert("Please select both 'From' and 'To' dates.");
+      return;
+    }
+    if (from > to) {
+      e.preventDefault();
+      alert("The 'From' date cannot be later than the 'To' date.");
+      fromDate.focus();
+      return;
+    }
+
+    // Prevent double submit and show feedback
+    btn.disabled = true;
+    btn.dataset.originalText = btn.innerHTML;
+    btn.innerHTML = spinnerSVG + 'Syncing...';
+    statusArea.textContent = "Fetching data from ERP… Please wait.";
+
+    // If the page doesn't navigate (e.g., server 500 renders same page),
+    // re-enable the button so the user can retry without refresh.
+    // 15s is a safe upper bound for most syncs; adjust if needed.
+    setTimeout(() => {
+      if (!document.hidden) { // still on the same page
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.originalText || 'Sync';
+        statusArea.textContent = "No response yet. If this persists, try a smaller date range or check server logs.";
+      }
+    }, 15000);
+  });
+
+  // If server responds and page reloads, this code won't run further.
+  // But if a validation error is returned and form stays, restore button on user change.
+  [fromDate, toDate].forEach(el=>{
+    el.addEventListener('change', () => {
+      if (btn.disabled) {
+        btn.disabled = false;
+        btn.innerHTML = btn.dataset.originalText || 'Sync';
+        statusArea.textContent = '';
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

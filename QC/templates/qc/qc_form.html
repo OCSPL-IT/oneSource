@@ -1,0 +1,692 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ action }} QC Entry – QC Project{% endblock %}
+
+{% block head_extra %}
+<style>
+  /* ────────────────────────────────────────────────────────────────────────── */
+  .qc-form-card {
+    background-color: #ffffff;
+    padding: 25px 30px;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+    margin-bottom: 30px;
+  }
+
+  .qc-form-card .page-title-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .qc-form-card .page-title {
+    font-size: 1.5em;
+    color: #333;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0;
+    text-align: left;
+  }
+
+  .qc-form-card .company-logo-placeholder {
+    width: 120px;
+    height: 40px;
+    background-color: #e9ecef;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center right;
+    font-size: 0.8em;
+    color: #6c757d;
+    text-align: right;
+    padding-right: 5px;
+  }
+
+  .alert {
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.375rem;
+  }
+
+  .alert-success {
+    color: #0f5132;
+    background-color: #d1e7dd;
+    border-color: #badbcc;
+  }
+
+  .alert-info {
+    color: #055160;
+    background-color: #cff4fc;
+    border-color: #b6effb;
+  }
+
+  .alert-warning {
+    color: #664d03;
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+  }
+
+  .alert-danger {
+    color: #842029;
+    background-color: #f8d7da;
+    border-color: #f5c2c7;
+  }
+
+  /* ---------- HEADER INFO TABLE STYLES ---------- */
+  .header-info-table {
+    border: 1px solid #777;
+    margin-bottom: 25px;
+    font-size: 0.85rem;
+  }
+
+  .info-row {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .info-row:last-child {
+    border-bottom: none;
+  }
+
+  .info-cell-label,
+  .info-cell-value {
+    padding: 6px 8px;
+    display: flex;
+    align-items: center;
+  }
+
+  .info-cell-label {
+    flex-basis: 25%;
+    font-weight: 500;
+    color: #333;
+    border-right: 1px solid #ccc;
+  }
+
+  .info-cell-value {
+    flex-basis: 25%;
+    border-right: 1px solid #ccc;
+  }
+
+  .info-cell-value:last-child {
+    border-right: none;
+  }
+
+  .info-cell-value.full-width-hack {
+    flex-basis: 75%;
+    border-right: none;
+  }
+
+  .header-info-table input[type="text"],
+  .header-info-table input[type="date"],
+  .header-info-table input[type="datetime-local"],
+  .header-info-table input[type="number"],
+  .header-info-table select {
+    width: 100%;
+    padding: 4px 6px;
+    font-size: 1em;
+    border: none;
+    background-color: transparent;
+    box-shadow: none;
+    outline: none;
+  }
+
+  .header-info-table select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+
+  .header-info-table .invalid-feedback.d-block {
+    font-size: 0.9em;
+    color: #dc3545;
+    width: 100%;
+    padding-top: 2px;
+  }
+
+  /* ---------- END HEADER INFO TABLE ---------- */
+
+  .qc-form-card .section-title {
+    font-size: 1.3em;
+    color: #333;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: 600;
+  }
+
+  #loading-indicator {
+    display: none;
+    padding: 10px;
+    font-style: italic;
+  }
+
+  .table-responsive {
+    margin-bottom: 1.5rem;
+  }
+
+  .qc-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    border: 1px solid #777;
+  }
+
+  .qc-results-table thead th {
+    background-color: #e9ecef;
+    color: #333;
+    font-weight: 600;
+    padding: 6px 8px;
+    border: 1px solid #999;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .qc-results-table tbody td {
+    padding: 5px 8px;
+    border: 1px solid #999;
+    vertical-align: middle;
+  }
+
+  .qc-results-table tbody tr:hover {
+    background-color: #f8f9fa;
+  }
+
+  .qc-results-table .text-center {
+    text-align: center !important;
+  }
+
+  .qc-results-table .text-muted {
+    color: #6c757d !important;
+  }
+
+  .qc-results-table .text-warning {
+    color: #ffc107 !important;
+  }
+
+  .qc-results-table .text-danger {
+    color: #dc3545 !important;
+  }
+
+  .qc-results-table input.form-control-sm {
+    padding: 4px 6px;
+    font-size: 1em;
+    border-radius: 0;
+    border: 1px solid #ccc;
+    width: 100%;
+  }
+
+  .qc-results-table input.form-control-sm:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.1rem rgba(13, 110, 253, .25);
+  }
+
+  .form-submit-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+  }
+
+  .form-submit-actions .btn-primary {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  /* ────────────────────────────────────────────────────────────────────────── */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="qc-form-card">
+  <div class="page-title-container">
+    <h1 class="page-title">INPROCESS TESTING REQUISITION AND REPORT</h1>
+    <div class="company-logo-placeholder">OCSPL, Solapur</div>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    {# ────────── HEADER INFO TABLE ────────── #}
+    <div class="header-info-table">
+
+      {# ─── First row: Product & Stage ─── #}
+      <div class="info-row">
+        <div class="info-cell-label">{{ form.product.label_tag }}</div>
+        <div class="info-cell-value">
+          {{ form.product }}
+          {% for err in form.product.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="info-cell-label">{{ form.stage.label_tag }}</div>
+        <div class="info-cell-value">
+          {{ form.stage }}
+          {% for err in form.stage.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ─── Second row: Equipment & Block ─── #}
+      <div class="info-row">
+        <div class="info-cell-label">Equipment</div>
+        <div class="info-cell-value">
+          <select
+            id="id_equipment_id"
+            name="equipment_id"
+            class="form-control"
+          >
+            <option value="">— Select equipment —</option>
+            {% for eq in equipment_list %}
+              <option
+                value="{{ eq.eqp_code }}"
+                data-block="{{ eq.block_name }}"
+                {% if form.equipment_id.value|stringformat:"s" == eq.eqp_code|stringformat:"s" %}
+                  selected
+                {% endif %}
+              >
+                {{ eq.eqp_name }}
+              </option>
+            {% endfor %}
+          </select>
+          {% for err in form.equipment_id.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="info-cell-label">{{ form.block.label_tag }}</div>
+        <div class="info-cell-value">
+          <input
+            type="text"
+            id="id_block"
+            name="block"
+            value="{{ form.block.value|default_if_none:'' }}"
+            class="form-control"
+            readonly
+          >
+          {% for err in form.block.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ─── Third row: Batch no (dropdown) & Prod sign date ─── #}
+      <div class="info-row">
+        <div class="info-cell-label">{{ form.batch_no.label_tag }}</div>
+        <div class="info-cell-value">
+          <select
+            id="id_batch_no"
+            name="batch_no"
+            class="form-control"
+          >
+            <option value="">— Select Batch No —</option>
+            {% for bn in distinct_batch_nos %}
+              <option
+                value="{{ bn }}"
+                {% if form.batch_no.value|stringformat:"s" == bn|stringformat:"s" %}
+                  selected
+                {% endif %}
+              >
+                {{ bn }}
+              </option>
+            {% endfor %}
+          </select>
+          {% for err in form.batch_no.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="info-cell-label">{{ form.prod_sign_date.label_tag }}</div>
+        <div class="info-cell-value">
+          {{ form.prod_sign_date }}
+          {% for err in form.prod_sign_date.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ─── Fourth row: Entry date & Sample received at ─── #}
+      <div class="info-row">
+        <div class="info-cell-label">{{ form.entry_date.label_tag }}</div>
+        <div class="info-cell-value">
+          {{ form.entry_date }}
+          {% for err in form.entry_date.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="info-cell-label">{{ form.sample_received_at.label_tag }}</div>
+        <div class="info-cell-value">
+          {{ form.sample_received_at }}
+          {% for err in form.sample_received_at.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ─── Fifth row: Sample sent at & AR No. ─── #}
+      <div class="info-row">
+        <div class="info-cell-label">{{ form.sample_sent_at.label_tag }}</div>
+        <div class="info-cell-value">
+          {{ form.sample_sent_at }}
+          {% for err in form.sample_sent_at.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="info-cell-label">{{ form.ar_no.label_tag }}</div>
+        <div class="info-cell-value">
+          {{ form.ar_no }}
+          {% for err in form.ar_no.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ─── Sixth row: Release by QC at (full width) ─── #}
+      <div class="info-row">
+        <div class="info-cell-label">{{ form.release_by_qc_at.label_tag }}</div>
+        <div class="info-cell-value full-width-hack">
+          {{ form.release_by_qc_at }}
+          {% for err in form.release_by_qc_at.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# ─── Seventh row: Test Required For (full width) ─── #}
+      <div class="info-row">
+        <div class="info-cell-label">{{ form.test_required_for.label_tag }}</div>
+        <div class="info-cell-value full-width-hack">
+          {{ form.test_required_for }}
+          {% for err in form.test_required_for.errors %}
+            <div class="invalid-feedback d-block">{{ err }}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {# ─────────────────────────────────────────────────── END HEADER INFO TABLE ── #}
+
+    <h2 class="section-title">Test Parameters</h2>
+    <div id="loading-indicator" class="text-center text-muted">
+      <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+      Loading test parameters…
+    </div>
+
+    <div class="table-responsive">
+      <table class="qc-results-table">
+        <thead>
+          <tr>
+            <th class="text-center" style="width: 5%;">Sr. No.</th>
+            <th style="width: 35%;">Test Parameter</th>
+            <th style="width: 20%;">Result</th>
+            <th style="width: 20%;">Specification</th>
+            <th style="width: 20%;">Remark</th>
+          </tr>
+        </thead>
+        <tbody id="spec-rows">
+          {% if existing_spec_entries %}
+            {% for se in existing_spec_entries %}
+              <tr
+                {% if se.spec.min_val is not None and se.spec.max_val is not None %}
+                  data-min="{{ se.spec.min_val }}" data-max="{{ se.spec.max_val }}"
+                {% endif %}
+              >
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td>{{ se.spec.name }}</td>
+                <td>
+                  <input
+                    type="text"
+                    name="spec_result_{{ se.spec.id }}"
+                    value="{{ se.value }}"
+                    class="form-control form-control-sm result-input"
+                    {% if se.spec.min_val is not None and se.spec.max_val is not None %}
+                      data-type="numeric"
+                    {% else %}
+                      data-type="text"
+                    {% endif %}
+                    required
+                  >
+                </td>
+                <td>
+                  {% if se.spec.min_val is not None or se.spec.max_val is not None %}
+                    {{ se.spec.min_val|default:"N/A" }} – {{ se.spec.max_val|default:"N/A" }}
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    name="spec_remark_{{ se.spec.id }}"
+                    value="{{ se.remark }}"
+                    class="form-control form-control-sm remark-input"
+                    readonly
+                  >
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-3">
+                Select a product to load parameters.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="form-submit-actions">
+      <button type="submit" class="btn btn-primary">Save Report</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(function () {
+    var $prod = $('#id_product');
+    var $stage = $('#id_stage');
+    var $testRequired = $('#id_test_required_for');
+    var $rows = $('#spec-rows');
+    var $loading = $('#loading-indicator');
+
+    $('#id_equipment_id').on('change', function () {
+      var selectedOption = $(this).find('option:selected');
+      var blockName = selectedOption.data('block') || '';
+      $('#id_block').val(blockName);
+    });
+    
+    (function initializeBlockOnLoad() {
+      var initiallySelected = $('#id_equipment_id').find('option:selected');
+      if (initiallySelected.val()) {
+        $('#id_block').val(initiallySelected.data('block') || '');
+      }
+    })();
+
+    function recalcRemarkForRow(row) {
+      var $row = $(row);
+      var type = $row.find('.result-input').data('type');
+      var rawVal = $row.find('.result-input').val().trim();
+      var $remarkInput = $row.find('.remark-input');
+
+      if (type === 'numeric') {
+        var min = parseFloat($row.data('min'));
+        var max = parseFloat($row.data('max'));
+        var val = parseFloat(rawVal);
+
+        if (!isNaN(val) && !isNaN(min) && !isNaN(max)) {
+          if (val >= min && val <= max) {
+            $remarkInput.val('Pass');
+          } else {
+            $remarkInput.val('Fail');
+          }
+        } else {
+          $remarkInput.val('');
+        }
+      } else {
+        $remarkInput.val('');
+      }
+    }
+
+    $('#spec-rows tr').each(function () {
+      var $tr = $(this);
+      if ($tr.data('min') !== undefined && $tr.data('max') !== undefined) {
+        var $input = $tr.find('.result-input');
+        $input.on('input', function () {
+          recalcRemarkForRow($tr);
+        });
+        recalcRemarkForRow($tr);
+      }
+    });
+
+    function loadProductData() {
+      var pid = $prod.val();
+      var stageText = $stage.find('option:selected').text();
+
+      {% if existing_spec_entries %}
+        return;
+      {% endif %}
+
+      if (!pid) {
+        $('#id_block').val('');
+        $('#id_equipment_id').val('');
+        $('#id_stage').val('');
+        $('#id_test_required_for').val('');
+
+        $rows.html(
+          '<tr><td colspan="5" class="text-center text-muted py-3">' +
+          'Select a product to load parameters.' +
+          '</td></tr>'
+        );
+        return;
+      }
+
+      $loading.show();
+      $rows.empty();
+
+      $.getJSON("{% url 'get_product_details' %}", { product: pid })
+        .done(function (resp) {
+          if (resp.header) {
+            $('#id_block').val(resp.header.default_block || '');
+            $('#id_equipment_id').val(resp.header.default_equipment || '');
+            $('#id_test_required_for').val(resp.header.default_test_required_for || '');
+
+            if (resp.header.default_stage) {
+              $('#id_stage').val(resp.header.default_stage);
+              stageText = $('#id_stage option:selected').text();
+            }
+
+            var selectedOption = $('#id_equipment_id').find('option:selected');
+            if (selectedOption.length) {
+              $('#id_block').val(selectedOption.data('block') || '');
+            }
+          }
+
+          if (resp.specs && resp.specs.length) {
+            $.each(resp.specs, function (i, spec) {
+              var range =
+                (spec.min_val !== null ? spec.min_val : 'N/A') +
+                ' – ' +
+                (spec.max_val !== null ? spec.max_val : 'N/A');
+
+              var newRow = $(
+                '<tr ' +
+                  (spec.min_val !== null && spec.max_val !== null
+                    ? 'data-min="' + spec.min_val + '" data-max="' + spec.max_val + '"'
+                    : ''
+                  ) +
+                '>' +
+                  '<td class="text-center">' + (i + 1) + '</td>' +
+                  '<td>' + spec.name + '</td>' +
+                  '<td>' +
+                    '<input ' +
+                      'type="text" ' +
+                      'name="spec_result_' + spec.id + '" ' +
+                      'class="form-control form-control-sm result-input" ' +
+                      ((spec.min_val !== null && spec.max_val !== null)
+                        ? 'data-type="numeric"'
+                        : 'data-type="text"'
+                      ) +
+                      'required>' +
+                  '</td>' +
+                  '<td>' + range + '</td>' +
+                  '<td>' +
+                    '<input ' +
+                      'type="text" ' +
+                      'name="spec_remark_' + spec.id + '" ' +
+                      'class="form-control form-control-sm remark-input" ' +
+                      'readonly>' +
+                  '</td>' +
+                '</tr>'
+              );
+
+              $rows.append(newRow);
+
+              if (spec.min_val !== null && spec.max_val !== null) {
+                newRow.find('.result-input').on('input', function () {
+                  recalcRemarkForRow(newRow);
+                });
+                recalcRemarkForRow(newRow);
+              }
+            });
+          } else {
+            $rows.html(
+              '<tr><td colspan="5" class="text-center text-warning py-3">' +
+              'No parameters found for the selected product.' +
+              '</td></tr>'
+            );
+          }
+        })
+        .fail(function () {
+          $rows.html(
+            '<tr><td colspan="5" class="text-center text-danger py-3">' +
+            'Error loading product data. Please try again.' +
+            '</td></tr>'
+          );
+        })
+        .always(function () {
+          $loading.hide();
+        });
+    }
+
+    {% if not existing_spec_entries %}
+      if ($prod.val()) {
+        loadProductData();
+      }
+
+      $prod.on('change', loadProductData);
+
+      $stage.on('change', function () {
+        if ($prod.val()) {
+          loadProductData();
+        } else {
+          $rows.html(
+            '<tr><td colspan="5" class="text-center text-muted py-3">' +
+            'Select a product to load parameters.' +
+            '</td></tr>'
+          );
+        }
+      });
+    {% endif %}
+  });
+</script>
+{% endblock %}

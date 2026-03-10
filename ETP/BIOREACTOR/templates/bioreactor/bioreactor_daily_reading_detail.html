@@ -1,0 +1,143 @@
+{% extends "main/index.html" %}
+{% block maincontent %}
+
+<div class="max-w-6xl mx-auto py-8 px-4">
+  
+  {% if messages %}
+    <div class="mb-4 space-y-2">
+      {% for message in messages %}
+        <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                    {% if message.tags == 'success' %}bg-emerald-600{% else %}bg-rose-600{% endif %}">
+          <span>{{ message }}</span>
+          <button type="button" onclick="this.parentElement.remove()">✖</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-800">
+        Bioreactor Reading – {{ reading.date|date:"d-m-Y" }}
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Bioreactor feed: {{ reading.bioreactor_feed|default_if_none:"-" }}
+      </p>
+    </div>
+
+    <div class="flex gap-3">
+      {% if perms.BIOREACTOR.view_bioreactordailyreading  %}
+      <a href="{% url 'bioreactor_daily_reading_list' %}"
+         class="inline-flex items-center px-4 py-2 rounded-md border border-slate-300
+                text-sm font-medium text-slate-700 bg-white hover:bg-slate-50">
+        ← Back to List
+      </a>
+      {% endif %}
+      {% if perms.BIOREACTOR.change_bioreactordailyreading  %}
+      <a href="{% url 'bioreactor_daily_reading_edit' reading.pk %}"
+         class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium
+                bg-emerald-600 text-white hover:bg-emerald-700">
+        Edit Reading
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bioreactor 1 & 2 + Polishing + Feed -->
+  <div class="space-y-6">
+
+    <!-- Bioreactor 1 -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Bioreactor 1
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div><span class="font-medium">pH:</span> {{ reading.bioreactor_1_ph|default_if_none:"-" }}</div>
+        <div><span class="font-medium">COD:</span> {{ reading.bioreactor_1_cod|default_if_none:"-" }}</div>
+        <div><span class="font-medium">MLSS:</span> {{ reading.bioreactor_1_mlss|default_if_none:"-" }}</div>
+        <div><span class="font-medium">MLVSS:</span> {{ reading.bioreactor_1_mlvss|default_if_none:"-" }}</div>
+        <div><span class="font-medium">SVI:</span> {{ reading.bioreactor_1_svi|default_if_none:"-" }}</div>
+        <div><span class="font-medium">DO:</span> {{ reading.bioreactor_1_do|default_if_none:"-" }}</div>
+        <div><span class="font-medium">F/M Ratio:</span> {{ reading.bioreactor_1_fm_ratio|default_if_none:"-" }}</div>
+      </div>
+    </div>
+
+    <!-- Bioreactor 2 -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Bioreactor 2
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div><span class="font-medium">pH:</span> {{ reading.bioreactor_2_ph|default_if_none:"-" }}</div>
+        <div><span class="font-medium">COD:</span> {{ reading.bioreactor_2_cod|default_if_none:"-" }}</div>
+        <div><span class="font-medium">MLSS:</span> {{ reading.bioreactor_2_mlss|default_if_none:"-" }}</div>
+        <div><span class="font-medium">MLVSS:</span> {{ reading.bioreactor_2_mlvss|default_if_none:"-" }}</div>
+        <div><span class="font-medium">SVI:</span> {{ reading.bioreactor_2_svi|default_if_none:"-" }}</div>
+        <div><span class="font-medium">DO:</span> {{ reading.bioreactor_2_do|default_if_none:"-" }}</div>
+        <div><span class="font-medium">F/M Ratio:</span> {{ reading.bioreactor_2_fm_ratio|default_if_none:"-" }}</div>
+      </div>
+    </div>
+
+    <!-- Polishing Tank -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Polishing Tank
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+        <div><span class="font-medium">pH:</span> {{ reading.polishing_tank_ph|default_if_none:"-" }}</div>
+        <div><span class="font-medium">TSS:</span> {{ reading.polishing_tank_tss|default_if_none:"-" }}</div>
+        <div><span class="font-medium">TDS:</span> {{ reading.polishing_tank_tds|default_if_none:"-" }}</div>
+        <div><span class="font-medium">COD:</span> {{ reading.polishing_tank_cod|default_if_none:"-" }}</div>
+      </div>
+    </div>
+
+    <!-- Bioreactor Feed Detailed -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Bioreactor Feed – Detailed
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+        <div><span class="font-medium">pH:</span> {{ reading.bioreactor_feed_ph|default_if_none:"-" }}</div>
+        <div><span class="font-medium">Temp:</span> {{ reading.bioreactor_feed_temp|default_if_none:"-" }}</div>
+        <div><span class="font-medium">TDS:</span> {{ reading.bioreactor_feed_tds|default_if_none:"-" }}</div>
+        <div><span class="font-medium">TSS:</span> {{ reading.bioreactor_feed_tss|default_if_none:"-" }}</div>
+        <div><span class="font-medium">COD:</span> {{ reading.bioreactor_feed_cod|default_if_none:"-" }}</div>
+      </div>
+    </div>
+
+    <!-- Chemicals -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Chemicals Used
+        </h2>
+      </div>
+      <div class="px-4 py-4 text-sm">
+        {% if chemicals %}
+          <ul class="space-y-1">
+            {% for c in chemicals %}
+              <li>
+                <span class="font-medium">{{ c.chemical_name }}:</span>
+                {{ c.quantity }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-slate-500 text-sm">
+            No chemicals recorded for this reading.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

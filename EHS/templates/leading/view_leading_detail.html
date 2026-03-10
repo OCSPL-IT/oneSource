@@ -1,0 +1,134 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+
+<div class="flex justify-center items-center mt-2">
+  <div class="w-full max-w-4xl bg-white shadow-md rounded-lg p-5">
+    <h2 class="text-2xl font-semibold text-gray-700 text-center mb-4"></h2>
+
+    <!-- header row -->
+    <div class="flex items-center justify-between mb-6">
+      <!-- Left: Back -->
+      {% if next %}
+        <a href="{{ next }}"
+           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-sm">
+          <i class="fa fa-arrow-left" aria-hidden="true"></i>
+        </a>
+      {% else %}
+        <a href="{% url 'view_leading' %}"
+           class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-sm">
+          <i class="fa fa-arrow-left" aria-hidden="true"></i>
+        </a>
+      {% endif %}
+
+      <!-- Center: Title -->
+      <div class="flex-1 text-center">
+        <h2 class="text-2xl font-bold text-gray-800">
+          Leading Record Details
+        </h2>
+      </div>
+
+      <!-- Right: Edit -->
+      <a href="{% url 'edit_leading_record' record.id %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+         class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded shadow-sm">
+        <i class="fas fa-edit"></i>
+      </a>
+    </div>
+
+    <hr class="mb-4">
+
+    <!-- Two-column grid for record details -->
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <strong>Observation Date:</strong>
+        {{ record.observation_date|date:"m/d/Y" }}
+      </div>
+      <div>
+        <strong>Department:</strong>
+        {{ record.department }}
+      </div>
+      <div>
+        <strong>Physical Location:</strong>
+        {{ record.physical_location }}
+      </div>
+      <div>
+        <strong>Leading Abnormality:</strong>
+        {{ record.leading_abnormality }}
+      </div>
+      <div>
+        <strong>Initiated By:</strong>
+        {{ record.initiated_by }}
+      </div>
+      <div>
+        <strong>Severity:</strong>
+        {{ record.severity }}
+      </div>
+      <div>
+        <strong>Likelihood:</strong>
+        {{ record.likelihood }}
+      </div>
+      <div>
+        <strong>Risk Factor:</strong>
+        {{ record.risk_factor }}
+      </div>
+      <div class="col-span-2">
+        <strong>Observation Description:</strong>
+        {{ record.observation_description }}
+      </div>
+      <div class="col-span-2">
+        <strong>Corrective Action:</strong>
+        {{ record.corrective_action }}
+      </div>
+      <div>
+        <strong>PSL Member Name:</strong>
+        {{ record.psl_member_name }}
+      </div>
+      <div>
+        <strong>Responsible Person:</strong>
+        {{ record.responsible_person }}
+      </div>
+      <div class="col-span-2">
+        <strong>Root Cause:</strong>
+        {{ record.root_cause }}
+      </div>
+      <div class="col-span-2">
+        <strong>Preventive Action:</strong>
+        {{ record.preventive_action }}
+      </div>
+      <div>
+        <strong>Target Date:</strong>
+        {{ record.target_date|date:"m/d/Y" }}
+      </div>
+      <div>
+        <strong>Status:</strong>
+        {{ record.status }}
+      </div>
+      <div class="col-span-2">
+        <strong>Remark:</strong>
+        {{ record.remark }}
+      </div>
+    </div>
+
+    <!-- Navigation buttons -->
+    <div class="flex justify-between mt-6">
+      <!-- Back Button -->
+      {% if next %}
+        <a href="{{ next }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+          Back
+        </a>
+      {% else %}
+        <a href="{% url 'view_leading' %}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+          Back
+        </a>
+      {% endif %}
+
+      <!-- Edit Button -->
+      <a href="{% url 'edit_leading_record' record.id %}{% if next %}?next={{ next|urlencode }}{% endif %}"
+         class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        Edit
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock maincontent %}

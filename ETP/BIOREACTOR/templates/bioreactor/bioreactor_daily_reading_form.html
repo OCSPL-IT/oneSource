@@ -1,0 +1,345 @@
+{% extends "main/index.html" %}
+{% block maincontent %}
+
+<div class="max-w-6xl mx-auto py-8 px-4">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-semibold text-slate-800">
+      {% if is_edit %}Edit Bioreactor Daily Reading{% else %}Add Bioreactor Daily Reading{% endif %}
+    </h1>
+  </div>
+
+  {% if messages %}
+    <div class="mb-4 space-y-2">
+      {% for message in messages %}
+        <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                    {% if message.tags == 'success' %}bg-emerald-600{% else %}bg-rose-600{% endif %}">
+          <span>{{ message }}</span>
+          <button type="button" onclick="this.parentElement.remove()">✖</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" novalidate class="bg-white shadow-sm rounded-xl border border-slate-200 p-6 space-y-8">
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="mb-4 text-sm text-rose-600">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <!-- Date & total feed -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-medium text-slate-700">{{ form.date.label }}</label>
+        {{ form.date }}
+        {% if form.date.errors %}
+          <p class="mt-1 text-xs text-rose-600">{{ form.date.errors|striptags }}</p>
+        {% endif %}
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700">{{ form.bioreactor_feed.label }}</label>
+        {{ form.bioreactor_feed }}
+        {% if form.bioreactor_feed.errors %}
+          <p class="mt-1 text-xs text-rose-600">{{ form.bioreactor_feed.errors|striptags }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Bioreactor 1 -->
+    <div class="border rounded-lg border-slate-200">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Bioreactor 1
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        {% for field in form %}{% endfor %}
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_1_ph.label }}</label>
+          {{ form.bioreactor_1_ph }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_1_cod.label }}</label>
+          {{ form.bioreactor_1_cod }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_1_mlss.label }}</label>
+          {{ form.bioreactor_1_mlss }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_1_mlvss.label }}</label>
+          {{ form.bioreactor_1_mlvss }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_1_svi.label }}</label>
+          {{ form.bioreactor_1_svi }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_1_do.label }}</label>
+          {{ form.bioreactor_1_do }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_1_fm_ratio.label }}</label>
+          {{ form.bioreactor_1_fm_ratio }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bioreactor 2 -->
+    <div class="border rounded-lg border-slate-200">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Bioreactor 2
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_2_ph.label }}</label>
+          {{ form.bioreactor_2_ph }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_2_cod.label }}</label>
+          {{ form.bioreactor_2_cod }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_2_mlss.label }}</label>
+          {{ form.bioreactor_2_mlss }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_2_mlvss.label }}</label>
+          {{ form.bioreactor_2_mlvss }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_2_svi.label }}</label>
+          {{ form.bioreactor_2_svi }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_2_do.label }}</label>
+          {{ form.bioreactor_2_do }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_2_fm_ratio.label }}</label>
+          {{ form.bioreactor_2_fm_ratio }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Polishing tank -->
+    <div class="border rounded-lg border-slate-200">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Polishing Tank
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.polishing_tank_ph.label }}</label>
+          {{ form.polishing_tank_ph }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.polishing_tank_tss.label }}</label>
+          {{ form.polishing_tank_tss }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.polishing_tank_tds.label }}</label>
+          {{ form.polishing_tank_tds }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.polishing_tank_cod.label }}</label>
+          {{ form.polishing_tank_cod }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Feed detailed -->
+    <div class="border rounded-lg border-slate-200">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Bioreactor Feed – Detailed
+        </h2>
+      </div>
+      <div class="px-4 py-4 grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_feed_ph.label }}</label>
+          {{ form.bioreactor_feed_ph }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_feed_temp.label }}</label>
+          {{ form.bioreactor_feed_temp }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_feed_tds.label }}</label>
+          {{ form.bioreactor_feed_tds }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_feed_tss.label }}</label>
+          {{ form.bioreactor_feed_tss }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-600">{{ form.bioreactor_feed_cod.label }}</label>
+          {{ form.bioreactor_feed_cod }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Chemicals Used -->
+    <div class="border rounded-lg border-slate-200">
+      <div class="px-4 py-2 bg-slate-50 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.18em] text-slate-700 uppercase">
+          Chemicals Used
+        </h2>
+      </div>
+
+      <div class="px-4 py-4 text-sm space-y-4">
+        {% for chem in all_chemicals %}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center chem-row">
+            <!-- Checkbox + label -->
+            <div class="flex items-center">
+              <input type="checkbox"
+                     id="chem-check-{{ forloop.counter0 }}"
+                     class="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 chemical-checkbox"
+                     {% if chem.quantity is not None %}checked{% endif %}>
+              <label for="chem-check-{{ forloop.counter0 }}"
+                     class="ml-3 text-sm text-slate-700">
+                {{ chem.name }}
+              </label>
+            </div>
+
+            <!-- Hidden name + quantity -->
+            <div>
+              <input type="hidden"
+                     name="chemical_name"
+                     value="{{ chem.value }}"
+                     {% if chem.quantity is None %}disabled{% endif %}>
+
+              <input type="number"
+                     step="0.001"
+                     name="chemical_qty"
+                     class="py-2 px-2 block w-full rounded-md border border-slate-300 shadow-sm
+                            focus:border-emerald-500 focus:ring-emerald-500 text-sm
+                            {% if chem.quantity is None %}bg-slate-100{% endif %}"
+                     placeholder="Enter Qty"
+                     value="{{ chem.quantity|default_if_none:'' }}"
+                     {% if chem.quantity is None %}disabled{% endif %}>
+            </div>
+          </div>
+
+          {% if not forloop.last %}
+          <hr class="border-slate-100">
+          {% endif %}
+        {% endfor %}
+
+        <p class="mt-1 text-xs text-slate-500">
+          Select a chemical to enable its quantity field.
+        </p>
+      </div>
+    </div>
+
+    <div class="flex justify-end gap-3">
+      <a href="javascript:history.back()"
+         class="inline-flex items-center px-4 py-2 rounded-md border border-slate-300
+                text-sm font-medium text-slate-700 bg-white hover:bg-slate-50">
+        Cancel
+      </a>
+      <button type="submit"
+              class="inline-flex items-center px-4 py-2 rounded-md border border-transparent
+                     text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700">
+        {% if is_edit %}Update Reading{% else %}Save Reading{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+
+
+ <script>
+document.addEventListener('DOMContentLoaded', function () {
+  /* =======================
+     1) CHEMICAL CHECKBOXES
+     ======================= */
+  document.querySelectorAll('.chem-row').forEach(row => {
+    const checkbox       = row.querySelector('.chemical-checkbox');
+    const hiddenNameInput = row.querySelector('input[name="chemical_name"]');
+    const qtyInput       = row.querySelector('input[name="chemical_qty"]');
+
+    if (!checkbox || !hiddenNameInput || !qtyInput) return;
+
+    const sync = () => {
+      const isChecked = checkbox.checked;
+      hiddenNameInput.disabled = !isChecked;
+      qtyInput.disabled = !isChecked;
+
+      if (isChecked) {
+        qtyInput.classList.remove('bg-slate-100');
+      } else {
+        qtyInput.value = '';
+        qtyInput.classList.add('bg-slate-100');
+      }
+    };
+
+    // Initial state (important for EDIT page)
+    sync();
+
+    // Toggle on click
+    checkbox.addEventListener('change', sync);
+  });
+
+  /* =======================
+     2) F/M RATIO CALCULATION
+     ======================= */
+  const feedInput    = document.getElementById('id_bioreactor_feed');
+  const feedCodInput = document.getElementById('id_bioreactor_feed_cod');
+  const b1CodInput   = document.getElementById('id_bioreactor_1_cod');
+  const b1MlssInput  = document.getElementById('id_bioreactor_1_mlss');
+  const b2MlssInput  = document.getElementById('id_bioreactor_2_mlss');
+  const b1FmInput    = document.getElementById('id_bioreactor_1_fm_ratio');
+  const b2FmInput    = document.getElementById('id_bioreactor_2_fm_ratio');
+
+  function toNum(el) {
+    if (!el) return NaN;
+    const v = parseFloat(el.value);
+    return isNaN(v) ? NaN : v;
+  }
+
+  function recalcFM() {
+    const feed    = toNum(feedInput);
+    const feedCod = toNum(feedCodInput);
+    const b1Cod   = toNum(b1CodInput);
+    const b1Mlss  = toNum(b1MlssInput);
+    const b2Mlss  = toNum(b2MlssInput);
+
+    // Bioreactor 1: ((feed*feed_cod)/1000)/((200*b1_mlss)/1000)
+    if (!isNaN(feed) && !isNaN(feedCod) && !isNaN(b1Mlss) && b1Mlss !== 0) {
+      const num1 = (feed * feedCod) / 1000.0;
+      const den1 = (200.0 * b1Mlss) / 1000.0;
+      const val1 = den1 !== 0 ? num1 / den1 : NaN;
+      if (b1FmInput) b1FmInput.value = isNaN(val1) ? '' : val1.toFixed(3);
+    } else if (b1FmInput) {
+      b1FmInput.value = '';
+    }
+
+    // Bioreactor 2: (feed*b1_cod)/(200*b2_mlss/1000)
+    if (!isNaN(feed) && !isNaN(b1Cod) && !isNaN(b2Mlss) && b2Mlss !== 0) {
+      const den2 = (200.0 * b2Mlss) / 1000.0;
+      const val2 = den2 !== 0 ? (feed * b1Cod) / den2 : NaN;
+      if (b2FmInput) b2FmInput.value = isNaN(val2) ? '' : val2.toFixed(3);
+    } else if (b2FmInput) {
+      b2FmInput.value = '';
+    }
+  }
+
+  [feedInput, feedCodInput, b1CodInput, b1MlssInput, b2MlssInput].forEach(el => {
+    if (el) {
+      el.addEventListener('input', recalcFM);
+      el.addEventListener('change', recalcFM);
+    }
+  });
+
+  // Run once on load (so edit page shows values immediately)
+  recalcFM();
+});
+</script>
+
+
+{% endblock %}

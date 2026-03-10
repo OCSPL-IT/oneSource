@@ -1,0 +1,736 @@
+{% extends "main/index.html" %}
+{% load inv_tags %}
+
+{% block maincontent %}
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+
+    <!-- HEADER -->
+    <header
+      class="bg-gradient-to-r from-indigo-600 via-slate-900 to-slate-900 text-white rounded-xl shadow-sm border border-slate-900/40 px-4 py-3 sm:px-6 sm:py-4 mb-4">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 class="text-base sm:text-lg font-semibold tracking-tight">Inventory Ageing Report ENG Material</h1>
+          <p class="text-[11px] sm:text-xs text-indigo-100/90 mt-0.5">
+            From
+            <span class="font-semibold">{{ from_str }}</span>
+            to
+            <span class="font-semibold">{{ today_str }}</span>
+          </p>
+        </div>
+        <div class="text-right space-y-1">
+          <div
+            class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] sm:text-xs border border-indigo-300/40 shadow-sm">
+            <span class="text-indigo-100/80">As on</span>
+            <span class="font-semibold text-white">{{ today_str }}</span>
+          </div>
+          {% if show_results %}
+          <div class="text-[11px] text-indigo-100/80">
+            Total rows:
+            <span class="font-semibold text-white">{{ total_rows }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <!-- ERROR / INFO MESSAGE -->
+    {% if error_msg %}
+      <div
+        class="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-800 shadow-sm">
+        {{ error_msg }}
+      </div>
+    {% endif %}
+
+    <!-- FILTER FORM (STEP 1) -->
+    <form id="filterForm" method="get"
+          class="mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 sm:px-5 sm:py-4 shadow-sm">
+      <input type="hidden" name="run" value="1">
+
+      <!-- Card header -->
+      <div
+        class="flex flex-col gap-2 border-b border-slate-100 pb-2 mb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-800">Filters</h2>
+          <p class="text-[11px] text-slate-500">
+            Step 1 of 2 · Set date range and click
+            <span class="font-semibold text-slate-700">Apply</span>
+            to load data
+          </p>
+        </div>
+      </div>
+
+      <!-- FILTER GRID – ONLY DATES -->
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <!-- From -->
+        <div>
+          <label class="mb-1 block text-[11px] font-medium text-slate-600">From</label>
+          <input type="date"
+                 name="from"
+                 value="{{ request.GET.from|default:from_str }}"
+                 class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-800 shadow-sm
+                        focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+
+        <!-- To -->
+        <div>
+          <label class="mb-1 block text-[11px] font-medium text-slate-600">To</label>
+          <input type="date"
+                 name="to"
+                 value="{{ request.GET.to|default:today_str }}"
+                 class="w-full rounded-md border border-slate-300 px-2 py-1.5 text-xs text-slate-800 shadow-sm
+                        focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          class="inline-flex items-center rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white shadow-sm
+                 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+          Apply
+        </button>
+
+        <a href="{{ request.path }}"
+           class="inline-flex items-center rounded-full border border-slate-300 px-4 py-1.5 text-xs font-medium text-slate-700
+                  hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">
+          Reset All
+        </a>
+      </div>
+
+      <!-- ACTIVE FILTER CHIPS (JS will fill) -->
+      <div id="active-chips" class="mt-2 flex flex-wrap gap-2 text-[11px]"></div>
+    </form>
+
+    {% if show_results %}
+
+      <!-- STEP 2 HEADER -->
+      <div class="mb-2 flex items-center justify-between">
+        <p class="text-[11px] text-slate-500">
+          Step 2 of 2 · Review ageing summary and detail · Click on any value to cross-filter
+        </p>
+      </div>
+
+      <!-- KPI STRIP (graph removed) -->
+      <div class="mb-4 grid grid-cols-1 gap-4">
+        <!-- Total Inventory KPI -->
+        <section
+          class="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm">
+          <div>
+            <p class="text-[11px] font-medium text-emerald-800 uppercase tracking-wide">Total Inventory Value</p>
+            <p id="kpi-total-inv-value" class="mt-1 text-lg font-semibold text-emerald-900">
+              ₹0.00
+            </p>
+            <p class="mt-0.5 text-[10px] text-emerald-700/80">
+              Reflects current filters
+            </p>
+          </div>
+        </section>
+      </div>
+
+      <!-- SUMMARY GRID -->
+      <div class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+
+        <!-- Ageing summary -->
+        <section
+          class="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <header
+            class="flex items-center justify-between rounded-t-xl border-b border-slate-100 bg-slate-50 px-3 py-2">
+            <span class="text-xs font-semibold text-slate-800">Ageing Bucket</span>
+            <span class="text-[10px] text-slate-500">Click to filter</span>
+          </header>
+          <ul id="age-summary-list"
+              class="summary-list flex-1 divide-y divide-slate-100 overflow-auto text-[11px] max-h-72"></ul>
+        </section>
+
+        <!-- Location summary -->
+        <section
+          class="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <header class="rounded-t-xl border-b border-slate-100 bg-slate-50 px-3 py-2">
+            <span class="text-xs font-semibold text-slate-800">Location</span>
+          </header>
+          <ul id="location-summary-list"
+              class="summary-list flex-1 divide-y divide-slate-100 overflow-auto text-[11px] max-h-72"></ul>
+        </section>
+
+        <!-- Item Type summary (next to Location) -->
+        <section
+          class="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <header class="rounded-t-xl border-b border-slate-100 bg-slate-50 px-3 py-2">
+            <span class="text-xs font-semibold text-slate-800">Item Type</span>
+          </header>
+          <ul id="itemtype-summary-list"
+              class="summary-list flex-1 divide-y divide-slate-100 overflow-auto text-[11px] max-h-72"></ul>
+        </section>
+
+        <!-- Batch wise summary (right corner) -->
+        <section
+          class="flex h-full flex-col rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+          <header class="rounded-t-xl border-b border-slate-100 bg-slate-50 px-3 py-2">
+            <span class="text-xs font-semibold text-slate-800">Batch wise</span>
+          </header>
+          <ul id="batch-summary-list"
+              class="summary-list flex-1 divide-y divide-slate-100 overflow-auto text-[11px] max-h-72"></ul>
+        </section>
+      </div>
+
+      <!-- Item wise summary -->
+      <section
+        class="mb-4 rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+        <header
+          class="flex items-center justify-between rounded-t-xl border-b border-slate-100 bg-slate-50 px-3 py-2">
+          <span class="text-xs font-semibold text-slate-800">Item wise (Item Name) – Qty &amp; Value</span>
+          <span class="text-[10px] text-slate-500">Click on item name to filter detail</span>
+        </header>
+        <div class="max-h-80 overflow-auto">
+          <table class="min-w-full text-[11px]">
+            <thead class="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
+              <tr class="text-[11px] text-slate-700">
+                <th class="whitespace-nowrap px-2 py-1 text-left font-semibold">Item Name</th>
+                <th class="whitespace-nowrap px-2 py-1 text-right font-semibold">Total Qty</th>
+                <th class="whitespace-nowrap px-2 py-1 text-right font-semibold">Total Value</th>
+              </tr>
+            </thead>
+            <tbody id="itemwise-summary-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DETAIL TABLE -->
+      <section
+        class="rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+        <header
+          class="flex items-center justify-between rounded-t-xl border-b border-slate-100 bg-slate-50 px-3 py-2">
+          <div>
+            <h2 class="text-xs font-semibold text-slate-800">Detail</h2>
+            <p class="text-[10px] text-slate-500">
+              Client-side filtered · No page size · Totals at bottom
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              id="btn-export-excel"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full border border-emerald-500 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+              <span class="text-xs">⬇</span>
+              <span>Export Excel</span>
+            </button>
+          </div>
+        </header>
+        <div class="max-h-[540px] overflow-auto">
+          <table class="min-w-full text-[11px]">
+            <thead class="sticky top-0 z-10 border-b border-slate-200 bg-slate-50">
+              <tr id="detail-header-row" class="text-slate-700">
+                {% for col in columns %}
+                  <th class="whitespace-nowrap px-2 py-1 text-left font-semibold">{{ col }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody id="detail-body" class="divide-y divide-slate-100">
+              {# JS will render rows + total #}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    {% else %}
+
+      <!-- NO DATA STATE -->
+      <section
+        class="rounded-xl border border-dashed border-slate-300 bg-white px-4 py-6 text-center shadow-sm">
+        <h2 class="mb-1 text-sm font-semibold text-slate-800">No data loaded</h2>
+        <p class="text-xs text-slate-500">
+          Use the date range above and click
+          <span class="font-semibold text-slate-700">Apply</span>
+          to run the Inventory Ageing report.
+        </p>
+      </section>
+
+    {% endif %}
+
+  </div>
+</div>
+
+{% if show_results %}
+
+<script>
+(function () {
+  const ALL_ROWS = JSON.parse('{{ table_data_json|default:"[]"|escapejs }}');
+  const COLUMNS = {{ columns|safe }};
+
+  if (!Array.isArray(ALL_ROWS) || ALL_ROWS.length === 0) return;
+
+  const BUCKETS = [
+    { slug: '0-60',    label: '0–60',    test: age => age <= 60 },
+    { slug: '61-90',   label: '61–90',   test: age => age >= 61 && age <= 90 },
+    { slug: '91-160',  label: '91–160',  test: age => age >= 91 && age <= 160 },
+    { slug: '161-360', label: '161–360', test: age => age >= 161 && age <= 360 },
+    { slug: '>360',    label: '>360',    test: age => age > 360 }
+  ];
+  const BUCKET_BY_SLUG = {};
+  BUCKETS.forEach(b => BUCKET_BY_SLUG[b.slug] = b);
+
+  const FILTER_COLUMNS = {
+    location: 'Location',
+    inventory_category: 'Inventory Category',
+    item_type: 'Item Type',
+    item_name: 'Item Name',
+    batch_no: 'BatchNo',
+  };
+
+  let activeFilters = {
+    ageBucket: null,
+    location: null,
+    inventory_category: null,
+    item_type: null,
+    item_name: null,
+    batch_no: null,
+  };
+
+  let CURRENT_ROWS = ALL_ROWS.slice();
+
+  const fmtAmt = (v) => {
+    const num = Number(v || 0);
+    if (!isFinite(num)) return '0.00';
+    return num.toLocaleString('en-IN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const fmtQty = (v) => {
+    const num = Number(v || 0);
+    if (!isFinite(num)) return '0.000';
+    return num.toLocaleString('en-IN', {
+      minimumFractionDigits: 3,
+      maximumFractionDigits: 3
+    });
+  };
+
+  const getBucketFromAge = (ageDays) => {
+    const a = Number(ageDays || 0);
+    for (const b of BUCKETS) {
+      if (b.test(a)) return b;
+    }
+    return null;
+  };
+
+  const rowMatchesFilters = (row) => {
+    if (activeFilters.ageBucket) {
+      const b = getBucketFromAge(row["AgeDays"]);
+      if (!b || b.slug !== activeFilters.ageBucket) return false;
+    }
+
+    for (const key of Object.keys(FILTER_COLUMNS)) {
+      const val = activeFilters[key];
+      if (!val) continue;
+      const colName = FILTER_COLUMNS[key];
+      const cellVal = (row[colName] || "(Blank)");
+      if (cellVal !== val) return false;
+    }
+
+    return true;
+  };
+
+  const updateKpi = (rows) => {
+    const el = document.getElementById('kpi-total-inv-value');
+    if (!el) return;
+
+    let grandTotal = 0;
+    rows.forEach(row => {
+      const rib = Number(row["RowInBatch"] || 0);
+      if (rib !== 1) return;
+      const val = Number(row["TotalClosingValuePerBatch"] || row["ClosingValue"] || 0);
+      if (isFinite(val)) grandTotal += val;
+    });
+
+    el.textContent = '₹' + fmtAmt(grandTotal);
+  };
+
+  const applyAndRender = () => {
+    const filtered = ALL_ROWS.filter(rowMatchesFilters);
+    CURRENT_ROWS = filtered;
+
+    updateKpi(CURRENT_ROWS);
+    renderChips();
+    renderSummaries(filtered);
+    renderDetailTable(filtered);
+  };
+
+  const renderChips = () => {
+    const container = document.getElementById('active-chips');
+    if (!container) return;
+
+    const chips = [];
+
+    if (activeFilters.ageBucket) {
+      const b = BUCKET_BY_SLUG[activeFilters.ageBucket];
+      if (b) chips.push({ label: 'Age', key: 'ageBucket', value: b.label });
+    }
+    if (activeFilters.location) {
+      chips.push({ label: 'Location', key: 'location', value: activeFilters.location });
+    }
+    if (activeFilters.inventory_category) {
+      chips.push({ label: 'Inventory Category', key: 'inventory_category', value: activeFilters.inventory_category });
+    }
+    if (activeFilters.item_type) {
+      chips.push({ label: 'Item Type', key: 'item_type', value: activeFilters.item_type });
+    }
+    if (activeFilters.item_name) {
+      chips.push({ label: 'Item Name', key: 'item_name', value: activeFilters.item_name });
+    }
+    if (activeFilters.batch_no) {
+      chips.push({ label: 'Batch', key: 'batch_no', value: activeFilters.batch_no });
+    }
+
+    if (!chips.length) {
+      container.innerHTML = '';
+      return;
+    }
+
+    container.innerHTML = chips.map(ch => `
+      <button
+        type="button"
+        data-chip-key="${ch.key}"
+        class="inline-flex items-center gap-1 rounded-full border border-indigo-100 bg-indigo-50 px-2 py-0.5 text-[11px] text-indigo-700">
+        <span>${ch.label}: ${ch.value}</span>
+        <span class="text-[9px] font-semibold">✕</span>
+      </button>
+    `).join('');
+
+    container.querySelectorAll('[data-chip-key]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-chip-key');
+        if (key === 'ageBucket') activeFilters.ageBucket = null;
+        else activeFilters[key] = null;
+        applyAndRender();
+      });
+    });
+  };
+
+  const renderSummaries = (rows) => {
+    renderAgeingSummary(rows);
+    renderGroupSummary(rows, 'Location', 'location-summary-list', 'location');
+    renderGroupSummary(rows, 'Item Type', 'itemtype-summary-list', 'item_type');
+    renderGroupSummary(rows, 'BatchNo', 'batch-summary-list', 'batch_no');
+    renderItemwiseSummary(rows);
+  };
+
+  const renderAgeingSummary = (rows) => {
+    const ul = document.getElementById('age-summary-list');
+    if (!ul) return;
+
+    const bucketTotals = {};
+    BUCKETS.forEach(b => bucketTotals[b.slug] = 0);
+    let grandTotal = 0;
+
+    rows.forEach(row => {
+      const rib = Number(row["RowInBatch"] || 0);
+      if (rib !== 1) return;
+
+      const b = getBucketFromAge(row["AgeDays"]);
+      if (!b) return;
+
+      const val = Number(row["TotalClosingValuePerBatch"] || row["ClosingValue"] || 0);
+      bucketTotals[b.slug] += val;
+      grandTotal += val;
+    });
+
+    const lis = [];
+
+    BUCKETS.forEach(b => {
+      const val = bucketTotals[b.slug] || 0;
+      lis.push(`
+        <li class="flex items-center justify-between px-3 py-1.5 text-[11px]
+                   ${activeFilters.ageBucket === b.slug ? 'bg-indigo-50' : 'bg-white'}">
+          <button type="button"
+                  data-age-bucket="${b.slug}"
+                  class="flex-1 text-left text-[11px] text-indigo-600 hover:underline">
+            ${b.label}
+          </button>
+          <span class="font-semibold text-slate-800">${fmtAmt(val)}</span>
+        </li>
+      `);
+    });
+
+    lis.push(`
+      <li class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold">
+        <button type="button"
+                data-age-bucket=""
+                class="flex-1 text-left text-[11px] text-slate-800">
+          Total
+        </button>
+        <span class="text-slate-900">${fmtAmt(grandTotal)}</span>
+      </li>
+    `);
+
+    ul.innerHTML = lis.join('');
+
+    ul.querySelectorAll('[data-age-bucket]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const slug = btn.getAttribute('data-age-bucket') || null;
+        activeFilters.ageBucket = slug && activeFilters.ageBucket === slug ? null : slug;
+        applyAndRender();
+      });
+    });
+  };
+
+  const renderGroupSummary = (rows, colName, ulId, filterKey) => {
+    const ul = document.getElementById(ulId);
+    if (!ul) return;
+
+    const map = new Map();
+    let grandTotal = 0;
+
+    rows.forEach(row => {
+      const rib = Number(row["RowInBatch"] || 0);
+      if (rib !== 1) return;
+
+      const key = row[colName] || "(Blank)";
+      const val = Number(row["TotalClosingValuePerBatch"] || row["ClosingValue"] || 0);
+      map.set(key, (map.get(key) || 0) + val);
+      grandTotal += val;
+    });
+
+    if (!map.size) {
+      ul.innerHTML = `<li class="px-3 py-2 text-center text-[11px] text-slate-400">No data</li>`;
+      return;
+    }
+
+    const entries = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+
+    const lis = entries.map(([key, amount]) => `
+      <li class="flex items-center justify-between px-3 py-1.5 text-[11px]">
+        <button type="button"
+                data-filter-key="${filterKey}"
+                data-filter-value="${key}"
+                class="flex-1 text-left text-[11px] text-indigo-600 hover:underline">
+          ${key}
+        </button>
+        <span class="font-semibold text-slate-800">${fmtAmt(amount)}</span>
+      </li>
+    `);
+
+    lis.push(`
+      <li class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3 py-1.5 text-[11px] font-semibold">
+        <span class="text-slate-800">Total</span>
+        <span class="text-slate-900">${fmtAmt(grandTotal)}</span>
+      </li>
+    `);
+
+    ul.innerHTML = lis.join('');
+
+    ul.querySelectorAll('[data-filter-key]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fk = btn.getAttribute('data-filter-key');
+        const val = btn.getAttribute('data-filter-value');
+        activeFilters[fk] = (activeFilters[fk] === val ? null : val);
+        applyAndRender();
+      });
+    });
+  };
+
+  const renderItemwiseSummary = (rows) => {
+    const tbody = document.getElementById('itemwise-summary-body');
+    if (!tbody) return;
+
+    const map = new Map();
+    let grandQty = 0;
+    let grandVal = 0;
+
+    rows.forEach(row => {
+      const rib = Number(row["RowInBatch"] || 0);
+      if (rib !== 1) return;
+
+      const key = row["Item Name"] || "(Blank)";
+      const qty = Number(row["TotalClosingPerBatch"] || row["Closing"] || 0);
+      const val = Number(row["TotalClosingValuePerBatch"] || row["ClosingValue"] || 0);
+
+      if (!map.has(key)) map.set(key, { qty: 0, value: 0 });
+      const agg = map.get(key);
+      agg.qty += qty;
+      agg.value += val;
+
+      grandQty += qty;
+      grandVal += val;
+    });
+
+    if (!map.size) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" class="py-4 text-center text-[11px] text-slate-400">No data</td>
+        </tr>`;
+      return;
+    }
+
+    const entries = Array.from(map.entries()).sort((a, b) => b[1].value - a[1].value);
+
+    const rowsHtml = entries.map(([key, agg]) => `
+      <tr class="hover:bg-slate-50">
+        <td class="whitespace-nowrap px-2 py-1">
+          <button type="button"
+                  data-filter-key="item_name"
+                  data-filter-value="${key}"
+                  class="text-[11px] text-indigo-600 hover:underline">
+            ${key}
+          </button>
+        </td>
+        <td class="whitespace-nowrap px-2 py-1 text-right">${fmtQty(agg.qty)}</td>
+        <td class="whitespace-nowrap px-2 py-1 text-right">${fmtAmt(agg.value)}</td>
+      </tr>
+    `);
+
+    rowsHtml.push(`
+      <tr class="bg-slate-100 font-semibold">
+        <td class="whitespace-nowrap px-2 py-1 text-[11px]">Grand Total</td>
+        <td class="whitespace-nowrap px-2 py-1 text-right text-[11px]">${fmtQty(grandQty)}</td>
+        <td class="whitespace-nowrap px-2 py-1 text-right text-[11px]">${fmtAmt(grandVal)}</td>
+      </tr>
+    `);
+
+    tbody.innerHTML = rowsHtml.join('');
+
+    tbody.querySelectorAll('[data-filter-key]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fk = btn.getAttribute('data-filter-key');
+        const val = btn.getAttribute('data-filter-value');
+        activeFilters[fk] = (activeFilters[fk] === val ? null : val);
+        applyAndRender();
+      });
+    });
+  };
+
+  const renderDetailTable = (rows) => {
+    const tbody = document.getElementById('detail-body');
+    if (!tbody) return;
+
+    if (!rows.length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="${COLUMNS.length}"
+              class="py-6 text-center text-[11px] text-slate-400">
+            No data
+          </td>
+        </tr>`;
+      return;
+    }
+
+    const numericCols = new Set([
+      "Opening", "Receipt", "Issue",
+      "Closing", "ClosingValue",
+      "TotalClosingPerBatch",
+      "TotalClosingValuePerBatch"
+    ]);
+    const totals = {};
+    COLUMNS.forEach(col => { if (numericCols.has(col)) totals[col] = 0; });
+
+    const htmlRows = rows.map(row => {
+      const tds = COLUMNS.map(col => {
+        const rawVal = row[col];
+        const val = rawVal == null ? '' : rawVal;
+
+        if (numericCols.has(col)) {
+          const num = Number(val || 0);
+          if (isFinite(num)) totals[col] += num;
+        }
+
+        if (col === "Item Type" || col === "Location" ||
+            col === "Inventory Category" || col === "Item Name" ||
+            col === "BatchNo") {
+
+          let key = null;
+          if (col === "Item Type") key = "item_type";
+          if (col === "Location") key = "location";
+          if (col === "Inventory Category") key = "inventory_category";
+          if (col === "Item Name") key = "item_name";
+          if (col === "BatchNo") key = "batch_no";
+
+          return `
+            <td class="whitespace-nowrap px-2 py-1">
+              <button type="button"
+                      data-filter-key="${key}"
+                      data-filter-value="${val}"
+                      class="text-[11px] text-indigo-600 hover:underline">
+                ${val}
+              </button>
+            </td>`;
+        }
+
+        return `<td class="whitespace-nowrap px-2 py-1">${val}</td>`;
+      }).join('');
+
+      return `<tr class="hover:bg-slate-50">${tds}</tr>`;
+    });
+
+    const totalRowTds = COLUMNS.map((col, idx) => {
+      if (!numericCols.has(col)) {
+        if (idx === 0) return `<td class="whitespace-nowrap px-2 py-1 text-[11px] font-semibold">Total</td>`;
+        return `<td class="px-2 py-1"></td>`;
+      }
+      const val = totals[col] || 0;
+      const text = (col.toLowerCase().includes("value"))
+        ? fmtAmt(val)
+        : fmtQty(val);
+      return `<td class="whitespace-nowrap px-2 py-1 text-right text-[11px] font-semibold">${text}</td>`;
+    }).join('');
+
+    htmlRows.push(`
+      <tr class="bg-slate-100">
+        ${totalRowTds}
+      </tr>
+    `);
+
+    tbody.innerHTML = htmlRows.join('');
+
+    tbody.querySelectorAll('[data-filter-key]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fk = btn.getAttribute('data-filter-key');
+        const val = btn.getAttribute('data-filter-value');
+        activeFilters[fk] = (activeFilters[fk] === val ? null : val);
+        applyAndRender();
+      });
+    });
+  };
+
+  const exportDetailToExcel = () => {
+    if (!CURRENT_ROWS.length) {
+      alert("No rows to export.");
+      return;
+    }
+
+    const header = COLUMNS;
+    let csv = header.join(",") + "\n";
+
+    CURRENT_ROWS.forEach(row => {
+      const line = header.map(col => {
+        let val = row[col];
+        if (val == null) val = "";
+        const s = String(val).replace(/"/g, '""');
+        return `"${s}"`;
+      }).join(",");
+      csv += line + "\n";
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const todayStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `inventory_ageing_detail_${todayStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportBtn = document.getElementById('btn-export-excel');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', exportDetailToExcel);
+  }
+
+  applyAndRender();
+})();
+</script>
+{% endif %}
+
+{% endblock maincontent %}

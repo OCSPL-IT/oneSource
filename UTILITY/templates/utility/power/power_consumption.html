@@ -1,0 +1,226 @@
+{% extends "main/index.html" %}
+{% load utility_extras %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-100 py-5">
+  <div class="w-full px-4 sm:px-6 lg:px-8">
+    <div class="bg-white shadow rounded-2xl p-6">
+      
+      <div class="container mx-auto px-2 sm:px-4">
+        <!-- Header Section -->
+        <div class="flex items-center justify-between mb-5">
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+              <i class="fa fa-arrow-left" aria-hidden="true"></i>
+            </a>
+            <h2 class="text-xl sm:text-2xl font-bold text-gray-700 flex-1 text-center">Power Consumption Report</h2>
+            <div>
+              <a href="{% url 'power_entry' %}" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-xs sm:text-sm whitespace-nowrap">
+                  <i class="fa-solid fa-plus mr-1"></i> New Entry
+              </a>
+              <a href="{% url 'power_readings_report' %}" class="rounded-lg text-xs sm:text-sm mx-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded shadow-md">
+                Readings
+              </a>
+            </div>
+        </div>
+
+        <!-- Filter Form -->
+        <form method="get" class="flex flex-wrap items-end gap-4 mb-4">
+          <div>
+            <label for="from_date" class="block text-xs font-medium text-gray-600">From Date</label>
+            <input type="date" name="from_date" id="from_date" class="border px-3 py-2 rounded-md text-sm" value="{{ from_date }}">
+          </div>
+          <div>
+            <label for="to_date" class="block text-xs font-medium text-gray-600">To Date</label>
+            <input type="date" name="to_date" id="to_date" class="border px-3 py-2 rounded-md text-sm" value="{{ to_date }}">
+          </div>
+          <div class="py-1">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow text-sm">
+              <i class="fa-solid fa-filter"></i>
+            </button>
+            {% if from_date or to_date %}
+              <a href="{% url 'power_consumption_report' %}" class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg shadow text-sm">
+                <i class="fa-solid fa-eraser"></i>
+              </a>
+            {% endif %}
+            <a href="{% url 'power_consumption_excel' %}?from_date={{ from_date }}&to_date={{ to_date }}" class="text-green-700 hover:text-green-900 py-2 px-2" title="Download Excel">
+              <i class="fa-solid fa-file-excel fa-2xl"></i>
+            </a>
+          </div>
+        </form>
+
+        <!-- Bar Chart -->
+        <div class="mt-8 mb-8">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4 text-center">Consumption Distribution</h3>
+            <div class="bg-gray-50 p-4 rounded-lg shadow" style="height: 200px;">
+                <canvas id="powerConsumptionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="overflow-x-auto shadow-md sm:rounded-lg mt-4">
+          <table class="min-w-full text-xs sm:text-sm border-collapse border border-slate-400">
+            <thead class="text-slate-700 uppercase">
+              <tr class="text-center">
+                <th rowspan="2" class="px-2 py-2 border border-slate-400 align-middle whitespace-nowrap sticky left-0 z-10 bg-blue-200 font-semibold">
+                  DATE
+                </th>
+                {% for group in header_structure %}
+                  <th colspan="{{ group.fields|length }}" class="px-2 py-2 border border-slate-400 font-semibold {{ group.group_bg_color }}">
+                    {{ group.group_label }}
+                  </th>
+                {% endfor %}
+              </tr>
+              <tr class="text-center">
+                {% for group in header_structure %}
+                  {% for _, field_label in group.fields %}
+                    <th class="px-2 py-2 border border-slate-400 font-medium whitespace-nowrap {{ group.group_bg_color }}">
+                      {{ field_label|safe }}
+                    </th>
+                  {% endfor %}
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for reading in daily_readings %}
+                <tr class="bg-white border-b border-slate-300 hover:bg-slate-50 even:bg-slate-50 group text-center">
+                  <td class="px-2 py-1.5 border border-slate-300 whitespace-nowrap sticky left-0 z-0 bg-white group-hover:bg-slate-50 even:bg-slate-50 font-medium">
+                    {{ reading.reading_date|date:"d-m-Y" }}
+                  </td>
+                  {% for group in header_structure %}
+                    {% for model_field, _ in group.fields %}
+                      <td class="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap">
+                        {{ reading|get_item:model_field|floatformat:0 }}
+                      </td>
+                    {% endfor %}
+                  {% endfor %}
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="13" class="text-center text-slate-500 py-6">No data available for the selected dates.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot class="bg-orange-400 font-bold text-black">
+              <tr>
+                <td class="px-2 py-2 border border-slate-400 text-center sticky left-0 z-0 bg-orange-400">Total</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e18_utility|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e18_a_block|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e18_b_block|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e18_dc_block|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e18_ejector|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e18_mee_etp|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e18_other|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e17_utility|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e17_e_block|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e17_other|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e22|floatformat:0 }}</td>
+                <td class="px-2 py-2 border border-slate-400 text-right">{{ totals.total_e16|floatformat:0 }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js and Datalabels Plugin -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const chartData = JSON.parse('{{ chart_data|safe }}');
+
+    if (chartData && chartData.length > 0) {
+      const ctx = document.getElementById('powerConsumptionChart').getContext('2d');
+      
+      const labels = chartData.map(item => item.label);
+      const values = chartData.map(item => parseFloat(item.value).toFixed(0));
+      const percentages = chartData.map(item => parseFloat(item.percentage).toFixed(2));
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Power Consumption',
+            data: values,
+            backgroundColor: [
+              'rgba(255, 99, 132, 0.6)', 'rgba(54, 162, 235, 0.6)', 'rgba(255, 206, 86, 0.6)',
+              'rgba(75, 192, 192, 0.6)', 'rgba(153, 102, 255, 0.6)', 'rgba(255, 159, 64, 0.6)',
+              'rgba(255, 99, 132, 0.4)', 'rgba(54, 162, 235, 0.4)', 'rgba(255, 206, 86, 0.4)',
+              'rgba(75, 192, 192, 0.4)', 'rgba(153, 102, 255, 0.4)', 'rgba(255, 159, 64, 0.4)'
+            ],
+            borderColor: [
+              'rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)', 'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)', 'rgba(153, 102, 255, 1)', 'rgba(255, 159, 64, 1)',
+              'rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)', 'rgba(255, 206, 86, 0.8)',
+              'rgba(75, 192, 192, 0.8)', 'rgba(153, 102, 255, 0.8)', 'rgba(255, 159, 64, 0.8)'
+            ],
+            borderWidth: 1
+          }]
+        },
+        plugins: [ChartDataLabels],
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          // --- NEW: Added layout padding to prevent labels from being cut off ---
+          layout: {
+            padding: {
+              top: 30 // Adds 30px of padding to the top of the chart area
+            }
+          },
+          // --------------------------------------------------------------------
+          plugins: {
+            legend: {
+              display: false
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              formatter: (value, context) => {
+                const percentage = percentages[context.dataIndex];
+                // Display the value and percentage on a new line
+                return `${value}\n(${percentage}%)`;
+              },
+              font: {
+                weight: 'bold',
+                size: 10,
+              },
+              color: '#444'
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                    let label = context.dataset.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed.y !== null) {
+                        label += context.parsed.y + ` (${percentages[context.dataIndex]}%)`;
+                    }
+                    return label;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                font: { size: 10 }
+              }
+            },
+            x: {
+              ticks: {
+                font: { size: 10 }
+              }
+            }
+          }
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

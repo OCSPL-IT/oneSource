@@ -1,0 +1,444 @@
+{% extends 'main/index.html' %}
+
+{% block maincontent %}
+<div class="max-w py-8 mx-4">
+
+  {# Messages #}
+  {% if messages %}
+  <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+    <div
+      class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+      {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+      <span class="flex-1">{{ message }}</span>
+      <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+              onclick="this.parentElement.remove()">
+        ✖
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="mb-6 flex items-center justify-between">
+    <h1 class="text-2xl font-semibold text-gray-800">
+      Personal Care – Sample Requests
+    </h1>
+    {% if perms.PERSONAL_CARE.add_pc_samplerequest %}
+    <a href="{% url 'pc_sample_request_create' %}"
+       class="inline-flex items-center px-4 py-2 rounded-md text-sm font-medium
+              bg-indigo-600 text-white hover:bg-indigo-700">
+      + Add Sample Request
+    </a>
+    {% endif %}
+  </div>
+
+  <form method="get" class="mb-6 bg-white shadow rounded-lg p-4">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Inquiry date (From)
+        </label>
+        <input type="date" name="inquiry_from" value="{{ filters.inquiry_from }}"
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                      focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Inquiry date (To)
+        </label>
+        <input type="date" name="inquiry_to" value="{{ filters.inquiry_to }}"
+               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm
+                      focus:border-indigo-500 focus:ring-indigo-500 text-sm border py-1 px-2">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Customer Name
+        </label>
+        <input type="text" name="customer_name" list="customer_name_filter_list"
+               value="{{ filters.customer_name }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="customer_name_filter_list">
+          {% for v in customer_name_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Product Name
+        </label>
+        <input type="text" name="product_name" list="product_name_filter_list"
+               value="{{ filters.product_name }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="product_name_filter_list">
+          {% for v in product_name_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Project Name
+        </label>
+        <input type="text" name="project_name" list="project_name_filter_list"
+               value="{{ filters.project_name }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="project_name_filter_list">
+          {% for v in project_name_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Contact Person
+        </label>
+        <input type="text" name="contact_person" value="{{ filters.contact_person }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Supplier Name
+        </label>
+        <input type="text" name="supplier_name" list="supplier_name_filter_list"
+               value="{{ filters.supplier_name }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="supplier_name_filter_list">
+          {% for v in supplier_name_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Stage
+        </label>
+        <input type="text" name="stage" list="stage_filter_list"
+               value="{{ filters.stage }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="stage_filter_list">
+          {% for v in stage_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Executive Name
+        </label>
+        <input type="text" name="executive_name" list="executive_filter_list"
+               value="{{ filters.executive_name }}"
+               class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                      focus:border-indigo-500 focus:ring-indigo-500">
+        <datalist id="executive_filter_list">
+          {% for v in executive_options %}
+            <option value="{{ v }}"></option>
+          {% endfor %}
+        </datalist>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">
+          Approval By NMP
+        </label>
+        <select name="approval_by_nmp"
+                class="block w-full rounded-md border border-gray-300 px-2 py-1 text-sm
+                       focus:border-indigo-500 focus:ring-indigo-500">
+          <option value="">-- All --</option>
+          <option value="Approved"    {% if filters.approval_by_nmp == 'Approved' %}selected{% endif %}>Approved</option>
+          <option value="Pending"{% if filters.approval_by_nmp == 'Pending' %}selected{% endif %}>Pending</option>
+          <option value="Hold"   {% if filters.approval_by_nmp == 'Hold' %}selected{% endif %}>Hold</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mt-4 flex justify-end gap-2">
+      <a href="{% url 'pc_sample_request_list' %}"
+         class="inline-flex items-center px-3 py-1.5 rounded-md border border-gray-300
+                text-xs font-medium text-gray-700 bg-white hover:bg-gray-50">
+        Clear
+      </a>
+      <button type="submit"
+              class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium
+                     text-white bg-indigo-600 hover:bg-indigo-700">
+        Filter
+      </button>
+      <button type="submit"
+              formmethod="get"
+              formaction="{% url 'pc_sample_request_export' %}"
+              class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium
+                     text-white bg-green-600 hover:bg-green-700">
+        Download Excel
+      </button>
+    </div>
+  </form>
+
+  {# Results table #}
+  <div class="bg-white shadow rounded-lg overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50">
+        <tr>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Inquiry Date</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Sample Dispatch Date</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Year</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Project Close Date</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Customer Name</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Product Name</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Project Name</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Project Type</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Sample Qty</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Price Indication Given</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Supplier</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Stage</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Remarks</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Executive</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Approval</th>
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Follow-up Month</th>
+          {% if perms.PERSONAL_CARE.view_pc_samplerequest or  perms.PERSONAL_CARE.change_pc_samplerequest or perms.PERSONAL_CARE.delete_pc_samplerequest %}
+          <th class="px-3 py-2 text-left font-semibold text-gray-700">Action</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-200 text-xs">
+        {% for r in sample_requests %}
+        <tr>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {{ r.inquiry_date|date:"d-m-Y" }}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {{ r.sample_dispatch_date|date:"d-m-Y" }}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {{ r.year }}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {{ r.project_close_date|date:"d-m-Y" }}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {% if r.customer_name %}{{ r.customer_name.subcategory }}{% endif %}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {% if r.product_name %}{{ r.product_name.subcategory }}{% endif %}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {% if r.project_name %}{{ r.project_name.subcategory }}{% endif %}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {{ r.get_project_type_display }}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">{{ r.sample_quantity }}</td>
+          <td class="px-3 py-2 whitespace-nowrap">{{ r.price_indication_given }}</td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {% if r.supplier_name %}{{ r.supplier_name.subcategory }}{% endif %}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {% if r.stage %}{{ r.stage.subcategory }}{% endif %}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {% if r.remarks_master %}{{ r.remarks_master.subcategory }}{% endif %}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {% if r.executive_name %}{{ r.executive_name.subcategory }}{% endif %}
+          </td>
+          <td class="px-3 py-2 whitespace-nowrap">{{ r.approval_by_nmp }}</td>
+          <td class="px-3 py-2 whitespace-nowrap">
+            {{ r.followup_date|date:"M-Y" }}
+          </td>
+          {% if perms.PERSONAL_CARE.view_pc_samplerequest or  perms.PERSONAL_CARE.change_pc_samplerequest or perms.PERSONAL_CARE.delete_pc_samplerequest %}
+          <td class="px-3 py-2 whitespace-nowrap space-x-2">
+            {% if perms.PERSONAL_CARE.view_pc_samplerequest  %}
+            <button type="button"
+                    onclick="openHistoryModal('{{ r.pk }}', '{% if r.customer_name %}{{ r.customer_name.subcategory|escapejs }}{% else %}Customer{% endif %}')"
+                    class="text-sky-600 hover:text-sky-700"
+                    title="View customer sample request history">
+              <i class="fa fa-eye"></i>
+            </button>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.change_pc_samplerequest %}
+            <a href="{% url 'pc_sample_request_edit' r.pk %}"
+               class="text-yellow-600 hover:text-yellow-700"
+               title="Edit">
+              <i class="fa fa-edit"></i>
+            </a>
+            {% endif %}
+            {% if perms.PERSONAL_CARE.delete_pc_samplerequest %}
+            <form method="post"
+                  action="{% url 'pc_sample_request_delete' r.pk %}"
+                  class="inline-block"
+                  onsubmit="return confirm('Are you sure you want to delete this sample request?');">
+              {% csrf_token %}
+              <button type="submit"
+                      class="text-red-600 hover:text-red-700"
+                      title="Delete">
+                <i class="fa fa-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="22" class="px-3 py-4 text-center text-gray-500">
+            No sample requests found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination #}
+  {% if is_paginated %}
+  <div class="mt-4 flex items-center justify-between text-xs text-gray-600">
+    <div>
+      Page {{ page_obj.number }} of {{ paginator.num_pages }}
+    </div>
+    <div class="flex space-x-1">
+      {% if page_obj.has_previous %}
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}page=1"
+         class="px-2 py-1 border rounded hover:bg-gray-100">« First</a>
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.previous_page_number }}"
+         class="px-2 py-1 border rounded hover:bg-gray-100">‹ Prev</a>
+      {% endif %}
+
+      <span class="px-2 py-1 border rounded bg-gray-100">
+        {{ page_obj.number }}
+      </span>
+
+      {% if page_obj.has_next %}
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ page_obj.next_page_number }}"
+         class="px-2 py-1 border rounded hover:bg-gray-100">Next ›</a>
+      <a href="?{% if querystring %}{{ querystring }}&{% endif %}page={{ paginator.num_pages }}"
+         class="px-2 py-1 border rounded hover:bg-gray-100">Last »</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{# -------------- HISTORY MODAL -------------- #}
+<div id="historyModal"
+     class="fixed inset-0 bg-slate-900/60 hidden items-center justify-center z-40">
+  <div class="bg-white rounded-lg shadow-lg max-w-8xl w-[95vw] max-h-[80vh] flex flex-col">
+    <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200">
+      <h2 id="historyTitle" class="text-sm font-semibold text-slate-800">
+        Sample Request History
+      </h2>
+      <button type="button"
+              onclick="closeHistoryModal()"
+              class="text-slate-500 hover:text-slate-700 text-lg">
+        ✖
+      </button>
+    </div>
+    <div id="historyBody" class="p-4 overflow-auto text-sm">
+      <div class="text-center text-slate-500">Loading...</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openHistoryModal(pk, customerName) {
+    const modal = document.getElementById('historyModal');
+    const body  = document.getElementById('historyBody');
+    const title = document.getElementById('historyTitle');
+
+    title.textContent = 'Sample Request History – ' + customerName;
+    body.innerHTML = '<div class="text-center text-slate-500">Loading...</div>';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    const urlTemplate = "{% url 'pc_sample_request_history' 0 %}";
+    const url = urlTemplate.replace('0', pk);
+
+    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+      .then(resp => resp.text())
+      .then(html => {
+        body.innerHTML = html;
+      })
+      .catch(err => {
+        console.error(err);
+        body.innerHTML = '<div class="text-center text-red-500">Error loading history.</div>';
+      });
+  }
+
+  function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        // Does this cookie string begin with the name we want?
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie('csrftoken');
+
+
+
+   // 🔸 Called when dropdown in history table changes
+  function pcChangeApproval(selectEl) {
+    const pk = selectEl.dataset.requestId;
+    const newValue = selectEl.value;
+
+    const urlTemplate = "{% url 'pc_sample_request_update_approval' 0 %}";
+    const url = urlTemplate.replace("0", pk);
+
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "X-CSRFToken": csrftoken,
+        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({ "approval_by_nmp": newValue })
+    })
+    .then(resp => resp.json())
+    .then(data => {
+      if (!data.ok) {
+        alert("Error: " + (data.error || "could not update status"));
+        return;
+      }
+
+      // If it became Approved, replace dropdown with plain text
+      if (data.approval_by_nmp === "Approved") {
+        const td = selectEl.parentElement;
+        td.textContent = "Approved";
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error updating approval status.");
+    });
+  }
+</script>
+{% endblock %}

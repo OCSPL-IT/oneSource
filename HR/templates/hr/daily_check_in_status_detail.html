@@ -1,0 +1,147 @@
+{% extends 'hr/HRone_base.html' %}
+
+{% block HRone_title %}
+<title>Check-In Status Detail</title>
+{% endblock HRone_title %}
+
+{% block HRone_report_header %}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold text-gray-600">Check-In Status Detail</h2>
+    <h2 class="text-xl font-bold text-gray-600">Status: {{ check_in_status }}</h2>
+</div>
+{% endblock HRone_report_header %}
+
+{% block HRone_report_content %}
+<div class="container mx-auto py-6 px-4">
+    <!-- Filter Form -->
+    <form method="get" class="flex flex-wrap justify-center gap-2 items-end mb-6 bg-white shadow-md p-4 rounded-lg">
+        
+        <!-- From Date -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">From Date</label>
+            <input type="date" name="from_date" value="{{ from_date }}" 
+                   class="text-xs border border-gray-300 rounded px-1 py-2" />
+        </div>
+
+        <!-- To Date -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">To Date</label>
+            <input type="date" name="to_date" value="{{ to_date }}" 
+                   class="text-xs border border-gray-300 rounded px-1 py-2" />
+        </div>
+
+        <!-- Company -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Company</label>
+            <select name="company" class="text-xs border border-gray-300 rounded pr-1 py-2">
+                <option value="">All</option>
+                {% for company in company_list %}
+                <option value="{{ company }}" {% if company == selected_company %}selected{% endif %}>{{ company }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Branch -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Branch</label>
+            <select name="branch" class="text-xs border border-gray-300 rounded pr-1 py-2">
+                <option value="">All</option>
+                {% for branch in branch_list %}
+                <option value="{{ branch }}" {% if branch == selected_branch %}selected{% endif %}>{{ branch }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Department -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Department</label>
+            <select name="department" class="text-xs border border-gray-300 rounded pr-7 py-2">
+                <option value="">All</option>
+                {% for department in department_list %}
+                <option value="{{ department }}" {% if department == selected_department %}selected{% endif %}>{{ department }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Shift -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Shift</label>
+            <select name="shift" class="text-xs border border-gray-300 rounded pr-2 py-2">
+                <option value="">All</option>
+                {% for shift in shift_list %}
+                <option value="{{ shift }}" {% if shift == selected_shift %}selected{% endif %}>{{ shift }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Full Name -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Full Name</label>
+            <input type="text" name="full_name" value="{{ full_name_query }}" placeholder="Search by name"
+                   class="text-xs border border-gray-300 rounded px-3 py-2">
+        </div>
+
+        <!-- Filter Button -->
+        <button type="submit" class="text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+            Filter
+        </button>
+        <a href="{% url 'daily_check_in_summary' %}" class="bg-gray-400 text-white px-4 py-1 rounded hover:bg-gray-500">
+            Clear
+        </a>
+        <a href="{% url 'check_in_status_excel_download' check_in_status %}?from_date={{ from_date }}&to_date={{ to_date }}&company={{ selected_company }}&branch={{ selected_branch }}&department={{ selected_department }}&shift={{ selected_shift }}&full_name={{ full_name_query|urlencode }}">
+            <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+        </a>
+    </form>
+
+    <!-- Detail Table -->
+    <div class="overflow-x-auto bg-white shadow rounded">
+        <table class="min-w-full text-sm border">
+            <thead class="bg-gray-100 border-b">
+                <tr class="text-center text-xs font-semibold text-gray-700">
+                    <th class="p-2">Employee Code</th>
+                    <th class="p-2">Full Name</th>
+                    <th class="p-2">Employment Status</th>
+                    <th class="p-2">Company</th>
+                    <th class="p-2">Business Unit</th>
+                    <th class="p-2">Department</th>
+                    <th class="p-2">Designation</th>
+                    <th class="p-2">Branch</th>
+                    <th class="p-2">Sub Branch</th>
+                    <th class="p-2">Attendance Date</th>
+                    <th class="p-2">Shift</th>
+                    <th class="p-2">Check-In</th>
+                    <th class="p-2">First Punch</th>
+                    <th class="p-2">Last Punch</th>
+                    <th class="p-2">Raw Punch</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr class="border-b hover:bg-gray-50 text-center">
+                    <td class="p-2 whitespace-nowrap">{{ record.employee_code }}</td>
+                    <td class="p-2">{{ record.full_name }}</td>
+                    <td class="p-2">{{ record.employment_status }}</td>
+                    <td class="p-2">{{ record.company }}</td>
+                    <td class="p-2">{{ record.business_unit }}</td>
+                    <td class="p-2">{{ record.department }}</td>
+                    <td class="p-2">{{ record.designation }}</td>
+                    <td class="p-2">{{ record.branch }}</td>
+                    <td class="p-2">{{ record.sub_branch }}</td>
+                    <td class="p-2">{{ record.attendance_date|date:"d/m/Y" }}</td>
+                    <td class="p-2">{{ record.shift }}</td>
+                    <td class="p-2">{{ record.check_in }}</td>
+                    <td class="p-2 whitespace-nowrap">{{ record.first_punch }}</td>
+                    <td class="p-2 whitespace-nowrap">{{ record.last_punch }}</td>
+                    <td class="p-2">{{ record.raw_punch }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="15" class="p-4 text-center text-gray-500">No records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock HRone_report_content %}

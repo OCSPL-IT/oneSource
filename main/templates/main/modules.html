@@ -1,0 +1,385 @@
+{# templates/main/modules.html #}
+{% load static %}
+
+{# ───────────────────────── Flash messages ───────────────────────── #}
+{% if messages %}
+  <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+    <div class="mb-6 space-y-3">
+      {% for message in messages %}
+        <div x-data="{show:true}" x-show="show"
+             x-init="setTimeout(()=>show=false,4500)"
+             x-transition:leave="transition ease-in duration-300"
+             class="flex items-start justify-between gap-4 px-4 py-3 rounded-lg shadow text-white
+                    {% if message.tags == 'debug'   %}bg-gray-600
+                    {% elif message.tags == 'info'   %}bg-blue-600
+                    {% elif message.tags == 'success'%}bg-green-600
+                    {% elif message.tags == 'warning'%}bg-yellow-500 text-black
+                    {% elif message.tags == 'error'  %}bg-red-600
+                    {% else %}bg-slate-600{% endif %}">
+          <span class="font-medium">{{ message }}</span>
+          <button @click="show=false" class="font-bold leading-none" aria-label="Dismiss">×</button>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+
+{# ─────────────────────── Card grid container ─────────────────────── #}
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+
+    {# ───────── 1) Daily Operation Plant ───────── #}
+    {% if 'Daily_Operation_Plant' in user_groups and user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-table-columns fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">
+          Daily Operation Plant
+        </h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">
+        Production · Dispatch · Utilities&nbsp;KPIs
+      </p>
+      <div class="mt-auto pt-4 border-t border-slate-100">
+        <a href="{% url 'plan_vs_actual_daily' %}"
+           class="text-blue-600 hover:underline text-sm font-medium">
+          Open&nbsp;Dashboard
+        </a>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 2) Accounts ───────── #}
+    {% if 'ACCOUNTS' in user_groups or 'Accounts' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-emerald-100 text-emerald-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-indian-rupee-sign fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">Accounts – Receivables</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Customer outstanding &amp; aging analysis.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        {% if perms.receivable.view_receivable %}
+        <a href="{% url 'accounts:receivable_dashboard' %}"
+           class="text-blue-600 hover:underline text-sm font-medium">Receivables Dashboard</a>
+        <a href="{% url 'accounts:receivable_new' %}"
+           class="text-blue-600 hover:underline text-sm font-medium">New Receivable Entry</a>
+        <a href="{% url 'accounts:receivable_list' %}"
+           class="text-blue-600 hover:underline text-sm font-medium">Receivables List</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 3) Store ───────── #}
+    {% if 'STORE' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-warehouse fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">Store</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Vehicle entry/exit &amp; logistics.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'add_vehicle' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;Vehicle</a>
+        <a href="{% url 'vehicle_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Vehicle&nbsp;Reports</a>
+        {% if perms.material_issue_capex.view_capexgrnline %}
+          <a href="{% url 'material_issue_capex:capex_mi_dashboard' %}" class="text-blue-600 hover:underline text-sm font-medium">Capex GRN &amp; Material Issue</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 4) Production ───────── #}
+    {% if 'PRODUCTION' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-purple-100 text-purple-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-industry fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">Production</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Downtime logging &amp; analysis.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'add_downtime' %}" class="text-blue-600 hover:underline text-sm font-medium">Log&nbsp;Downtime</a>
+        <a href="{% url 'view_downtime' %}" class="text-blue-600 hover:underline text-sm font-medium">Downtime&nbsp;Records</a>
+        <a href="{% url 'daily_checks:daily_block_dashboard' %}" class="text-blue-600 hover:underline text-sm font-medium">Daily Block Dashboard</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 5) QC Module ───────── #}
+    {% if 'QC' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-green-100 text-green-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-flask fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">QC Module</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Product quality &amp; batch analysis.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'qc:qc_home' %}" class="text-blue-600 hover:underline text-sm font-medium">QC&nbsp;Dashboard</a>
+        <a href="{% url 'qc:product_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Products</a>
+        <a href="{% url 'qc:mis_report' %}" class="text-blue-600 hover:underline text-sm font-medium">MIS&nbsp;Report</a>
+        <a href="{% url 'qc:qc_list' %}" class="text-blue-600 hover:underline text-sm font-medium">QC&nbsp;Entries</a>
+        {% if perms.QC.view_qccalibrationschedule %}
+        <a href="{% url 'qc:calibration_list' %}" class="text-blue-600 hover:underline text-sm font-medium">QC&nbsp;Calibration Schedule</a>
+        {% endif %}
+        {% if perms.QC.view_fgproductqcstatus %}
+        <a href="{% url 'qc:fg_qc_status_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Daily FgQC Status</a>
+        {% endif %}
+        {% if perms.QC.view_instrumentoccupancy %}
+        <a href="{% url 'qc:instrument_occupancy_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Instrument Occupancy</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 6) ETP ───────── #}
+    {% if 'ETP' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-teal-100 text-teal-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-water fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">ETP</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Effluent treatment plant records.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'effluent_dashboard' %}" class="text-blue-600 hover:underline text-sm font-medium">Effluent Dashboard</a>
+        <a href="{% url 'add_effluent_record' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;Record</a>
+        <a href="{% url 'view_effluent_records' %}" class="text-blue-600 hover:underline text-sm font-medium">Effluent&nbsp;Records</a>
+        <a href="{% url 'add_general_effluent' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;General Effluent</a>
+        <a href="{% url 'view_general_effluent' %}" class="text-blue-600 hover:underline text-sm font-medium">General&nbsp;Effluent Records</a>
+        <a href="{% url 'pte_create' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;Primary Treatment</a>
+        <a href="{% url 'pte_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Primary Treatment&nbsp;Records</a>
+        <a href="{% url 'hazardous_waste_create' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;Hazardous Waste</a>
+        <a href="{% url 'hazardous_waste_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Hazardous Waste&nbsp;Records</a>
+        {% if perms.MEE.view_meedailyreading %}
+        <a href="{% url 'mee:mee_reading_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Mee Readings</a>
+        {% endif %}
+        {% if perms.MEE.view_atfdreading %}
+        <a href="{% url 'mee:atfd_reading_list' %}" class="text-blue-600 hover:underline text-sm font-medium">ATFD Readings</a>
+        {% endif %}
+        {% if perms.BIOREACTOR.view_bioreactordailyreading %}
+        <a href="{% url 'bioreactor_daily_reading_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Bioreactor Readings</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 7) Utility ───────── #}
+    {% if 'UTILITY' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-indigo-100 text-indigo-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-bolt fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">Utility</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Daily readings &amp; energy tracking.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'utility_entry' %}" class="text-blue-600 hover:underline text-sm font-medium">Create&nbsp;Record</a>
+        <a href="{% url 'utility_readings_report' %}" class="text-blue-600 hover:underline text-sm font-medium">Utility&nbsp;Reports</a>
+        <a href="{% url 'power_entry' %}" class="text-blue-600 hover:underline text-sm font-medium">Power&nbsp;Entry</a>
+        <a href="{% url 'power_readings_report' %}" class="text-blue-600 hover:underline text-sm font-medium">Power&nbsp;Report</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 8) Maintenance ───────── #}
+    {% if 'MAINTENANCE' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-sky-100 text-sky-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-screwdriver-wrench fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">Maintenance</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Schedules, uploads &amp; calendar view.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'maintenance:dashboard' %}" class="text-blue-600 hover:underline text-sm font-medium">Dashboard</a>
+        <a href="{% url 'maintenance:upload_excel' %}" class="text-blue-600 hover:underline text-sm font-medium">Upload&nbsp;Schedule&nbsp;(Excel)</a>
+        <a href="{% url 'maintenance:calendar' %}" class="text-blue-600 hover:underline text-sm font-medium">Calendar&nbsp;(Month)</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 9) HR Module ───────── #}
+    {% if 'HR' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-blue-100 text-blue-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-users fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">HR Module</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Employees, attendance &amp; budgets.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        {% if perms.HR.view_dailyattendance %}
+        <a href="{% url 'attendance_pivot_report' %}" class="text-blue-600 hover:underline text-sm font-medium">Attendance&nbsp;Summary</a>
+        {% endif %}
+        {% if perms.CANTEEN.view_attendance %}
+        <a href="{% url 'canteen_dashboard' %}" class="text-blue-600 hover:underline text-sm font-medium">Canteen&nbsp;Dashboard</a>
+        <a href="{% url 'attendance_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Canteen&nbsp;Records</a>
+        {% endif %}
+        {% if 'HR_Budget' in user_groups or is_superuser %}
+        <a href="{% url 'monthly_hr_budget_summary' %}" class="text-blue-600 hover:underline text-sm font-medium">HR&nbsp;Budget</a>
+        {% endif %}
+        {% if perms.CONTRACT.view_employeeassignment %}
+        <a href="{% url 'assignment_dashboard_page' %}" class="text-blue-600 hover:underline text-sm font-medium">Casual&nbsp;Attendance</a>
+        {% endif %}
+        {% if perms.HR.view_employeejoining %}
+        <a href="{% url 'employee_joining_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Employee Joining</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 10) EHS Module ───────── #}
+    {% if 'EHS' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-rose-100 text-rose-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-shield-halved fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">EHS Module</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Lagging / leading indicators &amp; PSSR.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'add_lagging_indicator' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;Lagging</a>
+        <a href="{% url 'view_lagging' %}" class="text-blue-600 hover:underline text-sm font-medium">Lagging&nbsp;Records</a>
+        <a href="{% url 'add_leading_record' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;Leading</a>
+        <a href="{% url 'view_leading' %}" class="text-blue-600 hover:underline text-sm font-medium">Leading&nbsp;Records</a>
+        <a href="{% url 'add_pssr_record' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;PSSR</a>
+        <a href="{% url 'pssr_record_list' %}" class="text-blue-600 hover:underline text-sm font-medium">PSSR&nbsp;Records</a>
+        {% if perms.EHS.view_dailyworkpermit %}
+        <a href="{% url 'permit_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Daily Work Permit</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 11) R&D ───────── #}
+    {% if 'R&D' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-orange-100 text-orange-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-vials fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">R&amp;D</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Research &amp; development experiments.</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'add_r_and_d_moisture' %}" class="text-blue-600 hover:underline text-sm font-medium">Add&nbsp;Moisture</a>
+        <a href="{% url 'r_and_d_moisture_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Moisture&nbsp;Records</a>
+        <a href="{% url 'add_kf_factor_entry' %}" class="text-blue-600 hover:underline text-sm font-medium">KF&nbsp;Factor&nbsp;Entry</a>
+        <a href="{% url 'kf_factor_entry_list' %}" class="text-blue-600 hover:underline text-sm font-medium">KF&nbsp;Factor&nbsp;Report</a>
+        <a href="{% url 'add_melting_point_record' %}" class="text-blue-600 hover:underline text-sm font-medium">Melting&nbsp;Point&nbsp;Entry</a>
+        <a href="{% url 'melting_point_record_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Melting&nbsp;Point&nbsp;Report</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 12) Import Export ───────── #}
+    {% if 'IMPORT_EXPORT' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-orange-100 text-indigo-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-boxes-packing fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">IMPORT &amp; EXPORT</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">IMPORT EXPORT</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        {% if perms.Export_Commercial_Invoice.view_invoicepostshipment %}
+        <a href="{% url 'invoice_post_shipment_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Export Invoice &amp; Packing List</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 13) PURCHASE ───────── #}
+    {% if 'PURCHASE' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-orange-100 text-indigo-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-clipboard-list mx-1"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">PURCHASE</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">PURCHASE</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        {% if perms.DomesticETA.view_domesticetatracking %}
+        <a href="{% url 'domestic_eta:domestic_eta_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Domestic ETA Tracking</a>
+        <a href="{% url 'domestic_eta:eta_dashboard' %}" class="text-blue-600 hover:underline text-sm font-medium">Domestic ETA Dashboard</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 14) SALES MARKETING ───────── #}
+    {% if 'SALES MARKETING' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-orange-100 text-indigo-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fas fa-poll mx-1"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">SALES MARKETING</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">SALES MARKETING</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        {% if perms.sales_crm.view_customervisit %}
+        <a href="{% url 'sales_crm:customer_visit_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Customer Visit Record</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {# ───────── 15) Personal Care ───────── #}
+    {% if 'PERSONAL_CARE' in user_groups or 'PERSONAL_CARE_Management' in user_groups or is_superuser %}
+    <div class="flex flex-col bg-white border rounded-lg p-5 shadow-sm hover:shadow-md hover:-translate-y-1 transition duration-300">
+      <div class="flex items-center mb-4">
+        <div class="p-3 rounded-full bg-orange-100 text-indigo-600 mr-4 flex-shrink-0" aria-hidden="true">
+          <i class="fa-solid fa-spa fa-lg"></i>
+        </div>
+        <h2 class="text-xl font-semibold text-slate-700 break-words">PERSONAL CARE</h2>
+      </div>
+      <p class="text-slate-500 text-sm mb-4 flex-grow">Personal care consumers</p>
+      <div class="mt-auto pt-4 border-t border-slate-100 flex flex-col space-y-2">
+        <a href="{% url 'pc_customer_dashboard' %}" class="text-blue-600 hover:underline text-sm font-medium">Personal Care Customer Dashboard</a>
+        {% if perms.PERSONAL_CARE.view_pc_samplerequest %}
+        <a href="{% url 'pc_customer_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Customer Master</a>
+        {% endif %}
+        {% if perms.PERSONAL_CARE.add_pc_customermaster %}
+        <a href="{% url 'pc_customer_create' %}" class="text-blue-600 hover:underline text-sm font-medium">Add Customer</a>
+        {% endif %}
+        {% if perms.PERSONAL_CARE.view_pc_samplerequest %}
+        <a href="{% url 'pc_sample_request_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Sample Requests</a>
+        {% endif %}
+        {% if perms.PERSONAL_CARE.add_pc_samplerequest %}
+        <a href="{% url 'pc_sample_request_create' %}" class="text-blue-600 hover:underline text-sm font-medium">Create Sample Request</a>
+        {% endif %}
+        {% if perms.PERSONAL_CARE.view_customer_followup %}
+        <a href="{% url 'pc_task_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Customer Follow-ups</a>
+        {% endif %}
+        {% if perms.PERSONAL_CARE.add_customer_followup %}
+        <a href="{% url 'pc_task_create' %}" class="text-blue-600 hover:underline text-sm font-medium">Add Follow ups</a>
+        {% endif %}
+        {% if perms.PERSONAL_CARE.view_pc_other_customermaster %}
+        <a href="{% url 'pc_other_customer_list' %}" class="text-blue-600 hover:underline text-sm font-medium">Other Customer Master</a>
+        {% endif %}
+        {% if perms.PERSONAL_CARE.add_pc_other_customermaster %}
+        <a href="{% url 'pc_other_customer_create' %}" class="text-blue-600 hover:underline text-sm font-medium">Add Other Customer</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>

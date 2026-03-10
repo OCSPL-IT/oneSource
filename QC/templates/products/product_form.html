@@ -1,0 +1,394 @@
+{# products/templates/products/product_form.html #}
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}{{ action }} Product – QC Project{% endblock %}
+
+{% block maincontent %}
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+        integrity="sha512-M08nwyYg4nxsGIEBIg+odPlcucOsynpS3J+yJTuk7SzOoMPlg8IjsnBYo7lVkbv4WT1M3yu2YxyQlQvTMM6lKg=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+
+  <style>
+    /* ─── VARIABLES & BASE (ALIGNED) ────────────────────────────────── */
+    :root {
+      --font-sans: "Inter", -apple-system, sans-serif;
+      --color-primary: #2563eb; /* blue-600 */
+      --color-primary-hover: #1d4ed8; /* blue-700 */
+      --color-text: #111827; /* slate-900 */
+      --color-text-secondary: #6b7280; /* slate-500 */
+      --color-border: #e5e7eb; /* slate-200 */
+      --color-bg-subtle: #f8fafc; /* slate-50 */
+      --color-bg-card: #ffffff;
+      --color-danger: #dc2626; /* red-600 */
+      --radius-md: 0.375rem; /* rounded-md */
+      --radius-lg: 0.5rem; /* rounded-lg */
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    .product-form-container { font-family: var(--font-sans); color: var(--color-text); font-size: 0.875rem; line-height: 1.5; }
+
+    /* ─── LAYOUT & HEADER (ALIGNED) ──────────────────────────────── */
+    .container { max-width: 1300px; margin: 0 auto; padding: 1.5rem; }
+    .page-header {
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;
+      padding-bottom: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--color-border);
+    }
+    .page-title { font-size: 1.875rem; font-weight: 700; margin: 0; color: var(--text-heading); }
+    .command-bar { display: flex; gap: 0.75rem; }
+
+    /* ─── BUTTONS (ALIGNED) ─────────────────────────────────────────── */
+    .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid transparent; border-radius: var(--radius-md); font-weight: 500; font-size: 0.875rem; cursor: pointer; text-decoration: none; transition: all 0.2s ease-in-out; }
+    .btn-primary { background-color: var(--color-primary); color: white; border-color: var(--color-primary); }
+    .btn-primary:hover { background-color: var(--color-primary-hover); border-color: var(--color-primary-hover); }
+    .btn-secondary { background-color: var(--color-bg-card); color: var(--text-body); border-color: var(--color-border); }
+    .btn-secondary:hover { border-color: #d1d5db; background-color: var(--color-bg-subtle); }
+
+    /* ─── SECTIONS (ALIGNED) ────────────────────────────────────────── */
+    .form-section { background-color: var(--color-bg-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); margin-bottom: 1.5rem; box-shadow: var(--shadow-sm); }
+    .form-section summary { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; font-size: 1.125rem; font-weight: 600; cursor: pointer; list-style: none; }
+    .form-section summary::-webkit-details-marker { display: none; }
+    .form-section summary .fa-chevron-down { transition: transform 0.2s; margin-left: auto; font-size: 0.8rem; color: var(--color-text-secondary); }
+    .form-section[open] > summary { border-bottom: 1px solid var(--color-border); }
+    .form-section[open] > summary .fa-chevron-down { transform: rotate(-180deg); }
+    .form-section-content { padding: 1.5rem; }
+
+    .summary-groups { display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.75rem; font-weight: 500; margin-left: 0.75rem; }
+    .summary-group-badge { background-color: #f1f5f9; color: #475569; padding: 0.25rem 0.625rem; border-radius: 9999px; }
+    .form-section[open] .summary-groups { display: none; }
+
+    /* ─── FORM GRID & FIELDS (ALIGNED) ──────────────────────────────── */
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+    .field-group { display: flex; flex-direction: column; gap: 0.25rem; }
+    .field-label { font-weight: 500; color: var(--color-text-secondary); font-size: 0.75rem; }
+    .form-input, .form-select, .select2-container .select2-selection--single {
+        width: 100%; height: 38px; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: var(--radius-md);
+        background-color: var(--color-bg-card); font-size: 0.875rem; color: var(--color-text); transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus, .select2-container--default.select2-container--open .select2-selection--single, .select2-container--default.select2-container--focus .select2-selection--single {
+        outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+    .form-input[readonly] { background-color: var(--color-bg-subtle); color: var(--color-text-secondary); }
+    .select2-container .select2-selection--single .select2-selection__rendered { padding-left: 0; line-height: 24px; }
+    .select2-container .select2-selection--multiple { min-height: 38px; border: 1px solid #d1d5db; border-radius: var(--radius-md); padding: 2px; }
+    .select2-container--default.select2-container--focus .select2-selection--multiple { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }
+
+    /* ─── SPECIFICATIONS (ALIGNED) ──────────────────────────────────── */
+    .spec-layout { display: flex; gap: 1.5rem; }
+    .spec-groups-nav { flex: 0 0 200px; }
+    .spec-group-btn { width: 100%; display: block; padding: 0.5rem 0.75rem; margin-bottom: 0.25rem; text-align: left; border: none; border-radius: var(--radius-md); background-color: transparent; cursor: pointer; font-weight: 500; color: var(--text-body); transition: background-color 0.2s; font-size: 0.875rem; }
+    .spec-group-btn.active { background-color: #dbeafe; color: #1e40af; font-weight: 600; }
+    .spec-group-btn:not(.active):hover { background-color: var(--color-bg-subtle); }
+    .spec-panels { flex: 1; min-width: 0; }
+
+    .group-heading-input { font-size: 1.25rem; font-weight: 600; width: 100%; padding: 0.25rem 0.5rem; border: 1px solid transparent; border-radius: var(--radius-md); margin-bottom: 1rem; margin-left: -0.5rem; }
+    .group-heading-input:hover { border-color: var(--color-border); }
+    .group-heading-input:focus { border-color: var(--color-primary); background-color: white; outline: none; }
+
+    .spec-list { display: flex; flex-direction: column; gap: 1rem; }
+    .spec-item { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background-color: var(--color-bg-subtle); flex-wrap: wrap; }
+
+    .spec-content-grid { flex: 1; display: grid; grid-template-columns: 2fr 1fr 1.5fr 3fr 1fr 0.8fr; gap: 1rem; align-items: center; min-width: 0; }
+    .numeric-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .spec-actions { display: flex; align-items: center; margin-left: auto; }
+    .spec-actions .action-icon { color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 0.25rem; transition: color 0.2s; }
+    .spec-actions .action-icon:hover { color: var(--color-danger); }
+    .field-checkbox { display: flex; align-items: center; gap: 0.5rem; height: 38px; }
+    .field-checkbox input[type="checkbox"]{ width: 1rem; height: 1rem; border-radius: var(--radius-md); }
+
+    .d-none { display: none; }
+    .mt-3 { margin-top: 1rem; }
+  </style>
+
+<div class="product-form-container">
+<main class="container">
+  <form method="post" id="prod-form" novalidate>
+    {% csrf_token %}
+    <header class="page-header">
+      <h1 class="page-title">{{ action }} Product</h1>
+      <div class="command-bar">
+        <a href="{% url 'qc:product_list' %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i>Save Product</button>
+      </div>
+    </header>
+
+    <details class="form-section" open>
+      <summary><i class="fa-solid fa-chevron-down"></i> General</summary>
+      <div class="form-section-content">
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="field-label" for="id_name">Product Name</label>
+            <input type="text" id="id_name" name="name" class="form-input" value="{{ form.name.value|default:'' }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="id_stage">Stage</label>
+            <select id="id_stage" name="stage" class="form-select">
+              <option value="">–– Select ––</option>
+              {% for s in stages %}
+              <option value="{{ s.item_name }}"
+                      data-fg="{{ s.fg_name }}"
+                      data-bom="{{ s.bom_code }}"
+                      data-type="{{ s.itm_type }}"
+                      {% if form.instance.stages == s.item_name %}selected{% endif %}>
+                {{ s.item_name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="id_code">BOM Code</label>
+            <input type="text" id="id_code" name="code" class="form-input" readonly value="{{ form.code.value|default:'' }}">
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="id_item_type">Item Type</label>
+            <input type="text" id="id_item_type" name="item_type" class="form-input" readonly value="{{ form.item_type.value|default:'' }}">
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="form-section" id="spec-section" open>
+      <summary>
+        Specifications
+        <span class="summary-groups" id="summary-group-display"></span>
+        <i class="fa-solid fa-chevron-down"></i>
+      </summary>
+      <div class="form-section-content">
+        {{ formset.management_form }}
+        {% regroup formset.forms by group.value as by_group %}
+        <div class="spec-layout">
+          <nav class="spec-groups-nav" id="groupList">
+            {% for g in by_group %}
+              <button type="button"
+                      class="spec-group-btn {% if forloop.first %}active{% endif %}"
+                      data-target="pane-{{ forloop.counter0 }}">
+                {{ g.grouper|default:'New Group' }}
+              </button>
+            {% endfor %}
+            <div class="mt-3">
+              <button type="button" id="btn-add-group" class="btn btn-secondary">
+                <i class="fa-solid fa-plus"></i>Add Group
+              </button>
+            </div>
+          </nav>
+
+          <div class="spec-panels" id="groupPanels">
+            {% for g in by_group %}
+            <div id="pane-{{ forloop.counter0 }}" class="group-pane {% if not forloop.first %}d-none{% endif %}">
+              <input type="text" class="group-heading-input" value="{{ g.grouper|default:'New Group' }}" placeholder="Enter Group Name">
+              <div class="spec-list">
+                {% for sf in g.list %}
+                <div class="spec-item">
+                  {{ sf.id }}
+                  <div class="spec-content-grid">
+                    <div class="field-group"><label class="field-label">Name</label>{{ sf.name }}</div>
+                    <div class="field-group"><label class="field-label">Unit</label>{{ sf.unit }}</div>
+                    <div class="field-group"><label class="field-label">Type</label>{{ sf.spec_type }}</div>
+
+                    <div class="spec-dynamic-content">
+                      <div class="field-group choices-field">
+                        <label class="field-label">Choices</label>
+                        {{ sf.allowed_choices }}
+                      </div>
+                      <div class="numeric-fields">
+                        <div class="field-group"><label class="field-label">Min</label>{{ sf.min_val }}</div>
+                        <div class="field-group"><label class="field-label">Max</label>{{ sf.max_val }}</div>
+                      </div>
+                    </div>
+
+                    <div class="field-group"><label class="field-label">Acceptance</label>{{ sf.acceptance_criteria }}</div>
+                    <div class="field-group field-checkbox">
+                      <label class="field-label">Critical?</label>
+                      {{ sf.is_critical }}
+                    </div>
+                  </div>
+
+                  <div class="spec-actions">
+                    {% if sf.instance.pk %}
+                      {{ sf.DELETE }}
+                      <label for="{{ sf.DELETE.id_for_label }}" title="Delete" class="action-icon"><i class="fa-solid fa-trash-can"></i></label>
+                    {% else %}
+                      <i class="fa-solid fa-trash-can action-icon btn-remove" title="Remove row"></i>
+                    {% endif %}
+                  </div>
+
+                  <div class="d-none">{{ sf.group }}</div>
+                </div>
+                {% endfor %}
+              </div>
+              <div class="mt-3">
+                <button type="button" class="btn btn-secondary btn-add-spec"><i class="fa-solid fa-plus"></i>Add Specification</button>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </details>
+  </form>
+
+  <template id="spec-item-template">
+    <div class="spec-item">
+      {% for h in formset.empty_form.hidden_fields %}{{ h }}{% endfor %}
+      <div class="spec-content-grid">
+        <div class="field-group"><label class="field-label">Name</label>{{ formset.empty_form.name }}</div>
+        <div class="field-group"><label class="field-label">Unit</label>{{ formset.empty_form.unit }}</div>
+        <div class="field-group"><label class="field-label">Type</label>{{ formset.empty_form.spec_type }}</div>
+
+        <div class="spec-dynamic-content">
+          <div class="field-group choices-field">
+            <label class="field-label">Choices</label>
+            {{ formset.empty_form.allowed_choices }}
+          </div>
+          <div class="numeric-fields">
+            <div class="field-group"><label class="field-label">Min</label>{{ formset.empty_form.min_val }}</div>
+            <div class="field-group"><label class="field-label">Max</label>{{ formset.empty_form.max_val }}</div>
+          </div>
+        </div>
+
+        <div class="field-group"><label class="field-label">Acceptance</label>{{ formset.empty_form.acceptance_criteria }}</div>
+        <div class="field-group field-checkbox">
+          <label class="field-label">Critical?</label>
+          {{ formset.empty_form.is_critical }}
+        </div>
+      </div>
+
+      <div class="spec-actions">
+        <i class="fa-solid fa-trash-can action-icon btn-remove" title="Remove spec"></i>
+      </div>
+      <div class="d-none">{{ formset.empty_form.group }}</div>
+    </div>
+  </template>
+</main>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(function(){
+  const prefix = '{{ formset.prefix }}';
+  const $totalForms = $('#id_' + prefix + '-TOTAL_FORMS');
+  const $summaryDisplay = $('#summary-group-display');
+
+  function initSelect2($el) {
+    if (!$el.length) return;
+    if ($el.is('select') && !$el.hasClass('select2-hidden-accessible')) {
+      $el.select2({ width: '100%', placeholder: 'Select or type…' });
+    }
+  }
+  function addCssClassesToFormsetFields() {
+    $('input[name^="' + prefix + '"][type="text"], input[name^="' + prefix + '"][type="number"], textarea[name^="' + prefix + '"]').addClass('form-input');
+    $('select[name^="' + prefix + '"]').addClass('form-select');
+  }
+
+  function updateSpecFieldVisibility($item) {
+    const type = $item.find('select[name$="-spec_type"]').val();
+    $item.find('.choices-field').toggle(type === 'choice');
+    $item.find('.numeric-fields').toggle(type === 'numeric');
+  }
+
+  function updateSummaryGroupNames() {
+    const badges = [];
+    $('#groupList .spec-group-btn').each(function() {
+      const txt = $(this).text().trim();
+      if (txt) badges.push($('<div/>').text(txt).html());
+    });
+    $summaryDisplay.html(badges.map(n => `<span class="summary-group-badge">${n}</span>`).join(''));
+  }
+
+  function addSpecItem($panel) {
+    const total = parseInt($totalForms.val(), 10);
+    const $tpl = $(document.getElementById('spec-item-template').content.firstElementChild).clone();
+
+    $tpl.find('[name], [id], [for]').each(function() {
+      if (this.name) this.name = this.name.replace(/__prefix__/g, total);
+      if (this.id) this.id = this.id.replace(/__prefix__/g, total);
+      if (this.htmlFor) this.htmlFor = this.htmlFor.replace(/__prefix__/g, total);
+    });
+
+    $tpl.find('input[name$="-group"]').val($panel.find('.group-heading-input').val());
+    $tpl.find('input[type="text"], input[type="number"], textarea').addClass('form-input');
+    $tpl.find('select').addClass('form-select');
+
+    $panel.find('.spec-list').append($tpl);
+    initSelect2($tpl.find('select'));
+    updateSpecFieldVisibility($tpl);
+    $totalForms.val(total + 1);
+  }
+
+  function addGroup() {
+    const count = $('.spec-group-btn').length;
+    const paneId = 'pane-' + count;
+    const name = 'New Group';
+
+    $('#btn-add-group').parent().before(
+      `<button type="button" class="spec-group-btn" data-target="${paneId}">${name}</button>`
+    );
+
+    $('#groupPanels').append(
+      `<div id="${paneId}" class="group-pane d-none">
+         <input type="text" class="group-heading-input" value="${name}" placeholder="Enter Group Name">
+         <div class="spec-list"></div>
+         <div class="mt-3">
+           <button type="button" class="btn btn-secondary btn-add-spec"><i class="fa-solid fa-plus"></i>Add Specification</button>
+         </div>
+       </div>`
+    );
+
+    $('.spec-group-btn').removeClass('active').last().addClass('active');
+    $('.group-pane').addClass('d-none');
+    $('#' + paneId).removeClass('d-none');
+
+    addSpecItem($('#' + paneId));
+    updateSummaryGroupNames();
+  }
+
+  initSelect2($('#id_stage'));
+  $('#id_stage').on('change', function() {
+    const $opt = $(this).find('option:selected');
+    $('#id_name').val($opt.data('fg') || '');
+    $('#id_code').val($opt.data('bom') || '');
+    $('#id_item_type').val($opt.data('type') || '');
+  }).trigger('change');
+
+  $(document).on('click', '.spec-group-btn', function() {
+    $('.spec-group-btn').removeClass('active');
+    $(this).addClass('active');
+    $('.group-pane').addClass('d-none');
+    $('#' + $(this).data('target')).removeClass('d-none');
+  });
+
+  $(document).on('click', '#btn-add-group', function(e) { e.preventDefault(); addGroup(); });
+  $(document).on('click', '.btn-add-spec', function() { addSpecItem($(this).closest('.group-pane')); });
+  $(document).on('click', '.btn-remove', function() {
+    const $row = $(this).closest('.spec-item');
+    const $chk = $row.find('input[type=checkbox][name$="-DELETE"]');
+    if ($chk.length) { $chk.prop('checked', true); $row.hide(); }
+    else { $row.remove(); }
+  });
+
+  $(document).on('change', 'select[name$="-spec_type"]', function() {
+    updateSpecFieldVisibility($(this).closest('.spec-item'));
+  });
+
+  $(document).on('input', '.group-heading-input', function() {
+    const $pane = $(this).closest('.group-pane');
+    const newName = $(this).val() || 'New Group';
+    $pane.find('input[name$="-group"]').val(newName);
+    $('.spec-group-btn[data-target="' + $pane.attr('id') + '"]').text(newName);
+    updateSummaryGroupNames();
+  });
+
+  addCssClassesToFormsetFields();
+  $('.spec-item').each(function() {
+    initSelect2($(this).find('select'));
+    updateSpecFieldVisibility($(this));
+  });
+  updateSummaryGroupNames();
+});
+</script>
+{% endblock maincontent %}

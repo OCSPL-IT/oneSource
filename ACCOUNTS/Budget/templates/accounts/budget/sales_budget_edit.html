@@ -1,0 +1,762 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block title %}Edit Sales Budget{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root{
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --border2:#dbe3ee;
+    --head: rgba(250,250,250,.92);
+    --ink:#0f172a;
+    --muted:#64748b;
+    --shadow-soft: 0 1px 0 rgba(2,6,23,.04), 0 10px 25px rgba(2,6,23,.06);
+    --shadow-sticky: 12px 0 18px -12px rgba(2,6,23,.16);
+    --radius: 18px;
+  }
+
+  /* custom scrollbar */
+  .custom-scrollbar::-webkit-scrollbar { height: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  /* sticky first column */
+  .sticky-col{
+    position: sticky;
+    left: 0;
+    z-index: 12;
+    background-color: #fff;
+    border-right: 1px solid var(--border2) !important;
+    box-shadow: var(--shadow-sticky);
+  }
+  tr:hover .sticky-col { background-color: #fff; }
+
+  /* header sticky */
+  .thead-sticky th{
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--head);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .thead-sticky th.sticky-col{
+    z-index: 30;
+    background: var(--head);
+  }
+
+  /* “calculated” annual column look */
+  .col-annual { background-color: #f3f4f6; font-weight: 700; }
+
+  /* duplicates */
+  .dup-row { background: rgba(254, 226, 226, 0.35); }
+
+  /* Claude-like page shell */
+  .page-shell{
+    background:
+      radial-gradient(1200px 600px at 18% -12%, rgba(99,102,241,.10), transparent 55%),
+      radial-gradient(900px 500px at 95% 0%, rgba(16,185,129,.08), transparent 55%),
+      var(--bg);
+  }
+</style>
+{% endblock %}
+
+{% block maincontent %}
+
+<!-- {# ------------------------------------------------------------
+  Compute LOCK safely (NO parentheses, NO underscore variables)
+  locked_flag = 1 if status SUBMITTED/APPROVED else is_locked (backend)
+------------------------------------------------------------ #} -->
+{% with st=mc.status|default:"" %}
+  {% if st == "SUBMITTED" or st == "APPROVED" %}
+    {% with locked_flag=1 %}
+      <input type="hidden" id="lock-flag" value="{{ locked_flag }}">
+    {% endwith %}
+  {% else %}
+    {% if is_locked %}
+      {% with locked_flag=1 %}
+        <input type="hidden" id="lock-flag" value="{{ locked_flag }}">
+      {% endwith %}
+    {% else %}
+      {% with locked_flag=0 %}
+        <input type="hidden" id="lock-flag" value="{{ locked_flag }}">
+      {% endwith %}
+    {% endif %}
+  {% endif %}
+{% endwith %}
+
+<div class="page-shell min-h-screen pb-12">
+
+  <!-- Top Header Navigation (Claude-like) -->
+  <nav class="bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4 min-w-0">
+        <a href="{% url 'accounts_budget:sales_budget_home' %}"
+           class="h-10 w-10 rounded-2xl border border-slate-200 bg-white flex items-center justify-center text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+          <i class="fa-solid fa-arrow-left"></i>
+        </a>
+
+        <div class="min-w-0">
+          <h1 class="text-lg font-black text-slate-900 leading-tight truncate">Edit Sales Budget</h1>
+          <p class="text-xs text-slate-500">
+            Financial Year: <span class="font-extrabold text-slate-700">{{ plan.fy }}</span>
+          </p>
+        </div>
+
+        {% if mc %}
+          <div class="hidden sm:block h-8 w-px bg-slate-200 mx-1"></div>
+
+          <div class="hidden sm:flex items-center gap-2">
+            {% with s=mc.status|stringformat:"s" %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black border
+                {% if s == 'APPROVED' %} border-emerald-200 bg-emerald-50 text-emerald-700
+                {% elif s == 'SUBMITTED' %} border-amber-200 bg-amber-50 text-amber-700
+                {% elif s == 'REJECTED' %} border-rose-200 bg-rose-50 text-rose-700
+                {% else %} border-slate-200 bg-slate-50 text-slate-700 {% endif %}">
+                {{ mc.status }}
+              </span>
+            {% endwith %}
+
+            {% with st=mc.status|default:"" %}
+              {% if st == "SUBMITTED" or st == "APPROVED" %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black border border-indigo-200 bg-indigo-50 text-indigo-700">
+                  Locked
+                </span>
+              {% else %}
+                {% if is_locked %}
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black border border-indigo-200 bg-indigo-50 text-indigo-700">
+                    Locked
+                  </span>
+                {% endif %}
+              {% endif %}
+            {% endwith %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="flex items-center gap-3 shrink-0">
+        <a href="{% url 'accounts_budget:sales_budget_home' %}"
+           class="px-4 py-2 text-sm font-extrabold border border-slate-200 bg-white hover:bg-slate-50 rounded-2xl transition-colors shadow-sm">
+          Back
+        </a>
+
+        {% if submit_url %}
+          {% if mc %}
+            {% if mc.status == "DRAFT" %}
+              {% if not is_locked %}
+                <button type="submit" form="sales-budget-form" name="action" value="submit"
+                        class="px-4 py-2 text-sm font-extrabold bg-amber-600 text-white rounded-2xl hover:bg-amber-700 shadow-sm transition-all">
+                  Submit for Approval
+                </button>
+              {% endif %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+
+        {% if can_approve and mc and perms.accounts_budget.can_approve_budgets %}
+          {% url 'accounts_budget:budget_approvals_inbox' as inbox_url %}
+          {% with modelv=mc_model|default:"accounts_budget.SalesBudget" %}
+            {% with pkv=mc_pk|default:sales_budget.id %}
+              {% with scopev=mc_scope|default:"SALES" %}
+                {% if mc.status == "SUBMITTED" %}
+                  <a href="{% url 'accounts_budget:mc_approve' model=modelv pk=pkv scope=scopev %}?next={{ inbox_url|urlencode }}"
+                     class="px-4 py-2 text-sm font-extrabold bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 shadow-sm transition-all">
+                    Approve
+                  </a>
+                  <a href="{% url 'accounts_budget:mc_reject' model=modelv pk=pkv scope=scopev %}?next={{ inbox_url|urlencode }}"
+                     class="px-4 py-2 text-sm font-extrabold bg-white text-rose-600 border border-rose-200 rounded-2xl hover:bg-rose-50 transition-all">
+                    Reject
+                  </a>
+                {% endif %}
+
+                {% if mc.status == "APPROVED" %}
+                  <a href="{% url 'accounts_budget:mc_reopen' model=modelv pk=pkv scope=scopev %}?next={{ inbox_url|urlencode }}"
+                     class="px-4 py-2 text-sm font-extrabold bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 shadow-sm transition-all">
+                    Reopen
+                  </a>
+                {% endif %}
+              {% endwith %}
+            {% endwith %}
+          {% endwith %}
+        {% endif %}
+
+        {% with st=mc.status|default:"" %}
+          {% if st == "SUBMITTED" or st == "APPROVED" %}
+            <span class="px-6 py-2 text-sm font-extrabold bg-slate-200 text-slate-500 rounded-2xl cursor-not-allowed">
+              Save (Locked)
+            </span>
+          {% else %}
+            {% if is_locked %}
+              <span class="px-6 py-2 text-sm font-extrabold bg-slate-200 text-slate-500 rounded-2xl cursor-not-allowed">
+                Save (Locked)
+              </span>
+            {% else %}
+              <button type="submit" form="sales-budget-form"
+                      class="px-6 py-2 text-sm font-extrabold bg-slate-900 text-white rounded-2xl hover:bg-slate-800 shadow-[0_10px_25px_rgba(2,6,23,.18)] transition-all">
+                Save Changes
+              </button>
+            {% endif %}
+          {% endif %}
+        {% endwith %}
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 mt-6 space-y-6">
+
+    {% with st=mc.status|default:"" %}
+      {% if st == "SUBMITTED" or st == "APPROVED" %}
+        <div class="bg-amber-50 border border-amber-200 p-4 rounded-[var(--radius)] shadow-[var(--shadow-soft)]">
+          <div class="flex items-start gap-3">
+            <div class="h-10 w-10 rounded-2xl bg-white border border-amber-200 flex items-center justify-center text-amber-700">
+              <i class="fa-solid fa-lock"></i>
+            </div>
+            <div>
+              <div class="text-sm font-black text-amber-900">Read-only mode</div>
+              <div class="text-sm text-amber-800 font-medium italic mt-0.5">
+                Budget is locked (Submitted/Approved). Viewing in read-only mode.
+              </div>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        {% if is_locked %}
+          <div class="bg-amber-50 border border-amber-200 p-4 rounded-[var(--radius)] shadow-[var(--shadow-soft)]">
+            <div class="flex items-start gap-3">
+              <div class="h-10 w-10 rounded-2xl bg-white border border-amber-200 flex items-center justify-center text-amber-700">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div>
+                <div class="text-sm font-black text-amber-900">Read-only mode</div>
+                <div class="text-sm text-amber-800 font-medium italic mt-0.5">
+                  Budget is locked. Viewing in read-only mode.
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+    {% endwith %}
+
+    {% if mc and mc.remarks %}
+      <div class="rounded-[var(--radius)] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-[var(--shadow-soft)]">
+        <div class="font-black">Remarks / Feedback</div>
+        <div class="mt-1 whitespace-pre-wrap">{{ mc.remarks }}</div>
+      </div>
+    {% endif %}
+
+    {% if formset.non_form_errors %}
+      <div class="rounded-[var(--radius)] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-[var(--shadow-soft)]">
+        {{ formset.non_form_errors }}
+      </div>
+    {% endif %}
+
+    <form method="post" id="sales-budget-form">
+      {% csrf_token %}
+
+      <!-- Small control card -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-[var(--radius)] border border-slate-200 shadow-[var(--shadow-soft)]">
+          <label class="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
+            Currency Conversion (INR/USD)
+          </label>
+          <div class="relative w-full">
+            {{ form.inr_usd }}
+            {% if form.inr_usd.errors %}
+              <div class="mt-1 text-[11px] text-rose-600 font-bold">{{ form.inr_usd.errors|striptags }}</div>
+            {% endif %}
+          </div>
+          <p class="mt-2 text-xs text-slate-500 font-semibold">
+            Used for pricing normalization where applicable.
+          </p>
+        </div>
+      </div>
+
+      <!-- Table card -->
+      <div class="bg-white border border-slate-200 rounded-[var(--radius)] shadow-[var(--shadow-soft)] overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-slate-50/60">
+          <div>
+            <h2 class="text-sm font-black text-slate-900 flex items-center gap-2">
+              <span class="h-9 w-9 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                <i class="fa-solid fa-table text-slate-700"></i>
+              </span>
+              Monthly Sales Distribution (Qty MT)
+            </h2>
+            <p class="text-xs text-slate-500 font-semibold mt-1">
+              Annual MT is auto-calculated as sum of months (kept at 2 decimals).
+            </p>
+          </div>
+
+          <button type="button" id="add-row-btn"
+                  class="px-4 py-2 text-xs font-black bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 text-slate-800 shadow-sm flex items-center gap-2 disabled:opacity-50">
+            <i class="fa-solid fa-plus text-emerald-600"></i> Add Product
+          </button>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar">
+          {{ formset.management_form }}
+
+          <table class="w-full text-xs min-w-[1800px] border-collapse" id="formset-table">
+            <thead class="thead-sticky">
+              <tr class="text-slate-600 uppercase tracking-wider font-black">
+                <th class="px-4 py-3 sticky-col text-left min-w-[260px]">Product / FG</th>
+                <th class="px-2 py-3 w-32">Type</th>
+                <th class="px-2 py-3 w-36 col-annual">Annual MT</th>
+                <th class="px-2 py-3 w-32 bg-indigo-50/60 text-indigo-700">USD Rate</th>
+                <th class="px-2 py-3 w-36 bg-indigo-50/60 text-indigo-700">INR/KG Rate</th>
+
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Apr</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">May</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Jun</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Jul</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Aug</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Sep</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Oct</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Nov</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Dec</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Jan</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Feb</th>
+                <th class="px-1 py-3 w-24 text-center border-l border-slate-200/50">Mar</th>
+
+                <th class="px-4 py-3 text-center w-20">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody id="formset-body">
+              {% for f in formset %}
+                <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors form-row">
+                  {% for h in f.hidden_fields %}{{ h }}{% endfor %}
+
+                  <td class="px-4 py-2 sticky-col">
+                    <div class="product-field-wrap">
+                      {{ f.product_name }}
+                      {% if f.product_name.errors %}
+                        <div class="mt-1 text-[11px] text-rose-600 font-bold">{{ f.product_name.errors|striptags }}</div>
+                      {% endif %}
+                    </div>
+                  </td>
+
+                  <td class="px-2 py-2">
+                    {{ f.sale_type }}
+                    {% if f.sale_type.errors %}
+                      <div class="mt-1 text-[11px] text-rose-600 font-bold">{{ f.sale_type.errors|striptags }}</div>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-2 py-2 col-annual">
+                    {{ f.annual_qty_mt }}
+                    {% if f.annual_qty_mt.errors %}
+                      <div class="mt-1 text-[11px] text-rose-600 font-bold">{{ f.annual_qty_mt.errors|striptags }}</div>
+                    {% endif %}
+                  </td>
+
+                  <td class="px-2 py-2 bg-indigo-50/40">
+                    <div class="rate-usd-wrap">
+                      {{ f.rate_usd }}
+                      {% if f.rate_usd.errors %}
+                        <div class="mt-1 text-[11px] text-rose-600 font-bold">{{ f.rate_usd.errors|striptags }}</div>
+                      {% endif %}
+                    </div>
+                  </td>
+
+                  <td class="px-2 py-2 bg-indigo-50/40">
+                    <div class="rate-inr-wrap">
+                      {{ f.rate_inr }}
+                      {% if f.rate_inr.errors %}
+                        <div class="mt-1 text-[11px] text-rose-600 font-bold">{{ f.rate_inr.errors|striptags }}</div>
+                      {% endif %}
+                    </div>
+                  </td>
+
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.apr }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.may }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.jun }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.jul }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.aug }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.sep }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.oct }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.nov }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.dec }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.jan }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.feb }}</td>
+                  <td class="px-1 py-2 border-l border-slate-100">{{ f.mar }}</td>
+
+                  <td class="px-4 py-2 text-center">
+                    <div class="hidden">{{ f.DELETE }}</div>
+                    <button type="button" class="remove-row-btn text-slate-400 hover:text-rose-600 transition-colors p-1" title="Remove Product">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <template id="empty-form-template">
+            <tr class="border-b border-slate-100 hover:bg-slate-50/60 transition-colors form-row">
+              <td class="px-4 py-2 sticky-col"><div class="product-field-wrap">{{ formset.empty_form.product_name }}</div></td>
+              <td class="px-2 py-2">{{ formset.empty_form.sale_type }}</td>
+              <td class="px-2 py-2 col-annual">{{ formset.empty_form.annual_qty_mt }}</td>
+              <td class="px-2 py-2 bg-indigo-50/40"><div class="rate-usd-wrap">{{ formset.empty_form.rate_usd }}</div></td>
+              <td class="px-2 py-2 bg-indigo-50/40"><div class="rate-inr-wrap">{{ formset.empty_form.rate_inr }}</div></td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.apr }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.may }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.jun }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.jul }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.aug }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.sep }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.oct }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.nov }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.dec }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.jan }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.feb }}</td>
+              <td class="px-1 py-2 border-l border-slate-100">{{ formset.empty_form.mar }}</td>
+              <td class="px-4 py-2 text-center">
+                <button type="button" class="remove-row-btn text-slate-400 hover:text-rose-600 p-1">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </div>
+
+        <div class="px-4 py-3 bg-slate-50 border-t border-slate-200">
+          <div class="flex flex-wrap items-center gap-6 text-[11px] text-slate-500 uppercase tracking-widest font-black">
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> Pricing Fields</span>
+            <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-slate-300"></span> Calculated Column</span>
+            <span class="sm:ml-auto italic normal-case font-semibold text-slate-500">Auto-Calculation active (normalized)</span>
+          </div>
+        </div>
+      </div>
+    </form>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  const MONTH_FIELDS = ["apr","may","jun","jul","aug","sep","oct","nov","dec","jan","feb","mar"];
+  const IS_LOCKED = (document.getElementById("lock-flag")?.value === "1");
+
+  // ✅ Keep 2 decimal everywhere asked
+  const DP_MONTH = 2;
+  const DP_ANNUAL = 2;
+  const DP_RATE = 2;   // rates also 2 (as requested)
+
+  function addInputEnhancements(root) {
+    root.querySelectorAll('input[type="number"], input[type="text"]').forEach(input => {
+      input.classList.add(
+        'w-full','bg-transparent','border','border-slate-200','px-2.5','py-2',
+        'text-right','focus:ring-2','focus:ring-indigo-500','focus:bg-white',
+        'rounded-xl','transition-all','outline-none'
+      );
+      if (input.name.includes('product_name')) input.classList.add('text-left');
+      input.addEventListener('focus', function() { setTimeout(() => this.select(), 10); });
+    });
+    root.querySelectorAll('select').forEach(sel => {
+      sel.classList.add(
+        'w-full','bg-transparent','border','border-slate-200','focus:ring-2',
+        'focus:ring-indigo-500','py-2','rounded-xl','px-2.5'
+      );
+    });
+  }
+
+  function norm(v) { return (v || "").toString().trim().toUpperCase(); }
+  function findSelect(el, suffix) { return el.querySelector(`select[name$="${suffix}"]`); }
+  function findInput(el, suffix) { return el.querySelector(`input[name$="${suffix}"]`); }
+  function setVisible(wrapEl, visible) { if (wrapEl) wrapEl.style.display = visible ? "" : "none"; }
+
+  function setReadOnly(inputEl, readOnly) {
+    if (!inputEl) return;
+    inputEl.readOnly = !!readOnly;
+    if (readOnly) inputEl.classList.add('bg-slate-50','text-slate-400');
+    else inputEl.classList.remove('bg-slate-50','text-slate-400');
+  }
+
+  function toNum(v) {
+    const s = (v || "").toString().replace(/,/g, "").trim();
+    if (!s) return 0;
+    const n = Number(s);
+    return isFinite(n) ? n : 0;
+  }
+
+  function toFixedSafe(val, dp) {
+    const s = (val ?? "").toString().replace(/,/g, "").trim();
+    if (s === "") return "";
+    const n = Number(s);
+    if (!isFinite(n)) return s;
+    return n.toFixed(dp);
+  }
+
+  function wireDp(root) {
+    const els = (root || document).querySelectorAll('input[data-dp]');
+    els.forEach(el => {
+      if (el.dataset.dpBound === "1") return;
+      el.dataset.dpBound = "1";
+      const dp = parseInt(el.dataset.dp || "0", 10);
+      el.addEventListener("blur", () => { el.value = toFixedSafe(el.value, dp); });
+    });
+  }
+
+  function calcAnnualForRow(row) {
+    let total = 0;
+    MONTH_FIELDS.forEach(m => {
+      const inp = findInput(row, `-${m}`);
+      total += toNum(inp ? inp.value : 0);
+    });
+    const annual = findInput(row, "-annual_qty_mt");
+    if (annual) annual.value = total.toFixed(DP_ANNUAL);
+  }
+
+  function wireAnnualCalcForRow(row) {
+    if (row.dataset.annualBound === "1") return;
+    row.dataset.annualBound = "1";
+
+    MONTH_FIELDS.forEach(m => {
+      const inp = findInput(row, `-${m}`);
+      if (!inp) return;
+
+      inp.addEventListener("input", () => calcAnnualForRow(row));
+      inp.addEventListener("blur", () => {
+        inp.value = toFixedSafe(inp.value, DP_MONTH);
+        calcAnnualForRow(row);
+      });
+    });
+
+    calcAnnualForRow(row);
+  }
+
+  function ensureDpAttrs(row) {
+    MONTH_FIELDS.forEach(m => {
+      const inp = findInput(row, `-${m}`);
+      if (inp && !inp.dataset.dp) inp.dataset.dp = String(DP_MONTH);
+    });
+
+    const annual = findInput(row, "-annual_qty_mt");
+    if (annual && !annual.dataset.dp) annual.dataset.dp = String(DP_ANNUAL);
+
+    const usd = findInput(row, "-rate_usd");
+    const inr = findInput(row, "-rate_inr");
+    if (usd && !usd.dataset.dp) usd.dataset.dp = String(DP_RATE);
+    if (inr && !inr.dataset.dp) inr.dataset.dp = String(DP_RATE);
+
+    if (annual) {
+      annual.readOnly = true;
+      annual.classList.add('bg-slate-50');
+    }
+  }
+
+  function applyRateToggle(row) {
+    const saleTypeSel = findSelect(row, "-sale_type");
+    const usdInput    = findInput(row, "-rate_usd");
+    const inrInput    = findInput(row, "-rate_inr");
+    const usdWrap     = row.querySelector(".rate-usd-wrap");
+    const inrWrap     = row.querySelector(".rate-inr-wrap");
+
+    const t = norm(saleTypeSel ? saleTypeSel.value : "");
+
+    if (t === "EXPORT") {
+      setVisible(usdWrap, true);
+      setVisible(inrWrap, false);
+      setReadOnly(usdInput, false);
+      setReadOnly(inrInput, true);
+      if (inrInput) inrInput.value = "";
+    } else {
+      setVisible(usdWrap, false);
+      setVisible(inrWrap, true);
+      setReadOnly(usdInput, true);
+      setReadOnly(inrInput, false);
+      if (usdInput) usdInput.value = "";
+    }
+
+    // Keep rates formatted to 2 dp on toggle
+    if (usdInput && usdInput.value) usdInput.value = toFixedSafe(usdInput.value, DP_RATE);
+    if (inrInput && inrInput.value) inrInput.value = toFixedSafe(inrInput.value, DP_RATE);
+  }
+
+  function wireRateToggleForRow(row) {
+    const saleTypeSel = findSelect(row, "-sale_type");
+    if (!saleTypeSel) return;
+    if (saleTypeSel.dataset.rateToggleBound === "1") return;
+    saleTypeSel.dataset.rateToggleBound = "1";
+    saleTypeSel.addEventListener("change", () => applyRateToggle(row));
+    applyRateToggle(row);
+  }
+
+  function wireRemoveButtons(container) {
+    container.querySelectorAll(".remove-row-btn").forEach(btn => {
+      if (btn.dataset.rmBound === "1") return;
+      btn.dataset.rmBound = "1";
+      btn.addEventListener("click", () => {
+        if (IS_LOCKED) return;
+        const tr = btn.closest("tr");
+        const del = tr.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        if (del) {
+          del.checked = true;
+          tr.style.display = "none";
+        } else {
+          tr.remove();
+        }
+        validateDuplicates();
+      });
+    });
+  }
+
+  function rowIsDeleted(row) {
+    const del = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+    if (del && del.checked) return true;
+    if (row.style.display === "none") return true;
+    return false;
+  }
+
+  function getRowKey(row) {
+    const p = row.querySelector('select[name$="-product_name"]');
+    const t = row.querySelector('select[name$="-sale_type"]');
+    const pn = norm(p ? p.value : "");
+    const st = norm(t ? t.value : "");
+    if (!pn || !st) return "";
+    return pn + "||" + st;
+  }
+
+  function clearDupStyles(row) {
+    row.classList.remove("dup-row");
+    const p = row.querySelector('select[name$="-product_name"]');
+    const t = row.querySelector('select[name$="-sale_type"]');
+    if (p) p.classList.remove("ring-2", "ring-rose-400");
+    if (t) t.classList.remove("ring-2", "ring-rose-400");
+    const hint = row.querySelector(".dup-hint");
+    if (hint) hint.remove();
+  }
+
+  function markDuplicateRow(row) {
+    row.classList.add("dup-row");
+    const p = row.querySelector('select[name$="-product_name"]');
+    const t = row.querySelector('select[name$="-sale_type"]');
+    if (p) p.classList.add("ring-2", "ring-rose-400");
+    if (t) t.classList.add("ring-2", "ring-rose-400");
+
+    if (!row.querySelector(".dup-hint")) {
+      const td = row.querySelector("td.sticky-col");
+      if (td) {
+        const div = document.createElement("div");
+        div.className = "dup-hint mt-1 text-[11px] text-rose-700 font-bold";
+        div.textContent = "Duplicate Product + Type. Change Type or remove one row.";
+        td.appendChild(div);
+      }
+    }
+  }
+
+  function validateDuplicates() {
+    const rows = Array.from(document.querySelectorAll("tr.form-row"));
+    rows.forEach(clearDupStyles);
+
+    const seen = new Map();
+    let firstDupRow = null;
+
+    for (const row of rows) {
+      if (rowIsDeleted(row)) continue;
+      const key = getRowKey(row);
+      if (!key) continue;
+
+      if (seen.has(key)) {
+        const first = seen.get(key);
+        markDuplicateRow(first);
+        markDuplicateRow(row);
+        if (!firstDupRow) firstDupRow = row;
+      } else {
+        seen.set(key, row);
+      }
+    }
+    return firstDupRow;
+  }
+
+  function wireDupCheckForRow(row) {
+    const p = row.querySelector('select[name$="-product_name"]');
+    const t = row.querySelector('select[name$="-sale_type"]');
+    if (p && p.dataset.dupBound !== "1") {
+      p.dataset.dupBound = "1";
+      p.addEventListener("change", () => validateDuplicates());
+    }
+    if (t && t.dataset.dupBound !== "1") {
+      t.dataset.dupBound = "1";
+      t.addEventListener("change", () => validateDuplicates());
+    }
+  }
+
+  function wireRow(row) {
+    addInputEnhancements(row);
+    ensureDpAttrs(row);
+    wireRemoveButtons(row);
+    wireRateToggleForRow(row);
+    wireAnnualCalcForRow(row);
+    wireDp(row);
+    wireDupCheckForRow(row);
+  }
+
+  document.querySelectorAll("tr.form-row").forEach(wireRow);
+  addInputEnhancements(document);
+  wireDp(document);
+
+  const addBtn = document.getElementById("add-row-btn");
+
+  if (IS_LOCKED) {
+    addBtn?.setAttribute("disabled", "disabled");
+    document.querySelectorAll(".remove-row-btn").forEach(b => b.setAttribute("disabled", "disabled"));
+
+    document.querySelectorAll("#sales-budget-form input, #sales-budget-form select, #sales-budget-form textarea").forEach(el => {
+      if (el.type === "hidden") return;
+      if (el.tagName === "SELECT") {
+        el.disabled = true;
+        el.classList.add("bg-slate-50","text-slate-400");
+      } else {
+        el.readOnly = true;
+        el.classList.add("bg-slate-50","text-slate-400");
+      }
+    });
+  }
+
+  validateDuplicates();
+
+  const form = document.getElementById("sales-budget-form");
+  form?.addEventListener("submit", (e) => {
+    if (IS_LOCKED) {
+      e.preventDefault();
+      alert("This budget is locked (Submitted/Approved).");
+      return;
+    }
+    const dupRow = validateDuplicates();
+    if (dupRow) {
+      e.preventDefault();
+      dupRow.scrollIntoView({ behavior: "smooth", block: "center" });
+      alert("Duplicate Product + Type found. Please change Type or remove one row.");
+    }
+  });
+
+  if (!IS_LOCKED) {
+    const body = document.getElementById("formset-body");
+    const tmpl = document.getElementById("empty-form-template");
+
+    addBtn?.addEventListener("click", () => {
+      const tf = document.querySelector('input[name$="-TOTAL_FORMS"]');
+      const index = parseInt(tf.value || "0", 10);
+
+      let html = tmpl.innerHTML.replace(/__prefix__/g, index);
+      const temp = document.createElement("tbody");
+      temp.innerHTML = html;
+
+      const newRow = temp.querySelector("tr");
+      body.appendChild(newRow);
+
+      tf.value = index + 1;
+      wireRow(newRow);
+      validateDuplicates();
+    });
+  }
+})();
+</script>
+
+{% endblock %}

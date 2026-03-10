@@ -1,0 +1,74 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Analytical Downtime – List{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#f5f7fb; --surface:#fff; --border:#e5e7eb; --brand:#3b82f6; --dark:#1e40af; }
+  .ad-body{ background:var(--bg); font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif; margin:0; color:#0f172a; }
+  .wrap{ max-width:1100px; margin:28px auto; padding:0 16px; }
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:0 8px 24px rgba(2,6,23,.06); padding:18px; margin-bottom:18px; }
+  .toolbar{ display:flex; gap:8px; justify-content:space-between; align-items:center; }
+  .btn{ appearance:none; border:1px solid var(--brand); background:var(--brand); color:#fff; border-radius:10px; padding:8px 12px; font-weight:600; text-decoration:none; }
+  .btn.gray{ background:#fff; color:var(--dark); }
+  table{ width:100%; border-collapse:collapse; background:var(--surface); border-radius:12px; overflow:hidden; }
+  th,td{ border:1px solid var(--border); padding:8px; font-size:14px; text-align:left; vertical-align:top; }
+  th{ background:#eef2ff; color:var(--dark); font-weight:600; }
+  tr:hover td{ background:#f9fafb; }
+  .icon{ display:inline-flex; align-items:center; gap:6px; font-weight:600; }
+  @media (max-width: 768px){
+    th,td{ font-size:13px; }
+    .toolbar{ flex-direction:column; align-items:flex-start; gap:12px; }
+  }
+</style>
+
+<div class="ad-body">
+  <div class="wrap">
+    <div class="toolbar card">
+      <div class="icon">Analytical Downtime</div>
+      <div>
+        <a class="btn gray" href="{% url 'qc:qc_home' %}">⌂ Home</a>
+        <a class="btn gray" href="{% url 'qc:downtime_report' %}" title="Report">📊 Report</a>
+        <a class="btn" href="{% url 'qc:downtime_create' %}">+ New Incident</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Incident</th>
+            <th>Instrument</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Duration (min)</th>
+            <th>Edit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.incident_no }}</td>
+            <td>{{ r.instrument_id }}</td>
+            <td>{{ r.get_category_display }}</td>
+            <td>{{ r.get_status_display }}</td>
+            <td>{{ r.start_at|date:"d-m-Y H:i" }}</td>
+            <td>{{ r.end_at|date:"d-m-Y H:i" }}</td>
+            <td>{{ r.duration_minutes }}</td>
+            <td><a href="{% url 'qc:downtime_update' r.id %}">Edit</a></td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" style="text-align:center;color:#6b7280">No incidents.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock maincontent %}

@@ -1,0 +1,71 @@
+{% extends "main/index.html" %}
+
+{% block maincontent %}
+<div class="max-w-3xl mx-auto my-6 px-4">
+  <div class="flex items-center justify-between mb-4">
+    <h1 class="text-xl sm:text-2xl font-bold text-slate-800">
+      {% if mode == "edit" %}Edit{% else %}Add{% endif %} QC Calibration Schedule
+    </h1>
+
+    <a href="{% url 'qc:calibration_list' %}"
+       class="inline-flex items-center rounded-md border border-slate-300 bg-white px-3 py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+      View List
+    </a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow border border-slate-200 p-4 sm:p-6 space-y-4">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <!-- Instrument + Year -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Instrument ID</label>
+          {{ form.instrument }}
+          {% if form.instrument.errors %}
+            <p class="text-xs text-red-600 mt-1">{{ form.instrument.errors.0 }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Schedule Year</label>
+          {{ form.schedule_year }}
+        </div>
+      </div>
+
+      <!-- Dates -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Calibration Date</label>
+          {{ form.calibration_date }}
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Calibration Due Date</label>
+          {{ form.calibration_due_date }}
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Reminder Date</label>
+          {{ form.reminder_date }}
+        </div>
+      </div>
+
+      <!-- Remarks -->
+      <div class="mt-4">
+        <label class="text-xs font-semibold text-slate-600">Remarks</label>
+        {{ form.remarks }}
+      </div>
+
+      <div class="mt-6 flex justify-end gap-2">
+        <a href="{% url 'qc:calibration_list' %}"
+           class="inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+          Cancel
+        </a>
+        <button type="submit"
+                class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow hover:bg-indigo-700">
+          Save
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

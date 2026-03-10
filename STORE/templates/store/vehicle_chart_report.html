@@ -1,0 +1,137 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto p-6">
+  <!-- header -->
+  <div class="flex items-center justify-between mb-6">
+    <a href="/" class="bg-blue-500 hover:bg-blue-600 text-xs text-white font-bold py-2 px-4 rounded shadow-md">
+      Back to Main Page
+    </a>
+    <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Vehicle Report</h2>
+    <a href="{% url 'vehicle_list' %}" class="bg-green-500 hover:bg-green-600 text-xs text-white font-bold py-2 px-4 rounded shadow-md">
+      View Records
+    </a>
+  </div>
+
+  <!-- filters -->
+  <form method="get" action="{% url 'vehicle_chart_report' %}"
+        class="flex flex-nowrap gap-4 mb-6 items-end overflow-x-auto text-xs">
+    <!-- Year -->
+    <div class="w-24">
+      <label class="block mb-1">Year</label>
+      <select name="year" class="border p-1 rounded w-full">
+        {% for y in year_choices %}
+          <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Month -->
+    <div class="w-28">
+      <label class="block mb-1">Month</label>
+      <select name="month" class="border p-1 rounded w-full">
+        {% for m,label in month_choices %}
+          <option value="{{ m }}" {% if m == month %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Period -->
+    <div class="w-32">
+      <label class="block mb-1">Period</label>
+      <select name="period" class="border p-1 rounded w-full">
+        <option value="monthly"    {% if period == 'monthly'    %}selected{% endif %}>Monthly</option>
+        <option value="fortnightly" {% if period == 'fortnightly' %}selected{% endif %}>Fortnightly</option>
+      </select>
+    </div>
+
+    <!-- Material -->
+    <div class="w-48">
+      <label class="block mb-1">Material</label>
+      <select name="material" class="border p-1 rounded w-full">
+        <option value="">All</option>
+        {% for mat in material_choices %}
+          <option value="{{ mat }}" {% if mat == selected_material %}selected{% endif %}>{{ mat }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Supplier -->
+    <div class="w-48">
+      <label class="block mb-1">Supplier</label>
+      <select name="supplier" class="border p-1 rounded w-full">
+        <option value="">All</option>
+        {% for sup in supplier_choices %}
+          <option value="{{ sup }}" {% if sup == selected_supplier %}selected{% endif %}>{{ sup }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Apply & Clear -->
+    <div class="flex gap-2">
+      <button type="submit"
+              class="bg-blue-600 text-white px-3 py-1 rounded shadow-sm hover:bg-blue-700 text-xs">
+        Apply
+      </button>
+      <a href="{% url 'vehicle_chart_report' %}"
+         class="bg-gray-300 text-gray-800 px-3 py-1 rounded shadow-sm hover:bg-gray-400 text-xs">
+        Clear
+      </a>
+    </div>
+  </form>
+
+  <!-- Material Chart -->
+  <div class="mb-8">
+    <h3 class="text-xl font-semibold mb-2">Material-Wise Count</h3>
+    <div>
+      <canvas id="materialChart" class="w-full h-64"></canvas>
+    </div>
+    
+  </div>
+
+  <!-- Supplier Chart -->
+  <div>
+    <h3 class="text-xl font-semibold mb-2">Supplier-Wise Count</h3>
+    <div>
+      <canvas id="supplierChart" class="w-full h-64"></canvas>
+    </div>
+    
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Material bar chart
+  new Chart(document.getElementById('materialChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ labels|safe }},
+      datasets: {{ datasets|safe }}
+    },
+    options: {
+      maintainAspectRatio: false,
+      scales: {
+        x: { title:{ display:true, text:'Material' } },
+        y: { beginAtZero:true, title:{ display:true, text:'Count' } }
+      }
+    }
+  });
+
+  // Supplier bar chart
+  new Chart(document.getElementById('supplierChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ supplier_labels|safe }},
+      datasets: {{ supplier_datasets|safe }}
+    },
+    options: {
+      maintainAspectRatio: false,
+      scales: {
+        x: { title:{ display:true, text:'Supplier' } },
+        y: { beginAtZero:true, title:{ display:true, text:'Count' } }
+      }
+    }
+  });
+</script>
+{% endblock maincontent %}

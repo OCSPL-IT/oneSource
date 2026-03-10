@@ -1,0 +1,165 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Daily QA Report – {{ report.report_date }}{% endblock %}
+
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f5f7fb;--surface:#fff;--border:#e5e7eb;--muted:#64748b;--text:#0f172a;--brand:#3b82f6;--success:#16a34a;--gray:#e5e7eb}
+  *{box-sizing:border-box}
+  .dq-wrap{max-width:1100px;margin:28px auto;padding:0 16px;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+  .dq-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .dq-title{margin:0}
+  .muted{color:var(--muted)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(2,6,23,.06);padding:18px;margin-bottom:18px}
+  .grid{display:grid;gap:12px}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr)}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+  .kv{display:flex;flex-direction:column;gap:4px;border:1px solid var(--border);border-radius:10px;padding:10px;background:#fff}
+  .kv .label{font-size:12px;color:var(--muted)}
+  .kv .val{font-weight:600}
+  table{width:100%;border-collapse:collapse}
+  th,td{border:1px solid var(--border);padding:8px;font-size:14px;vertical-align:top}
+  th{background:#fafafa;text-align:left}
+  .actions{display:flex;gap:8px;justify-content:flex-end}
+  .btn{appearance:none;border:1px solid var(--brand);background:var(--brand);color:#fff;border-radius:10px;padding:10px 14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+  .btn.gray{background:var(--gray);border-color:var(--gray);color:#111827}
+  .btn.green{background:var(--success);border-color:var(--success)}
+  .empty{color:var(--muted);font-style:italic}
+  @media print{
+    .actions{display:none !important}
+    .card{box-shadow:none;border:1px solid #ddd}
+    a[href]:after{content:""}
+  }
+</style>
+
+<div class="dq-wrap">
+
+  <div class="dq-head">
+    <h2 class="dq-title">Daily QA Report</h2>
+    <div class="actions">
+      <!-- Back to list -->
+      <a href="{% url 'qc:daily_report_list' %}" class="btn gray">← Back</a>
+
+      <!-- Edit only if user has change permission -->
+      {% if perms.qc.change_dailyqareport %}
+      <a href="{% url 'qc:daily_report_edit' report.pk %}" class="btn">✎ Edit</a>
+      {% endif %}
+
+      <!-- Export PDF -->
+      <a href="{% url 'qc:daily_report_pdf' report.pk %}" class="btn green">⬇ PDF</a>
+
+      <!-- Print -->
+      <button class="btn" onclick="window.print()">🖨 Print</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="grid cols-4">
+      <div class="kv"><div class="label">Report Date</div><div class="val">{{ report.report_date }}</div></div>
+      <div class="kv"><div class="label">FTR %</div><div class="val">{{ report.ftr_percent|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Analytical Downtime (hrs)</div><div class="val">{{ report.analytical_downtime_hrs|default:"—" }}</div></div>
+      <div class="kv"><div class="label">FG Inspections</div><div class="val">{{ report.finished_goods_inspections|default:"—" }}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">In-process Summary</h3>
+    <div class="grid cols-4">
+      <div class="kv"><div class="label">Samples – Total</div><div class="val">{{ report.inprocess_samples_total|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Samples – Pass</div><div class="val">{{ report.inprocess_samples_pass|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Samples – Fail</div><div class="val">{{ report.inprocess_samples_fail|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Pending @ SPL-05</div><div class="val">{{ report.inprocess_pending_spl_05|default:"—" }}</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Other Quality & Safety Metrics</h3>
+    <div class="grid cols-4">
+      <div class="kv"><div class="label">Customer Complaints</div><div class="val">{{ report.customer_complaints|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Analytical Mistakes</div><div class="val">{{ report.analytical_mistakes|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Process Deviations</div><div class="val">{{ report.process_deviations|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Incidents / First-aid Injury</div><div class="val">{{ report.incident_first_aid_injury|default:"—" }}</div></div>
+      <div class="kv" style="grid-column:1/-1">
+        <div class="label">Any Other Abnormality</div>
+        <div class="val">{{ report.any_other_abnormality|default:"—" }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Safety Observation / Near Miss / PSL Points</h3>
+    <div class="grid cols-3" style="margin-bottom:12px">
+      <div class="kv"><div class="label">Observations – Total</div><div class="val">{{ report.obs_total|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Observations – Closed</div><div class="val">{{ report.obs_closed|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Observations – Open</div><div class="val">{{ report.obs_open|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Near Miss – Total</div><div class="val">{{ report.near_miss_total|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Near Miss – Closed</div><div class="val">{{ report.near_miss_closed|default:"—" }}</div></div>
+      <div class="kv"><div class="label">Near Miss – Open</div><div class="val">{{ report.near_miss_open|default:"—" }}</div></div>
+    </div>
+    <div class="kv">
+      <div class="label">Safety Observation Notes</div>
+      <div class="val">{{ report.safety_observation_text|default:"—" }}</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Incoming Material (RM/PM)</h3>
+    {% with qs=report.incoming.all %}
+      {% if qs %}
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th><th>Material</th><th>Supplier</th><th>Qty (MT)</th><th>Status</th><th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in qs %}
+            <tr>
+              <td>{{ r.material_type }}</td>
+              <td>{{ r.material }}</td>
+              <td>{{ r.supplier|default:"—" }}</td>
+              <td>{{ r.qty_mt|default:"—" }}</td>
+              <td>{{ r.status|default:"—" }}</td>
+              <td>{{ r.remarks|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty">No incoming materials recorded.</div>
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin:0 0 10px">Finished Product Release</h3>
+    {% with qs=report.releases.all %}
+      {% if qs %}
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th><th>Batch No.</th><th>Qty (MT)</th><th>Status</th><th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for r in qs %}
+            <tr>
+              <td>{{ r.product }}</td>
+              <td>{{ r.batch_no }}</td>
+              <td>{{ r.qty_mt|default:"—" }}</td>
+              <td>{{ r.status|default:"—" }}</td>
+              <td>{{ r.remarks|default:"—" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="empty">No finished product releases recorded.</div>
+      {% endif %}
+    {% endwith %}
+  </div>
+
+</div>
+{% endblock maincontent %}

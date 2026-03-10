@@ -1,0 +1,1475 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block title %}Edit RMC Budget | {{ plan.fy }}{% endblock %}
+
+{% block maincontent %}
+
+<!-- Tom Select -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+  :root{
+    --primary:#6366f1;
+    --primary-dark:#4f46e5;
+  }
+
+  *{ font-family:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:#f8fafc; border-radius:8px; }
+  ::-webkit-scrollbar-thumb{ background:linear-gradient(180deg,#cbd5e1,#94a3b8); border-radius:8px; border:2px solid #f8fafc; }
+  ::-webkit-scrollbar-thumb:hover{ background:linear-gradient(180deg,#94a3b8,#64748b); }
+
+  /* TomSelect */
+  .ts-dropdown{ z-index:9999!important; border-radius:1rem!important; box-shadow:0 20px 25px -5px rgb(0 0 0 / 0.10),0 8px 10px -6px rgb(0 0 0 / 0.10)!important; border:1px solid #e2e8f0!important; }
+  .ts-wrapper .ts-control{
+    border:2px solid #e2e8f0!important;
+    border-radius:1rem!important;
+    padding:.75rem 1rem!important;
+    min-height:48px!important;
+    box-shadow:0 1px 3px 0 rgb(0 0 0 / .08)!important;
+    background:#fff!important;
+    transition:all .2s ease!important;
+  }
+  .ts-wrapper.focus .ts-control{
+    border-color:var(--primary)!important;
+    box-shadow:0 0 0 4px rgba(99,102,241,.12),0 1px 3px 0 rgb(0 0 0 / .08)!important;
+  }
+  .ts-control input{ font-size:.875rem!important; font-weight:700!important; }
+  .ts-dropdown .option{ padding:.75rem 1rem!important; border-radius:.75rem!important; margin:.25rem!important; }
+  .ts-dropdown .option:hover,.ts-dropdown .option.active{
+    background:linear-gradient(135deg,#eef2ff,#e0e7ff)!important;
+    color:var(--primary-dark)!important;
+  }
+
+  /* Table inputs */
+  #formset-table input[type="text"],
+  #formset-table input[type="number"],
+  #formset-table select{
+    width:100%;
+    border:2px solid #e2e8f0;
+    border-radius:.85rem;
+    padding:.62rem .85rem;
+    font-size:.8125rem;
+    font-weight:800;
+    background:#fff;
+    outline:none;
+    transition:all .15s ease;
+    box-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  #formset-table input[type="number"]{
+    text-align:center;
+    font-family:'Plus Jakarta Sans', ui-monospace, monospace;
+    letter-spacing:.5px;
+  }
+  #formset-table input:focus,#formset-table select:focus{
+    border-color:var(--primary);
+    box-shadow:0 0 0 4px rgba(99,102,241,.12),0 1px 2px 0 rgb(0 0 0 / 0.05);
+    transform:translateY(-1px);
+  }
+  #formset-table input:disabled,#formset-table select:disabled{
+    background:#f1f5f9;
+    cursor:not-allowed;
+    opacity:.75;
+  }
+
+  /* Sticky header */
+  thead.sticky-header th{
+    position:sticky; top:0; z-index:30;
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+  }
+
+  /* Badges */
+  .cap-badge,.raw-badge{
+    display:inline-flex; align-items:center; gap:.5rem;
+    padding:.35rem .85rem;
+    border-radius:9999px;
+    font-size:.6875rem;
+    font-weight:900;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    box-shadow:0 1px 3px 0 rgb(0 0 0 / .10);
+  }
+  .cap-badge{
+    border:2px solid rgba(245,158,11,.28);
+    background:linear-gradient(135deg,rgba(254,243,199,.95),rgba(253,230,138,.95));
+    color:rgb(146,64,14);
+  }
+  .raw-badge{
+    border:2px solid rgba(99,102,241,.28);
+    background:linear-gradient(135deg,rgba(238,242,255,.95),rgba(224,231,255,.95));
+    color:rgb(67,56,202);
+  }
+
+  /* Row hover */
+  .form-row{ transition:background .15s ease; }
+  .form-row:hover{ background:linear-gradient(90deg,rgba(241,245,249,.55),rgba(248,250,252,.55))!important; }
+
+  /* Button ripple */
+  .btn-modern{ position:relative; overflow:hidden; transition:all .2s ease; }
+  .btn-modern::before{
+    content:'';
+    position:absolute; top:50%; left:50%;
+    width:0; height:0; border-radius:50%;
+    background:rgba(255,255,255,.18);
+    transform:translate(-50%,-50%);
+    transition:width .55s,height .55s;
+  }
+  .btn-modern:hover::before{ width:320px; height:320px; }
+
+  /* Glass header */
+  .glass{
+    background:rgba(255,255,255,.92);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(255,255,255,.55);
+  }
+
+  /* Computed values */
+  .computed-display{
+    background:linear-gradient(135deg,#f8fafc,#f1f5f9);
+    border:2px dashed #cbd5e1;
+    transition:all .15s ease;
+  }
+  .computed-display:hover{ border-color:#94a3b8; background:linear-gradient(135deg,#f1f5f9,#e2e8f0); }
+
+  .filter-btn-active{
+    background:linear-gradient(135deg,var(--primary),var(--primary-dark))!important;
+    color:#fff!important;
+    box-shadow:0 6px 14px -6px rgba(99,102,241,.55)!important;
+    border-color:transparent!important;
+  }
+
+  /* Status top bar */
+  @keyframes pulse-glow{ 0%,100%{opacity:1} 50%{opacity:.72} }
+  .status-bar{ animation:pulse-glow 2s ease-in-out infinite; }
+
+
+  /* ===================== FG TomSelect: FORCE single-line ===================== */
+.fg-ts.ts-wrapper .ts-control{
+  min-height: 40px !important;
+  height: 40px !important;                 /* ✅ hard cap */
+  padding: .35rem .65rem !important;
+  border-radius: 1rem !important;
+
+  display: flex !important;
+  flex-wrap: nowrap !important;            /* ✅ no wrap */
+  align-items: center !important;
+
+  white-space: nowrap !important;          /* ✅ no line breaks */
+  overflow-x: auto !important;             /* ✅ scroll horizontally */
+  overflow-y: hidden !important;           /* ✅ never grow */
+}
+
+/* ===== FG TomSelect: ensure remove (x) button is visible ===== */
+.fg-ts.ts-wrapper .ts-control .item{
+  position: relative !important;
+  padding-right: 26px !important;   /* ✅ space for X button */
+}
+
+/* the remove button injected by remove_button plugin */
+.fg-ts.ts-wrapper .ts-control .item .remove{
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 18px !important;
+  height: 18px !important;
+  line-height: 18px !important;
+
+  border-radius: 6px !important;
+  font-weight: 900 !important;
+  font-size: 14px !important;
+
+  color: #334155 !important;        /* slate-700 */
+  background: transparent !important;
+  border: 1px solid #cbd5e1 !important; /* slate-300 */
+  cursor: pointer !important;
+  opacity: 1 !important;
+}
+
+.fg-ts.ts-wrapper .ts-control .item .remove:hover{
+  background: #fee2e2 !important;   /* rose-100 */
+  border-color: #fca5a5 !important; /* rose-300 */
+  color: #b91c1c !important;        /* rose-700 */
+}
+
+/* optional scrollbar look */
+.fg-ts.ts-wrapper .ts-control::-webkit-scrollbar{ height: 6px; }
+.fg-ts.ts-wrapper .ts-control::-webkit-scrollbar-thumb{ border-radius: 9999px; }
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/25 to-slate-50 pb-16" id="page-root" data-locked="{{ is_locked|yesno:'1,0' }}">
+
+  {% if mc %}
+  <div class="w-full h-1.5 status-bar
+    {% if mc.status == 'APPROVED' %}bg-gradient-to-r from-emerald-400 to-emerald-600{% elif mc.status == 'REJECTED' %}bg-gradient-to-r from-rose-400 to-rose-600{% elif mc.status == 'SUBMITTED' %}bg-gradient-to-r from-amber-400 to-amber-600{% else %}bg-gradient-to-r from-indigo-400 to-indigo-600{% endif %}">
+  </div>
+  {% endif %}
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 glass border-b border-white/20 shadow-lg shadow-slate-900/5">
+    <div class="max-w-[140rem] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+
+       {% if messages %}
+        <div class="space-y-2">
+          {% for message in messages %}
+            <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm border
+              {% if message.tags == 'success' %}bg-emerald-100 text-emerald-800 border-emerald-200
+              {% elif message.tags == 'warning' %}bg-amber-100 text-amber-800 border-amber-200
+              {% elif message.tags == 'info' %}bg-sky-100 text-sky-800 border-sky-200
+              {% else %}bg-rose-50 text-rose-800 border-rose-200{% endif %}">
+              <span>{{ message }}</span>
+              <button type="button" class="ml-3 text-xs opacity-70 hover:opacity-100"
+                      onclick="this.parentElement.remove()">✖</button>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
+        <div class="flex items-center gap-4">
+          <div class="relative shrink-0">
+            <div class="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl blur-md opacity-40"></div>
+            <div class="relative h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white shadow-xl">
+              <i class="fa-solid fa-file-invoice-dollar text-xl"></i>
+            </div>
+          </div>
+
+          <div class="min-w-0">
+            <nav class="flex items-center gap-2 text-[11px] font-black text-slate-500 uppercase tracking-wider">
+              <a href="{% url 'accounts_budget:rmc_budget_home' %}" class="hover:text-indigo-600 transition-colors">Budgets</a>
+              <span class="text-slate-300">›</span>
+              <span class="text-indigo-600">RMC</span>
+            </nav>
+
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+              <h1 class="text-xl sm:text-2xl font-black text-slate-900">
+                Edit RMC • {{ plan.fy }}
+              </h1>
+
+              {% if mc %}
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black border-2
+                  {% if mc.status == 'APPROVED' %}bg-emerald-50 text-emerald-700 border-emerald-200
+                  {% elif mc.status == 'REJECTED' %}bg-rose-50 text-rose-700 border-rose-200
+                  {% elif mc.status == 'SUBMITTED' %}bg-amber-50 text-amber-800 border-amber-200
+                  {% else %}bg-indigo-50 text-indigo-700 border-indigo-200{% endif %}">
+                  <i class="fa-solid fa-circle text-[8px]"></i>
+                  {{ mc.status }}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-black border-2 bg-slate-50 text-slate-700 border-slate-200">
+                  <i class="fa-solid fa-pen-to-square text-[12px]"></i>
+                  DRAFT
+                </span>
+              {% endif %}
+
+              {% if is_locked %}
+                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black border border-slate-200">
+                  <i class="fa-solid fa-lock"></i> Locked
+                </span>
+              {% endif %}
+            </div>
+
+            {% if mc and mc.remarks %}
+              <div class="mt-1 text-xs text-slate-500 font-semibold truncate max-w-[60rem]">
+                Remarks: <span class="italic">{{ mc.remarks }}</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 justify-start lg:justify-end">
+          <a href="{% url 'accounts_budget:rmc_budget_home' %}"
+             class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border-2 border-slate-200 bg-white text-sm font-black text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm">
+            <i class="fa-solid fa-arrow-left mr-2"></i>
+            Back
+          </a>
+
+          {% if not is_locked %}
+
+          <a href="{% url 'accounts_budget:rmc_budget_report_excel' %}"
+              class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl border-2 border-emerald-200 bg-emerald-50 text-sm font-black text-emerald-800 hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-sm">
+              <i class="fa-solid fa-file-excel mr-2"></i>
+              Download Excel
+            </a>
+            
+            <button form="rmc-budget-form" type="submit" name="action" value="save" id="save-btn"
+                    class="btn-modern inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-white border-2 border-slate-200 text-slate-900 text-sm font-black shadow-sm hover:bg-slate-50 hover:border-slate-300">
+              <i class="fa-solid fa-floppy-disk mr-2"></i> Save Draft
+            </button>
+
+            <button form="rmc-budget-form" type="submit" name="action" value="submit" id="save-lock-btn"
+                    class="btn-modern inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 text-white text-sm font-black shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 hover:scale-[1.02] active:scale-[0.98]">
+              <i class="fa-solid fa-lock mr-2"></i> Save &amp; Lock
+            </button>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-[140rem] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    {% if is_locked %}
+    <div class="rounded-2xl border-2 border-indigo-200 bg-white/70 backdrop-blur p-5 shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="h-11 w-11 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 border border-indigo-100">
+          <i class="fa-solid fa-shield-halved text-lg"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="text-sm font-black text-slate-900">View Only Mode</div>
+            <span class="px-2.5 py-1 rounded-full border-2 border-indigo-200 bg-indigo-50 text-[11px] font-black uppercase text-indigo-700">
+              Locked
+            </span>
+          </div>
+          <p class="mt-1 text-sm text-slate-600">
+            This budget is under review and cannot be edited.
+            {% if mc.remarks %}
+              <span class="font-semibold">Remarks:</span> <span class="italic">{{ mc.remarks }}</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <form method="post" id="rmc-budget-form" class="space-y-6">
+      {% csrf_token %}
+
+      <!-- Controls -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+        <!-- FG Association -->
+        <section class="xl:col-span-8 rounded-3xl border-2 border-slate-200 bg-white shadow-xl overflow-hidden">
+          <div class="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-xs font-black text-slate-500 uppercase tracking-widest">Product Association</div>
+                <div class="mt-1 text-base font-black text-slate-900">Finished Goods selection</div>
+                <div class="mt-1 text-sm text-slate-600">Select FG products to auto-sync required quantities.</div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 px-4 py-3 rounded-2xl border border-indigo-100 bg-indigo-50">
+                  <span id="fg-count" class="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 text-white flex items-center justify-center text-lg font-black shadow">0</span>
+                  <div class="leading-tight">
+                    <div class="text-[11px] font-black text-slate-600 uppercase tracking-widest">Selected</div>
+                    <div id="fg-sync-status" class="text-[11px] font-bold text-indigo-700"></div>
+                  </div>
+                </div>
+
+                {% if not is_locked %}
+                <button type="button" id="btn-sync-all"
+                        class="btn-modern inline-flex items-center justify-center px-4 py-3 rounded-2xl bg-slate-900 text-white text-sm font-black hover:bg-slate-800 shadow-lg">
+                  <i class="fa-solid fa-arrows-rotate mr-2"></i> Sync All Inputs
+                </button>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-7 space-y-3">
+              <label class="block text-xs font-black text-slate-700 uppercase tracking-wider">Select FG Products</label>
+
+              <select id="fg-select"
+                      name="fg_names"
+                      multiple
+                      data-qty-url="{% url 'accounts_budget:rmc_qty_preview' %}"
+                      class="w-full"
+                      {% if is_locked %}disabled{% endif %}>
+                {% for fg in fg_choices %}
+                  <option value="{{ fg }}" {% if selected_fgs and fg in selected_fgs %}selected{% endif %}>{{ fg }}</option>
+                {% endfor %}
+              </select>
+
+              {% if not is_locked %}
+              <div class="flex flex-wrap items-center gap-2 pt-2">
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-black uppercase border border-indigo-200">
+                  <i class="fa-solid fa-sync text-[10px]"></i> Auto-sync required qty
+                </span>
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 text-slate-700 text-[11px] font-black uppercase border border-slate-200">
+                  <i class="fa-solid fa-plus text-[10px]"></i> Adds missing materials
+                </span>
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="lg:col-span-5">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div class="text-xs font-black text-slate-500 uppercase tracking-widest">Filters</div>
+
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <button type="button" id="filter-all"
+                          class="px-4 py-2 rounded-full text-xs font-black border-2 border-slate-300 bg-white text-slate-700 hover:border-slate-400 transition-all shadow-sm">
+                    All Materials
+                  </button>
+                  <button type="button" id="filter-raw"
+                          class="px-4 py-2 rounded-full text-xs font-black border-2 border-indigo-300 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all shadow-sm">
+                    Raw
+                  </button>
+                  <button type="button" id="filter-captive"
+                          class="px-4 py-2 rounded-full text-xs font-black border-2 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 transition-all shadow-sm">
+                    Captive
+                  </button>
+                </div>
+
+                <div class="mt-4 flex items-center gap-3 text-xs">
+                  <span class="raw-badge"><span class="w-2 h-2 rounded-full bg-indigo-600"></span> RAW</span>
+                  <span class="cap-badge"><span class="w-2 h-2 rounded-full bg-amber-600"></span> CAPTIVE</span>
+                </div>
+
+                {% if not is_locked %}
+                <div class="mt-4 text-xs text-slate-500 font-semibold">
+                  Tip: Change a row manually to prevent sync overwrite.
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Forex / Totals -->
+        <aside class="xl:col-span-4 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 shadow-2xl text-white overflow-hidden relative">
+          <div class="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
+          <div class="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl"></div>
+
+          <div class="relative z-10 space-y-5">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">Forex</h3>
+              <span class="px-3 py-1.5 rounded-full bg-indigo-500/20 text-indigo-200 text-[11px] font-black border border-indigo-500/30">
+                USD/INR
+              </span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-black text-slate-400 uppercase tracking-wider mb-2">Exchange Rate</label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-xl">₹</span>
+                <input type="number" name="usd_inr" value="{{ rmc_budget.usd_inr }}" step="0.01"
+                       class="w-full rounded-2xl bg-slate-800/50 border-2 border-slate-700 text-white text-3xl font-black font-mono pl-12 py-3.5 focus:outline-none focus:ring-4 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all backdrop-blur-sm"
+                       {% if is_locked %}readonly{% endif %}>
+              </div>
+              <p class="mt-2 text-xs text-slate-400 font-semibold">Applied to all imported material calculations.</p>
+            </div>
+
+            <div class="pt-5 border-t border-slate-700">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Annual Qty Totals</span>
+                <span class="text-[10px] font-black text-slate-600">Auto</span>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="rounded-2xl border-2 border-slate-700 bg-slate-800/40 p-4 backdrop-blur-sm">
+                  <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Raw</div>
+                  <div class="text-xl font-black text-white font-mono"><span id="tot-raw">0</span></div>
+                </div>
+                <div class="rounded-2xl border-2 border-slate-700 bg-slate-800/40 p-4 backdrop-blur-sm">
+                  <div class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Captive</div>
+                  <div class="text-xl font-black text-white font-mono"><span id="tot-cap">0</span></div>
+                </div>
+                <div class="col-span-2 rounded-2xl border-2 border-indigo-600/30 bg-gradient-to-br from-indigo-900/40 to-purple-900/40 p-4 backdrop-blur-sm">
+                  <div class="text-[10px] font-black text-indigo-200 uppercase tracking-widest mb-2">Total</div>
+                  <div class="text-2xl font-black text-white font-mono"><span id="tot-all">0</span></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+      </div>
+
+      <!-- Formula legend -->
+      <div class="rounded-2xl border-2 border-slate-200 bg-white/80 backdrop-blur px-6 py-4 shadow-sm">
+        <div class="flex flex-wrap items-center justify-center gap-x-10 gap-y-2">
+          <div class="flex items-center gap-3 text-sm font-extrabold">
+            <span class="w-3 h-3 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-sm"></span>
+            <span class="text-slate-500 uppercase tracking-wide">Local:</span>
+            <span class="text-slate-900">Budget = Rate INR</span>
+          </div>
+          <div class="hidden md:block h-8 w-px bg-gradient-to-b from-transparent via-slate-300 to-transparent"></div>
+          <div class="flex items-center gap-3 text-sm font-extrabold">
+            <span class="w-3 h-3 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-sm"></span>
+            <span class="text-slate-500 uppercase tracking-wide">Import:</span>
+            <span class="text-slate-900 font-mono text-xs">(Rate$ × Ex) + Duty% + Freight + Clearance</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <section class="rounded-3xl border-2 border-slate-200 bg-white shadow-2xl overflow-hidden">
+        <div class="px-6 py-5 bg-gradient-to-r from-slate-50 to-white border-b-2 border-slate-200">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h2 class="text-lg sm:text-xl font-black text-slate-900">Material Line Items</h2>
+              <p class="text-sm text-slate-600">Manage rates and purchase types for components</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <span id="chip-filter"
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white text-slate-700 text-xs font-black uppercase border-2 border-slate-300 shadow-sm">
+                <i class="fa-solid fa-filter text-[10px]"></i>
+                Showing: All
+              </span>
+
+              {% if not is_locked %}
+              <button type="button" id="add-row-btn"
+                      class="btn-modern inline-flex items-center px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 text-white text-sm font-black hover:from-indigo-700 hover:to-indigo-800 shadow-lg hover:shadow-xl transition-all">
+                <i class="fa-solid fa-plus-circle mr-2"></i> Add Material
+              </button>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          {{ formset.management_form }}
+
+          <table class="min-w-[2050px] w-full border-separate border-spacing-0" id="formset-table">
+            <thead class="sticky-header">
+              <tr class="bg-gradient-to-r from-slate-50 to-slate-100">
+                <th class="px-6 py-5 text-left text-xs font-black text-slate-700 uppercase tracking-wide w-[420px] border-b-2 border-slate-200">Material</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-slate-700 uppercase tracking-wide w-[160px] border-b-2 border-slate-200">Required Qty</th>
+                <th class="px-4 py-5 text-left text-xs font-black text-slate-700 uppercase tracking-wide w-[160px] border-b-2 border-slate-200">Source</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-emerald-700 uppercase tracking-wide w-[160px] border-b-2 border-emerald-100">Local Rate (₹)</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-blue-700 uppercase tracking-wide w-[120px] border-b-2 border-blue-100">Import ($)</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-blue-700 uppercase tracking-wide w-[140px] border-b-2 border-blue-100">Base (₹)</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-blue-700 uppercase tracking-wide w-[100px] border-b-2 border-blue-100">Duty %</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-blue-700 uppercase tracking-wide w-[130px] border-b-2 border-blue-100">Duty Amt</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-blue-700 uppercase tracking-wide w-[130px] border-b-2 border-blue-100">Freight (₹)</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-blue-700 uppercase tracking-wide w-[130px] border-b-2 border-blue-100">Clr (₹)</th>
+                <th class="px-6 py-5 text-center text-xs font-black text-indigo-800 uppercase tracking-wide w-[180px] border-b-2 border-indigo-100">Final Budget</th>
+                <th class="px-4 py-5 text-center text-xs font-black text-slate-700 uppercase tracking-wide w-[120px] border-b-2 border-slate-200">Type</th>
+                <th class="px-4 py-5 text-center w-[60px] border-b-2 border-slate-200"></th>
+              </tr>
+            </thead>
+
+            <tbody id="formset-body" class="divide-y divide-slate-100">
+              {% for f in formset %}
+              <tr class="form-row group"
+                  data-mat-type="{% if f.instance.is_captive %}captive{% else %}raw{% endif %}"
+                  data-manual="0"
+                  data-synced="0">
+
+                <td class="px-6 py-4">
+                  <div class="flex items-start gap-3">
+                    <div class="pt-1">
+                      {% if f.instance.is_captive %}
+                        <span class="cap-badge js-type-badge"><span class="w-2 h-2 rounded-full bg-amber-600"></span> CAPTIVE</span>
+                      {% else %}
+                        <span class="raw-badge js-type-badge"><span class="w-2 h-2 rounded-full bg-indigo-600"></span> RAW</span>
+                      {% endif %}
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                      {{ f.id }}
+                      {% for h in f.hidden_fields %}
+                        {% if h.name != "id" and h.name != "is_captive" %}{{ h }}{% endif %}
+                      {% endfor %}
+
+                      <input type="hidden"
+                             class="js-is-captive"
+                             name="{{ f.prefix }}-is_captive"
+                             value="{{ f.instance.is_captive|yesno:'1,0' }}">
+
+                      <div class="hidden">{{ f.DELETE }}</div>
+
+                      {{ f.rm_code }}
+                      <div class="mt-1 text-[10px] text-slate-500 font-semibold js-key-hint"></div>
+                    </div>
+                  </div>
+                </td>
+
+                <td class="px-4 py-4 text-center">{{ f.required_qty }}</td>
+                <td class="px-4 py-4">{{ f.purchase_type }}</td>
+
+                <td class="px-4 py-4">
+                  <div class="local-wrap">{{ f.local_rate_inr }}</div>
+                  <div class="import-wrap hidden text-xs text-slate-400 text-center italic">Local Only</div>
+                </td>
+
+                <td class="px-4 py-4">
+                  <div class="import-wrap">{{ f.import_rate_usd }}</div>
+                  <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+                </td>
+
+                <td class="px-4 py-4">
+                  <div class="computed-display text-sm font-mono font-black text-slate-600 text-center py-2.5 rounded-xl">
+                    <span class="js-rate-inr">—</span>
+                  </div>
+                </td>
+
+                <td class="px-4 py-4">
+                  <div class="import-wrap">{{ f.duty_percent }}</div>
+                  <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+                </td>
+
+                <td class="px-4 py-4">
+                  <div class="computed-display text-sm font-mono font-black text-slate-600 text-center py-2.5 rounded-xl">
+                    <span class="js-custom-duty">—</span>
+                  </div>
+                </td>
+
+                <td class="px-4 py-4">
+                  <div class="import-wrap">{{ f.freight_inr }}</div>
+                  <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+                </td>
+
+                <td class="px-4 py-4">
+                  <div class="import-wrap">{{ f.clearance_inr }}</div>
+                  <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+                </td>
+
+                <td class="px-6 py-4">
+                  <div class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 px-4 py-3 text-center shadow-sm">
+                    <span class="js-budgeted text-base font-black text-indigo-700">—</span>
+                  </div>
+                </td>
+
+                <td class="px-4 py-4 text-center">
+                  <select class="js-mat-type w-full rounded-xl border-2 border-slate-300 px-3 py-2 text-xs font-black" name="{{ f.prefix }}-type_ui"
+                          {% if is_locked %}disabled{% endif %}>
+                    <option value="raw" {% if not f.instance.is_captive %}selected{% endif %}>RAW</option>
+                    <option value="captive" {% if f.instance.is_captive %}selected{% endif %}>CAPTIVE</option>
+                  </select>
+                </td>
+
+                <td class="px-4 py-4 text-center">
+                  {% if not is_locked %}
+                  <button type="button"
+                          class="remove-row-btn inline-flex items-center justify-center h-10 w-10 rounded-xl text-slate-400 hover:text-white hover:bg-gradient-to-br hover:from-rose-500 hover:to-rose-600 transition-all shadow-sm hover:shadow-md">
+                    <i class="fa-solid fa-trash-can"></i>
+                  </button>
+                  {% else %}
+                    <i class="fa-solid fa-lock text-slate-300"></i>
+                  {% endif %}
+                </td>
+
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </form>
+  </div>
+</div>
+
+{% if not is_locked %}
+<template id="empty-form-template">
+  <tr class="form-row group" data-mat-type="raw" data-manual="1" data-synced="0">
+    <td class="px-6 py-4">
+      <div class="flex items-start gap-3">
+        <div class="pt-1">
+          <span class="raw-badge js-type-badge"><span class="w-2 h-2 rounded-full bg-indigo-600"></span> RAW</span>
+        </div>
+        <div class="flex-1 min-w-0">
+          {{ formset.empty_form.id }}
+          {% for h in formset.empty_form.hidden_fields %}
+            {% if h.name != "id" and h.name != "is_captive" %}{{ h }}{% endif %}
+          {% endfor %}
+          <input type="hidden"
+                 class="js-is-captive"
+                 name="{{ formset.empty_form.prefix }}-is_captive"
+                 value="0">
+          <div class="hidden">{{ formset.empty_form.DELETE }}</div>
+          {{ formset.empty_form.rm_code }}
+          <div class="mt-1 text-[10px] text-slate-500 font-semibold js-key-hint"></div>
+        </div>
+      </div>
+    </td>
+    <td class="px-4 py-4 text-center">{{ formset.empty_form.required_qty }}</td>
+    <td class="px-4 py-4">{{ formset.empty_form.purchase_type }}</td>
+    <td class="px-4 py-4">
+      <div class="local-wrap">{{ formset.empty_form.local_rate_inr }}</div>
+      <div class="import-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+    </td>
+    <td class="px-4 py-4">
+      <div class="import-wrap">{{ formset.empty_form.import_rate_usd }}</div>
+      <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+    </td>
+    <td class="px-4 py-4">
+      <div class="computed-display text-sm font-mono font-black text-slate-600 text-center py-2.5 rounded-xl">
+        <span class="js-rate-inr">—</span>
+      </div>
+    </td>
+    <td class="px-4 py-4">
+      <div class="import-wrap">{{ formset.empty_form.duty_percent }}</div>
+      <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+    </td>
+    <td class="px-4 py-4">
+      <div class="computed-display text-sm font-mono font-black text-slate-600 text-center py-2.5 rounded-xl">
+        <span class="js-custom-duty">—</span>
+      </div>
+    </td>
+    <td class="px-4 py-4">
+      <div class="import-wrap">{{ formset.empty_form.freight_inr }}</div>
+      <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+    </td>
+    <td class="px-4 py-4">
+      <div class="import-wrap">{{ formset.empty_form.clearance_inr }}</div>
+      <div class="local-wrap hidden text-xs text-slate-400 text-center italic">—</div>
+    </td>
+    <td class="px-6 py-4">
+      <div class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 px-4 py-3 text-center shadow-sm">
+        <span class="js-budgeted text-base font-black text-indigo-700">—</span>
+      </div>
+    </td>
+    <td class="px-4 py-4 text-center">
+      <select class="js-mat-type w-full rounded-xl border-2 border-slate-300 px-3 py-2 text-xs font-black" name="{{ f.prefix }}-type_ui">
+        <option value="raw" selected>RAW</option>
+        <option value="captive">CAPTIVE</option>
+      </select>
+    </td>
+    <td class="px-4 py-4 text-center">
+      <button type="button"
+              class="remove-row-btn inline-flex items-center justify-center h-10 w-10 rounded-xl text-slate-400 hover:text-white hover:bg-gradient-to-br hover:from-rose-500 hover:to-rose-600 transition-all shadow-sm hover:shadow-md">
+        <i class="fa-solid fa-trash-can"></i>
+      </button>
+    </td>
+  </tr>
+</template>
+{% endif %}
+
+<script>
+  (function () {
+    const _auto = "{{ auto_sync_on_load|default:'0' }}".toString().toLowerCase();
+    // ✅ default OFF unless view explicitly passes auto_sync_on_load = 1/true/yes
+    const AUTO_SYNC_ON_LOAD = (_auto === "1" || _auto === "true" || _auto === "yes");
+    const IS_LOCKED = {{ is_locked|yesno:"true,false" }};
+    const FG_STORAGE_KEY = "rmc_fg_selected::{{ plan.id|default:plan.fy }}";
+
+    function _clean(s) { return (s || "").toString().trim(); }
+    function _upper(s) { return _clean(s).toUpperCase(); }
+
+    function debounce(fn, delay) {
+      let t = null;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    function toNum(v) {
+      const s = (v || "").toString().replace(/,/g, '').trim();
+      if (!s) return 0;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    // ✅ Required Qty now supports 4 decimals
+    function toQty4(v) {
+      const n = toNum(v);
+      return Number.isFinite(n) ? Number(n.toFixed(4)) : 0;
+    }
+
+    function fmtMoney(n, dp = 2) {
+      if (!Number.isFinite(n)) return "—";
+      return n.toFixed(dp);
+    }
+
+    function fmtQty(n) {
+      if (!Number.isFinite(n)) return "—";
+      return n.toFixed(4);
+    }
+
+    function normalizeQtyInput(qtyInp) {
+      if (!qtyInp) return;
+      qtyInp.setAttribute("step", "0.0001");
+      qtyInp.setAttribute("inputmode", "decimal");
+      if (qtyInp.value !== "") qtyInp.value = fmtQty(toQty4(qtyInp.value));
+      qtyInp.addEventListener("blur", () => {
+        qtyInp.value = qtyInp.value === "" ? "" : fmtQty(toQty4(qtyInp.value));
+        recalcTotalsFromRows();
+      });
+    }
+
+    function getCSRFToken() {
+      const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+      return el ? el.value : "";
+    }
+
+    function setStatus(msg, tone) {
+      const el = document.getElementById("fg-sync-status");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.classList.remove("text-slate-400", "text-indigo-600", "text-rose-600", "text-emerald-600");
+      if (tone === "ok") el.classList.add("text-emerald-600");
+      else if (tone === "err") el.classList.add("text-rose-600");
+      else if (tone === "info") el.classList.add("text-indigo-600");
+      else el.classList.add("text-slate-400");
+    }
+
+    function shortFGLabel(txt) {
+      const t = _clean(txt);
+      if (!t) return t;
+      if (t.includes(" - ")) return t.split(" - ")[0].trim();
+      if (t.includes("|")) return t.split("|")[0].trim();
+      return t;
+    }
+
+    function parseKeyOrCode(codeOrKey, isCapFlag) {
+      const s = _clean(codeOrKey);
+      if (s.includes("|")) {
+        const parts = s.split("|");
+        const code = _upper(parts[0] || "");
+        const cap = _clean(parts[1] || "");
+        const isCap = (cap === "1" || cap.toLowerCase() === "true" || cap.toLowerCase() === "yes");
+        return { code, isCap };
+      }
+      const code = _upper(s);
+      const isCap = (isCapFlag === 1 || isCapFlag === true || _clean(isCapFlag).toLowerCase() === "true");
+      return { code, isCap };
+    }
+
+    function canonicalKey(code, isCap) {
+      return `${_upper(code)}|${isCap ? 1 : 0}`;
+    }
+
+    function getRowRMCode(row) {
+      const sel = row.querySelector('select[name$="-rm_code"]');
+      if (sel) {
+        if (sel.tomselect) return _upper(sel.tomselect.getValue());
+        return _upper(sel.value);
+      }
+      const inp = row.querySelector('input[name$="-rm_code"]');
+      return _upper(inp ? inp.value : "");
+    }
+
+    function setRowMatTypeUI(row, isCap) {
+      row.dataset.matType = isCap ? "captive" : "raw";
+
+      const badge = row.querySelector(".js-type-badge");
+      if (badge) {
+        if (isCap) {
+          badge.className = "cap-badge js-type-badge";
+          badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-600"></span> CAPTIVE';
+        } else {
+          badge.className = "raw-badge js-type-badge";
+          badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-indigo-600"></span> RAW';
+        }
+      }
+
+      const sel = row.querySelector(".js-mat-type");
+      if (sel) sel.value = isCap ? "captive" : "raw";
+
+      const capInp = row.querySelector('input[name$="-is_captive"]');
+      if (capInp) capInp.value = isCap ? "1" : "0";
+
+      const hint = row.querySelector(".js-key-hint");
+      if (hint) {
+        const rmCode = getRowRMCode(row);
+        hint.textContent = rmCode ? ("Key: " + canonicalKey(rmCode, isCap)) : "";
+      }
+    }
+
+    function getRowMatType(row) {
+      const capInp = row.querySelector('input[name$="-is_captive"]');
+      if (capInp) {
+        const v = (capInp.value || "").toString().toLowerCase();
+        return (v === "1" || v === "true" || v === "yes") ? "captive" : "raw";
+      }
+      const v = (row?.dataset?.matType || "").toLowerCase();
+      return (v === "captive") ? "captive" : "raw";
+    }
+
+    function isRowDeleted(row) {
+      const del = row.querySelector('input[name$="-DELETE"]');
+      return !!(del && del.checked);
+    }
+
+    function isRowManual(row) {
+      return row && row.dataset.manual === "1";
+    }
+
+    function markRowManual(row) {
+      if(!row) return;
+      row.dataset.manual = "1";
+      row.dataset.synced = "0";
+      const qtyInp = row.querySelector('input[name$="-required_qty"]');
+      if (qtyInp && !IS_LOCKED) qtyInp.readOnly = false;
+    }
+
+    function recalcTotalsFromRows() {
+      let raw = 0, cap = 0;
+      document.querySelectorAll("#formset-body .form-row").forEach(row => {
+        if (isRowDeleted(row)) return;
+        const qtyInp = row.querySelector('input[name$="-required_qty"]');
+        const qty = toQty4(qtyInp ? qtyInp.value : 0);
+        if (getRowMatType(row) === "captive") cap += qty;
+        else raw += qty;
+      });
+      const rawEl = document.getElementById("tot-raw");
+      const capEl = document.getElementById("tot-cap");
+      const allEl = document.getElementById("tot-all");
+      if (rawEl) rawEl.textContent = fmtQty(raw);
+      if (capEl) capEl.textContent = fmtQty(cap);
+      if (allEl) allEl.textContent = fmtQty(raw + cap);
+    }
+
+    function softDeleteRow(row) {
+      const delCheckbox = row.querySelector('input[name$="-DELETE"]');
+      if (delCheckbox) {
+        delCheckbox.checked = true;
+        row.classList.add("hidden");
+      } else {
+        row.remove();
+      }
+      recalcTotalsFromRows();
+    }
+
+    function ensureRMOption(selectEl, code, name) {
+      const c = _upper(code);
+      if(!c) return;
+      const label = (name && _clean(name)) ? `${_clean(name)} (${c})` : c;
+
+      if (selectEl.tomselect) {
+        const ts = selectEl.tomselect;
+        if (!ts.options[c]) {
+          ts.addOption({ value: c, text: label });
+        } else {
+          if (ts.options[c].text === c && label !== c) {
+            ts.updateOption(c, { value: c, text: label });
+          }
+        }
+        ts.refreshOptions(false);
+      } else {
+        let found = false;
+        for(let i=0; i<selectEl.options.length; i++){
+          if(_upper(selectEl.options[i].value) === c) { found = true; break; }
+        }
+        if(!found) {
+          const opt = document.createElement("option");
+          opt.value = c;
+          opt.textContent = label;
+          selectEl.appendChild(opt);
+        }
+      }
+    }
+
+    function setRMCodeOnRow(row, rmCode, rmName) {
+      const code = _upper(rmCode);
+      const sel = row.querySelector('select[name$="-rm_code"]');
+      if (sel) {
+        ensureRMOption(sel, code, rmName);
+        if (sel.tomselect) sel.tomselect.setValue(code, true);
+        else sel.value = code;
+      } else {
+        const inp = row.querySelector('input[name$="-rm_code"]');
+        if (inp) inp.value = code;
+      }
+    }
+
+    function initSearchableSelect(row) {
+      const selectEl = row.querySelector('select[name$="-rm_code"]');
+      if (selectEl && !selectEl.classList.contains('tom-selected')) {
+        const ts = new TomSelect(selectEl, {
+          create: false,
+          placeholder: "Search material...",
+          maxOptions: 1000,
+          dropdownParent: 'body',
+          onDropdownOpen: (dropdown) => { dropdown.style.zIndex = "10000"; }
+        });
+        selectEl.tomselect = ts;
+        selectEl.classList.add('tom-selected');
+        if(IS_LOCKED) ts.lock();
+      }
+    }
+
+    function computeRow(row) {
+      const typeSelect = row.querySelector('select[name$="-purchase_type"]');
+      if (!typeSelect) return;
+
+      let purchaseType = "LOCAL";
+      const val = _upper(typeSelect.value);
+      if (val.includes("IMPORT")) purchaseType = "IMPORT";
+
+      const exRate = toNum(document.querySelector('input[name$="usd_inr"]')?.value);
+      const localVal = toNum(row.querySelector('input[name$="-local_rate_inr"]')?.value);
+      const usdVal   = toNum(row.querySelector('input[name$="-import_rate_usd"]')?.value);
+      const dutyPct  = toNum(row.querySelector('input[name$="-duty_percent"]')?.value);
+      const frtVal   = toNum(row.querySelector('input[name$="-freight_inr"]')?.value);
+      const clrVal   = toNum(row.querySelector('input[name$="-clearance_inr"]')?.value);
+
+      const rateInrSpan  = row.querySelector(".js-rate-inr");
+      const dutyAmtSpan  = row.querySelector(".js-custom-duty");
+      const budgetedSpan = row.querySelector(".js-budgeted");
+
+      if (purchaseType === "IMPORT") {
+        const rateInr = usdVal * exRate;
+        const dutyAmt = rateInr * (dutyPct / 100);
+        const total = rateInr + dutyAmt + frtVal + clrVal;
+
+        if (rateInrSpan) rateInrSpan.textContent = fmtMoney(rateInr, 2);
+        if (dutyAmtSpan) dutyAmtSpan.textContent = fmtMoney(dutyAmt, 2);
+        if (budgetedSpan) budgetedSpan.textContent = fmtMoney(total, 2);
+      } else {
+        if (rateInrSpan) rateInrSpan.textContent = fmtMoney(localVal, 2);
+        if (dutyAmtSpan) dutyAmtSpan.textContent = "—";
+        if (budgetedSpan) budgetedSpan.textContent = fmtMoney(localVal, 2);
+      }
+    }
+
+    function toggleFields(row) {
+      const typeSelect = row.querySelector('select[name$="-purchase_type"]');
+      if (!typeSelect) return;
+      const isImport = _upper(typeSelect.value).includes("IMPORT");
+
+      row.querySelectorAll(".local-wrap").forEach(el => el.classList.toggle("hidden", isImport));
+      row.querySelectorAll(".import-wrap").forEach(el => el.classList.toggle("hidden", !isImport));
+
+      const localInp = row.querySelector('input[name$="-local_rate_inr"]');
+      const usdInp   = row.querySelector('input[name$="-import_rate_usd"]');
+      const dutyInp  = row.querySelector('input[name$="-duty_percent"]');
+      const frtInp   = row.querySelector('input[name$="-freight_inr"]');
+      const clrInp   = row.querySelector('input[name$="-clearance_inr"]');
+
+      if (!IS_LOCKED) {
+        if (isImport) {
+          if(localInp) localInp.readOnly = true;
+          if(usdInp) usdInp.readOnly = false;
+          if(dutyInp) dutyInp.readOnly = false;
+          if(frtInp) frtInp.readOnly = false;
+          if(clrInp) clrInp.readOnly = false;
+        } else {
+          if(localInp) localInp.readOnly = false;
+          if(usdInp) usdInp.readOnly = true;
+          if(dutyInp) dutyInp.readOnly = true;
+          if(frtInp) frtInp.readOnly = true;
+          if(clrInp) clrInp.readOnly = true;
+        }
+      }
+      computeRow(row);
+    }
+
+    function attachManualWatchers(row) {
+      if (!row || row.dataset.manualWired === "1") return;
+      row.dataset.manualWired = "1";
+
+      const fields = row.querySelectorAll(
+        'select[name$="-rm_code"], select[name$="-purchase_type"], input[name$="-required_qty"], input[name$="-local_rate_inr"], input[name$="-import_rate_usd"], input[name$="-duty_percent"], input[name$="-freight_inr"], input[name$="-clearance_inr"], select.js-mat-type'
+      );
+
+      fields.forEach(el => {
+        el.addEventListener("change", () => { markRowManual(row); recalcTotalsFromRows(); });
+        el.addEventListener("input",  () => { markRowManual(row); recalcTotalsFromRows(); });
+      });
+    }
+
+    function wireRow(row) {
+      initSearchableSelect(row);
+      toggleFields(row);
+      attachManualWatchers(row);
+      computeRow(row);
+
+      normalizeQtyInput(row.querySelector('input[name$="-required_qty"]'));
+
+      const tsel = row.querySelector(".js-mat-type");
+      const desired = (row.dataset.matType || (tsel ? tsel.value : "raw") || "raw").toLowerCase();
+      setRowMatTypeUI(row, desired === "captive");
+
+      if (!IS_LOCKED && tsel) {
+        tsel.addEventListener("change", () => {
+          markRowManual(row);
+          setRowMatTypeUI(row, tsel.value === "captive");
+          applyCurrentFilter();
+          recalcTotalsFromRows();
+        });
+      }
+
+      const rmSel = row.querySelector('select[name$="-rm_code"]');
+      if (rmSel && !IS_LOCKED) {
+        rmSel.addEventListener("change", () => {
+          const isCap = (getRowMatType(row) === "captive");
+          setRowMatTypeUI(row, isCap);
+        });
+      }
+
+      if (IS_LOCKED) return;
+
+      const typeSelect = row.querySelector('select[name$="-purchase_type"]');
+      if (typeSelect) typeSelect.addEventListener("change", () => toggleFields(row));
+
+      row.querySelectorAll("input").forEach(inp => {
+        inp.addEventListener("input", () => computeRow(row));
+      });
+
+      const removeBtn = row.querySelector(".remove-row-btn");
+      if (removeBtn) removeBtn.addEventListener("click", () => softDeleteRow(row));
+    }
+
+    let CURRENT_FILTER = "all";
+
+    function setFilterChip(txt) {
+      const chip = document.getElementById("chip-filter");
+      if (chip) chip.innerHTML = '<i class="fa-solid fa-filter text-[10px]"></i> Showing: ' + txt;
+    }
+
+    function applyCurrentFilter() {
+      document.querySelectorAll("#formset-body .form-row").forEach(row => {
+        if (isRowDeleted(row)) return;
+        const t = getRowMatType(row);
+        let show = true;
+        if (CURRENT_FILTER === "raw") show = (t === "raw");
+        else if (CURRENT_FILTER === "captive") show = (t === "captive");
+        row.classList.toggle("hidden", !show);
+      });
+    }
+
+    function setFilter(mode) {
+      CURRENT_FILTER = mode;
+
+      const btnAll = document.getElementById("filter-all");
+      const btnRaw = document.getElementById("filter-raw");
+      const btnCap = document.getElementById("filter-captive");
+
+      [btnAll, btnRaw, btnCap].forEach(btn => btn?.classList.remove("filter-btn-active"));
+
+      if (mode === "raw") {
+        setFilterChip("Raw Materials");
+        btnRaw?.classList.add("filter-btn-active");
+      } else if (mode === "captive") {
+        setFilterChip("Captive Materials");
+        btnCap?.classList.add("filter-btn-active");
+      } else {
+        setFilterChip("All");
+        btnAll?.classList.add("filter-btn-active");
+      }
+
+      applyCurrentFilter();
+    }
+
+    async function fetchAndApplyRMQty(forceAll = false) {
+      if (IS_LOCKED) return;
+
+      const fgEl = document.getElementById("fg-select");
+      if (!fgEl) return;
+      const url = fgEl.getAttribute("data-qty-url");
+      if (!url) return;
+
+      let selected = [];
+      if (!forceAll) {
+        if (fgEl.tomselect) selected = fgEl.tomselect.getValue();
+        else selected = Array.from(fgEl.selectedOptions || []).map(o => o.value);
+        if (!Array.isArray(selected)) selected = selected ? [selected] : [];
+        selected = selected.filter(Boolean);
+      }
+
+      if (!forceAll && selected.length === 0) {
+        setStatus("No FG selected. Cleaning up synced rows...", "info");
+        document.querySelectorAll("#formset-body .form-row").forEach(row => {
+          if (!isRowDeleted(row) && !isRowManual(row) && row.dataset.synced === "1") {
+            softDeleteRow(row);
+          }
+        });
+        setStatus("", "");
+        updateFGCount(0);
+        recalcTotalsFromRows();
+        return;
+      }
+
+      setStatus(forceAll ? "Syncing ALL inputs..." : "Syncing inputs...", "info");
+
+      try {
+        const formData = new FormData();
+        formData.append("csrfmiddlewaretoken", getCSRFToken());
+
+        if (forceAll) formData.append("all_inputs", "1");
+        else selected.forEach(v => formData.append("fg_names", v));
+
+        const res = await fetch(url, { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (!data.ok) {
+          setStatus("Sync failed: " + (data.error || "Unknown"), "err");
+          return;
+        }
+
+        const items = data.items || [];
+        const requiredKeys = new Set();
+
+        const rowMap = new Map();
+        document.querySelectorAll("#formset-body .form-row").forEach(row => {
+          if (isRowDeleted(row)) return;
+          const c = getRowRMCode(row);
+          if (!c) return;
+          const isCap = (getRowMatType(row) === "captive");
+          rowMap.set(canonicalKey(c, isCap), row);
+        });
+
+        const body = document.getElementById("formset-body");
+        const tmpl = document.getElementById("empty-form-template");
+        const totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+
+        let updated = 0;
+        let added = 0;
+
+        for (const item of items) {
+          const parsed = parseKeyOrCode(item.key || item.rm_code, item.is_captive);
+          let code = parsed.code;
+          const isCap = parsed.isCap;
+
+          if (code.startsWith("CODE::")) code = code.substring(6).trim();
+          if (code.startsWith("NAME::") || code === "") continue;
+
+          const name = item.rm_name || "";
+          const qty  = toQty4(item.annual || item.required_qty || 0);
+
+          const key = canonicalKey(code, isCap);
+          requiredKeys.add(key);
+
+          let row = rowMap.get(key);
+
+          if (!row) {
+            if (!tmpl) continue;
+
+            const count = parseInt(totalForms.value || "0", 10);
+            const newHtml = tmpl.innerHTML.replace(/__prefix__/g, count);
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = "<table><tbody>" + newHtml + "</tbody></table>";
+            row = tempDiv.querySelector("tr");
+
+            body.appendChild(row);
+            totalForms.value = count + 1;
+
+            wireRow(row);
+            row.dataset.synced = "1";
+            row.dataset.manual = "0";
+
+            setRMCodeOnRow(row, code, name);
+            setRowMatTypeUI(row, isCap);
+
+            const qtyInp = row.querySelector('input[name$="-required_qty"]');
+            if (qtyInp) { qtyInp.value = fmtQty(qty); qtyInp.readOnly = true; }
+
+            rowMap.set(key, row);
+            added++;
+          } else {
+            if (!isRowManual(row)) row.dataset.synced = "1";
+            if (!isRowManual(row)) setRowMatTypeUI(row, isCap);
+
+            if (!isRowManual(row)) {
+              const qtyInp = row.querySelector('input[name$="-required_qty"]');
+              if (qtyInp) { qtyInp.value = fmtQty(qty); qtyInp.readOnly = true; }
+            }
+            updated++;
+          }
+        }
+
+        let removed = 0;
+        document.querySelectorAll("#formset-body .form-row").forEach(row => {
+          if(isRowDeleted(row)) return;
+          if(isRowManual(row)) return;
+          if(row.dataset.synced !== "1") return;
+
+          const c = getRowRMCode(row);
+          if(!c) return;
+
+          const isCap = (getRowMatType(row) === "captive");
+          const key = canonicalKey(c, isCap);
+
+          if(!requiredKeys.has(key)) {
+            softDeleteRow(row);
+            removed++;
+          }
+        });
+
+        setStatus(`Synced: ${updated} updated, ${added} added${removed ? ", " + removed + " removed" : ""}.`, "ok");
+        setTimeout(() => setStatus("",""), 3000);
+
+        applyCurrentFilter();
+        recalcTotalsFromRows();
+
+      } catch(e) {
+        console.error(e);
+        setStatus("Network error during sync.", "err");
+      }
+    }
+
+    const fetchAndApplyRMQtyDebounced = debounce(fetchAndApplyRMQty, 300);
+
+    function updateFGCount(n) {
+      const badge = document.getElementById("fg-count");
+      if (!badge) return;
+      const val = (n !== undefined) ? n : (document.getElementById("fg-select")?.tomselect?.items.length || 0);
+      badge.textContent = val;
+    }
+
+    function findDuplicateRMCodes() {
+      const seen = new Set();
+      const dups = new Set();
+
+      document.querySelectorAll("#formset-body .form-row").forEach(row => {
+        if (isRowDeleted(row)) return;
+        const c = getRowRMCode(row);
+        if (!c) return;
+        const isCap = (getRowMatType(row) === "captive");
+        const k = canonicalKey(c, isCap);
+
+        if (seen.has(k)) dups.add(k);
+        else seen.add(k);
+      });
+
+      return Array.from(dups);
+    }
+
+    // --- FG TomSelect (keep compact height + keep earlier behavior) ---
+    let FG_TS = null;
+
+    const fgSelect = document.getElementById("fg-select");
+    if (fgSelect) {
+      FG_TS = new TomSelect(fgSelect, {
+        plugins: ['remove_button'],
+        maxOptions: 5000,
+        placeholder: "Select FG...",
+        dropdownParent: "body",
+        render: {
+          item: function(data, escape) {
+            return `<div class="item" title="${escape(data.text)}">${escape(shortFGLabel(data.text))}</div>`;
+          },
+          option: function(data, escape) {
+            return `<div class="py-2 px-2">
+                      <div class="font-extrabold text-sm text-slate-900">${escape(data.text)}</div>
+                    </div>`;
+          }
+        },
+        onDropdownOpen: (d) => { d.style.zIndex = "10000"; },
+        onChange: () => {
+          const vals = FG_TS.getValue();
+          localStorage.setItem(FG_STORAGE_KEY, JSON.stringify(vals));
+          updateFGCount(vals.length);
+          fetchAndApplyRMQtyDebounced(false);
+        }
+      });
+
+      FG_TS.wrapper.classList.add("fg-ts");
+
+      if (IS_LOCKED) FG_TS.lock();
+
+      updateFGCount(FG_TS.items.length);
+
+      if (!IS_LOCKED && AUTO_SYNC_ON_LOAD && FG_TS.items.length > 0) {
+        setTimeout(() => fetchAndApplyRMQty(false), 200);
+      }
+
+      if (!IS_LOCKED && AUTO_SYNC_ON_LOAD) {
+        try {
+          const saved = JSON.parse(localStorage.getItem(FG_STORAGE_KEY) || "[]");
+          if (Array.isArray(saved) && saved.length > 0 && FG_TS.items.length === 0) {
+            saved.forEach(v => FG_TS.addItem(v, true));
+            FG_TS.refreshItems();
+            updateFGCount(saved.length);
+            setTimeout(() => fetchAndApplyRMQty(false), 200);
+          }
+        } catch(e) {}
+      }
+    }
+
+    const fAll = document.getElementById("filter-all");
+    const fRaw = document.getElementById("filter-raw");
+    const fCap = document.getElementById("filter-captive");
+    if (fAll) fAll.addEventListener("click", () => setFilter("all"));
+    if (fRaw) fRaw.addEventListener("click", () => setFilter("raw"));
+    if (fCap) fCap.addEventListener("click", () => setFilter("captive"));
+
+    const btnSyncAll = document.getElementById("btn-sync-all");
+    if (btnSyncAll && !IS_LOCKED) {
+      btnSyncAll.addEventListener("click", () => {
+        if (confirm("Sync ALL inputs from Production?\nThis will update inputs for every FG in this plan.")) {
+          fetchAndApplyRMQty(true);
+        }
+      });
+    }
+
+    document.querySelectorAll(".form-row").forEach(wireRow);
+
+    const mainEx = document.querySelector('input[name$="usd_inr"]');
+    if (mainEx) {
+      mainEx.addEventListener("input", () => {
+        document.querySelectorAll(".form-row").forEach(computeRow);
+      });
+    }
+
+    const addBtn = document.getElementById("add-row-btn");
+    if (addBtn && !IS_LOCKED) {
+      addBtn.addEventListener("click", () => {
+        const body = document.getElementById("formset-body");
+        const tmpl = document.getElementById("empty-form-template");
+        const totalForms = document.querySelector('input[name$="-TOTAL_FORMS"]');
+        const count = parseInt(totalForms.value || "0", 10);
+
+        const newHtml = tmpl.innerHTML.replace(/__prefix__/g, count);
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = "<table><tbody>" + newHtml + "</tbody></table>";
+        const newRow = tempDiv.querySelector("tr");
+
+        body.appendChild(newRow);
+        totalForms.value = count + 1;
+
+        wireRow(newRow);
+        markRowManual(newRow);
+        setRowMatTypeUI(newRow, false);
+
+        normalizeQtyInput(newRow.querySelector('input[name$="-required_qty"]'));
+
+        applyCurrentFilter();
+        recalcTotalsFromRows();
+      });
+    }
+
+    const form = document.getElementById("rmc-budget-form");
+    if (form && !IS_LOCKED) {
+      form.addEventListener("submit", (e) => {
+        const dups = findDuplicateRMCodes();
+        if (dups.length) {
+          alert(
+            "Duplicate (RM|Type) found:\n" + dups.join("\n") +
+            "\n\nRemove duplicates before saving.\nNote: RAW and CAPTIVE can exist for same RM code, but not twice in same type."
+          );
+          e.preventDefault();
+          return;
+        }
+
+        document.querySelectorAll('#formset-body input[name$="-required_qty"]').forEach(inp => {
+          if (!inp) return;
+          inp.value = inp.value === "" ? "" : fmtQty(toQty4(inp.value));
+        });
+
+        if (e.submitter && e.submitter.value === "submit") {
+          if (!confirm("Confirm Save & Lock?\nThis will lock the budget for editing.")) {
+            e.preventDefault();
+          }
+        }
+      });
+    }
+
+    if (IS_LOCKED) {
+      document.querySelectorAll("#rmc-budget-form input, #rmc-budget-form select, #rmc-budget-form textarea").forEach(el => {
+        if (el.name === "csrfmiddlewaretoken") return;
+        if (el.tagName.toLowerCase() === "select") el.disabled = true;
+        else el.readOnly = true;
+      });
+    }
+
+    recalcTotalsFromRows();
+    setFilter("all");
+  })();
+</script>
+
+{% endblock %}

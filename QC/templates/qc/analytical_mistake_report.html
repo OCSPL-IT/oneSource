@@ -1,0 +1,114 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% block title %}Analytical Mistake Report – QC{% endblock %}
+
+{% block maincontent %}
+<style>
+  .wrap{max-width:1100px;margin:28px auto;padding:0 20px;font-family:Inter,system-ui,sans-serif}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:16px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row input{border:1px solid #e5e7eb;border-radius:8px;padding:7px 10px}
+  .btn{display:inline-block;border:1px solid #3b82f6;border-radius:8px;padding:7px 12px;text-decoration:none;font-weight:600;color:#1e40af;background:#fff}
+  .btn:hover{background:#3b82f6;color:#fff}
+  table{width:100%;border-collapse:collapse;margin-top:14px}
+  th,td{border-bottom:1px solid #e5e7eb;padding:8px 10px;font-size:14px;text-align:left;vertical-align:top}
+  th{background:#eef2ff;color:#1e40af}
+  .muted{color:#64748b}
+</style>
+
+<div class="wrap">
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+    <h2 style="margin:0">Analytical Mistake – Report</h2>
+    <div class="row">
+      <a class="btn" href="{% url 'qc:analytical_mistake_export' %}?start={{start}}&end={{end}}&plant={{plant}}&product={{product}}">Download Excel</a>
+      <a class="btn" href="{% url 'qc:analytical_mistake_list' %}">Back to List</a>
+    </div>
+  </div>
+
+  <form method="get" class="card" style="margin-top:12px">
+    <div class="row">
+      <div>
+        <div class="muted" style="font-size:12px">Start</div>
+        <input type="date" name="start" value="{{ start|default:'' }}">
+      </div>
+      <div>
+        <div class="muted" style="font-size:12px">End</div>
+        <input type="date" name="end" value="{{ end|default:'' }}">
+      </div>
+      <div>
+        <div class="muted" style="font-size:12px">Plant</div>
+        <input type="text" name="plant" value="{{ plant|default:'' }}" placeholder="Plant">
+      </div>
+      <div style="flex:1">
+        <div class="muted" style="font-size:12px">Product</div>
+        <input style="width:100%" type="text" name="product" value="{{ product|default:'' }}" placeholder="Alfa or Finished product">
+      </div>
+      <div style="align-self:end">
+        <button class="btn" type="submit">Apply</button>
+      </div>
+    </div>
+  </form>
+
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 10px 0">Summary</h3>
+    <div class="row">
+      <div style="flex:1;min-width:280px">
+        <div class="muted" style="font-weight:600;margin-bottom:6px">By Plant</div>
+        <table>
+          <thead><tr><th>Plant</th><th>Total</th></tr></thead>
+          <tbody>
+            {% for i in by_plant %}
+              <tr><td>{{ i.plant|default:"—" }}</td><td>{{ i.total }}</td></tr>
+            {% empty %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div style="flex:2;min-width:380px">
+        <div class="muted" style="font-weight:600;margin-bottom:6px">By Product (Alfa)</div>
+        <table>
+          <thead><tr><th>Product</th><th>Total</th></tr></thead>
+          <tbody>
+            {% for i in by_product %}
+              <tr><td>{{ i.product|default:"—" }}</td><td>{{ i.total }}</td></tr>
+            {% empty %}
+              <tr><td colspan="2" class="muted">No data</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 10px 0">Records</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Plant</th>
+          <th>Alfa Product</th>
+          <th>Finished Product</th>
+          <th>Batch</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.date|date:"Y-m-d" }}</td>
+          <td>{{ r.plant }}</td>
+          <td>{{ r.product }}</td>
+          <td>{{ r.finished_product }}</td>
+          <td>{{ r.batch_no }}</td>
+          <td>{{ r.description|truncatechars:80 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="muted">No records for the applied filters.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock maincontent %}

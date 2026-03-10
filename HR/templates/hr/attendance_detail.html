@@ -1,0 +1,204 @@
+{% extends 'hr/HRone_base.html' %}
+{% load static %}
+
+{% block HRone_title %}
+<title>Attendance Status Details</title>
+{% endblock HRone_title %}
+
+{% block HRone_report_header %}
+<h1 class="text-2xl font-bold text-gray-700 text-center">Details for {{ label }}</h1>
+{% endblock HRone_report_header %}
+
+{% block HRone_report_content %}
+<div class="container mx-auto py-6 px-1">
+    <!-- Centered Wrapper -->
+    <!-- Scrollable Filter Bar -->
+    <div class="w-full overflow-x-auto mb-4">
+      <form method="get"
+            class="bg-white p-4 rounded-lg shadow flex flex-nowrap items-end gap-3 min-w-max w-fit text-xs">
+          <!-- Start Date -->
+          <div class="flex flex-col">
+              <label for="start_date" class="text-xs text-gray-700 font-medium">Start Date</label>
+              <input type="date" name="start_date" id="start_date" value="{{ start_date }}"
+                    class="text-xs border border-gray-300 rounded px-3 py-2 min-w-[120px]">
+          </div>
+          <!-- End Date -->
+          <div class="flex flex-col">
+              <label for="end_date" class="text-xs text-gray-700 font-medium">End Date</label>
+              <input type="date" name="end_date" id="end_date" value="{{ end_date }}"
+                    class="text-xs border border-gray-300 rounded px-3 py-2 min-w-[120px]">
+          </div>
+          <!-- Company -->
+          <div class="flex flex-col">
+              <label for="company" class="text-xs text-gray-700 font-medium">Company</label>
+              <select name="company" id="company"
+                  class="text-xs border border-gray-300 rounded pr-2 py-2 min-w-[110px]">
+                  <option value="">All</option>
+                  {% for company in companies %}
+                  <option value="{{ company }}" {% if company == selected_company %}selected{% endif %}>
+                      {{ company }}
+                  </option>
+                  {% endfor %}
+              </select>
+          </div>
+          <!-- Branch -->
+          <div class="flex flex-col">
+              <label for="branch" class="text-xs text-gray-700 font-medium">Branch</label>
+              <select name="branch" id="branch"
+                  class="text-xs border border-gray-300 rounded py-2">
+                  <option value="">All</option>
+                  {% for branch in branches %}
+                  <option value="{{ branch }}" {% if branch == selected_branch %}selected{% endif %}>
+                      {{ branch }}
+                  </option>
+                  {% endfor %}
+              </select>
+          </div>
+          <!-- Department -->
+          <div class="flex flex-col">
+              <label for="department" class="text-xs text-gray-700 font-medium">Department</label>
+              <select name="department" id="department"
+                  class="text-xs border border-gray-300 rounded py-2">
+                  <option value="">All</option>
+                  {% for department in departments %}
+                  <option value="{{ department }}" {% if department == selected_department %}selected{% endif %}>
+                      {{ department }}
+                  </option>
+                  {% endfor %}
+              </select>
+          </div>
+          <!-- Sub Department -->
+          <div class="flex flex-col">
+              <label for="sub_department" class="text-xs text-gray-700 font-medium">Sub Department</label>
+              <select name="sub_department" id="sub_department"
+                  class="text-xs border border-gray-300 rounded py-2">
+                  <option value="">All</option>
+                  {% for sub_department in sub_departments %}
+                    {% if sub_department %}
+                      <option value="{{ sub_department }}" {% if sub_department == selected_sub_department %}selected{% endif %}>
+                          {{ sub_department }}
+                      </option>
+                    {% endif %}
+                  {% endfor %}
+              </select>
+          </div>
+          <!-- Shift Code -->
+          <div class="flex flex-col">
+              <label for="shift_code" class="text-xs text-gray-700 font-medium">Shift Code</label>
+              <select name="shift_code" id="shift_code"
+                  class="text-xs border border-gray-300 rounded py-2">
+                  <option value="">All</option>
+                  {% for shift_code in shift_codes %}
+                  <option value="{{ shift_code }}" {% if shift_code == selected_shift_code %}selected{% endif %}>
+                      {{ shift_code }}
+                  </option>
+                  {% endfor %}
+              </select>
+          </div>
+          <!-- Search Field for Full Name -->
+          <div class="flex flex-col">
+              <label for="search_name" class="text-xs text-gray-700 font-medium">Search by Full Name</label>
+              <input type="text" name="search_name" id="search_name" value="{{ search_name }}"
+                  placeholder="Enter full name"
+                  class="text-xs border border-gray-300 rounded px-3 py-2 min-w-[140px]">
+          </div>
+          <!-- Filter & Clear Buttons -->
+          <div class="flex items-center gap-1 mt-4">
+            <button type="submit" class="bg-blue-600 text-white px-2 py-2 rounded hover:bg-blue-700 transition">
+              <i class="fa-solid fa-filter"></i>
+            </button>
+            <a href="{% url 'attendance_by_status' status_code=status_code %}"
+                class="bg-gray-400 text-white px-2 py-2 rounded hover:bg-gray-500 transition">
+                <i class="fa-solid fa-eraser"></i> </a>
+            </a>
+        </div>
+          <!-- Excel Download -->
+          <div class="flex mt-4 py-1">
+              <a href="{% url 'attendance_download_excel' status_code=status_code %}?start_date={{ start_date }}&end_date={{ end_date }}&search_name={{ search_name }}&company={{ selected_company }}&branch={{ selected_branch }}&department={{ selected_department }}&sub_department={{ selected_sub_department }}&shift_code={{ selected_shift_code }}">
+                  <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+              </a>
+          </div>
+          
+      </form>
+    </div>
+
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table class="min-w-full border border-gray-300 text-left text-sm">
+            <thead class="bg-gray-100 border-b">
+                <tr>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Sr.No</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Attendance Date</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Employee Code</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Full Name</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Reporting Manager</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Status</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Punch In | Out</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Company</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Business Unit</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Department</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Sub Department</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Designation</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Branch</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Sub Branch</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Employment Status</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Shift Code</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Shift Timing</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Late | Early</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Working Hours</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Total Office Hours</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Source</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Date of Joining</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Employment Type</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Grade</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Lat/Long</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Level</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Location</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Mobile</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Region</th>
+                    <th class="py-2 px-4 border-b text-gray-700 font-bold whitespace-nowrap">Work Email</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr class="border-b hover:bg-gray-50 transition">
+                    <td class="py-2 px-4">{{ forloop.counter }}</td>
+                    <td class="py-2 px-4">{{ record.attendance_date|date:"d/m/Y" }}</td>
+                    <td class="py-2 px-4">{{ record.employee_code }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.full_name }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.reporting_manager }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.status_in_out }}</td>
+                    <td class="py-2 px-4">{{ record.punch_in_punch_out_time }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.company }}</td>
+                    <td class="py-2 px-4">{{ record.business_unit }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.department }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.sub_department }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.designation }}</td>
+                    <td class="py-2 px-4">{{ record.branch }}</td>
+                    <td class="py-2 px-4">{{ record.sub_branch }}</td>
+                    <td class="py-2 px-4">{{ record.employment_status }}</td>
+                    <td class="py-2 px-4">{{ record.shift_code }}</td>
+                    <td class="py-2 px-4">{{ record.shift_timing }}</td>
+                    <td class="py-2 px-4">{{ record.Late_or_early }}</td>
+                    <td class="py-2 px-4">{{ record.working_hours }}</td>
+                    <td class="py-2 px-4">{{ record.total_office_hours }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.source }}</td>
+                    <td class="py-2 px-4">{{ record.date_of_joining|date:"d/m/Y" }}</td>
+                    <td class="py-2 px-4">{{ record.employment_type }}</td>
+                    <td class="py-2 px-4">{{ record.grade }}</td>
+                    <td class="py-2 px-4">{{ record.lattitude_longitude }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ record.level }}</td>
+                    <td class="py-2 px-4">{{ record.location }}</td>
+                    <td class="py-2 px-4">{{ record.mobile }}</td>
+                    <td class="py-2 px-4">{{ record.region }}</td>
+                    <td class="py-2 px-4">{{ record.work_email }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="30" class="py-4 text-center text-gray-500">No records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock HRone_report_content %}

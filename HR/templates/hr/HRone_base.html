@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block HRone_title %}
+    <title>Base Template</title>
+    {% endblock HRone_title %}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="{% static 'main/css/fontawesome.css' %}">
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+    <div class="flex min-h-screen">
+        <!-- Left Sidebar / Vertical Navbar -->
+        <div class=" fixed h-full top-0 left-0  bg-blue-950 text-white w-64 space-y-6 py-6 px-1 ">
+            <a href="{% url 'attendance_pivot_report' %}" class="border-b block w-full ps-4 py-2  rounded  hover:text-gray-950 hover:bg-white bg-blue-950">← Back</a>
+            <ul class="leading-10">
+                <li><a href="{% url 'attendance_summary' %}" class="border-b block w-full ps-1 rounded  {% if active_link == 'attendance_summary' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Daily Attendance</a></li>
+                <li><a href="{% url 'daily_check_in_summary' %}" class="border-b block w-full ps-1 rounded  {% if active_link == 'daily_check_in' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Daily Check-in</a></li>
+                <li><a href="{% url 'late_early_go_summary' %}" class="border-b block w-full8 ps-1 rounded  {% if active_link == 'late_early_go' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Late and Early Go</a></li>
+                <li><a href="{% url 'on_duty_request_summary' %}" class="border-b block w-full ps-1 rounded  {% if active_link == 'on_duty_request' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">On Duty Request</a></li>
+                <li><a href="{% url 'overtime_report_summary' %}" class="border-b block w-full ps-1 rounded  {% if active_link == 'overtime_report' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Overtime</a></li>
+                <li><a href="{% url 'short_leave_summary' %}" class="border-b block w-full ps-1 rounded  {% if active_link == 'short_leave' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Short Leave</a></li>
+                <li><a href="{% url 'attendance_regulation_summary' %}" class="border-b block w-full rounded  {% if active_link == 'attendance_regulation' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">Attendance Regulation</a></li>
+                <li><a href="{% url 'helpdesk_ticket_summary' %}" class="border-b block w-full ps-1 rounded  {% if active_link == 'helpdesk_ticket' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}" >Helpdesk Tickets</a></li>
+                <li><a href="{% url 'hr_mis_report' %}" class="border-b block w-full ps-1 rounded  {% if active_link == 'mis_report' %}text-gray-950 bg-white{% else %}hover:text-gray-950 hover:bg-white bg-blue-950{% endif %}">MIS Report</a></li>
+                <!-- Add other links similarly -->
+            </ul>
+        </div>
+
+        <!-- Right Content Area -->
+        <div class="flex-1 p-10 ml-64 w-96">
+            {% block HRone_report_header %}
+                
+            {% endblock HRone_report_header %}
+            <hr style="height: 2px; background-color: darkblue;">
+            {% block HRone_report_content %}
+                
+            {% endblock HRone_report_content %}
+        </div>
+    </div>
+
+
+    <script src="{% static 'main/js/fontawesome.js' %}"></script>
+</body>
+</html>

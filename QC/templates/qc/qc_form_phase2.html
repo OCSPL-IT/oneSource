@@ -1,0 +1,439 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}
+QC in Progress: Enter Test Results – QC Project
+{% endblock title %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+  /* ─── VARIABLES & BASE (ALIGNED) ────────────────────────────────── */
+  :root {
+    --font-sans: "Inter", -apple-system, sans-serif;
+    --font-mono: "Roboto Mono", monospace;
+    --color-primary: #2563eb; /* blue-600 */
+    --color-primary-light: #dbeafe; /* blue-100 */
+    --color-success: #16a34a; /* green-600 */
+    --color-warning: #f59e0b; /* amber-500 */
+    --color-danger: #dc2626;  /* red-600 */
+    --color-success-light: #dcfce7; /* green-100 */
+    --color-warning-light: #fef3c7; /* yellow-100 */
+    --color-danger-light: #fee2e2; /* red-100 */
+    --text-heading: #111827; /* slate-900 */
+    --text-body: #374151; /* slate-700 */
+    --text-muted: #6b7280; /* slate-500 */
+    --color-border: #e5e7eb; /* slate-200 */
+    --color-bg-subtle: #f8fafc; /* slate-50 */
+    --color-bg-card: #ffffff;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  .qc-results-page { font-family: var(--font-sans); color: var(--text-body); font-size: 1rem; padding: 1.5rem; }
+
+  /* --- MESSAGES (ALIGNED) --- */
+  .messages-container { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  .message-box { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-radius: var(--radius-md); color: #fff; font-weight: 500; }
+  .message-box.success { background-color: var(--color-success); }
+  .message-box.error { background-color: var(--color-danger); }
+  .message-box.warning { background-color: var(--color-warning); color: var(--text-heading); }
+  .message-box.info { background-color: var(--color-primary); }
+  .message-box span { display: flex; align-items: center; gap: 0.5rem; }
+  .message-box .close-btn { background: none; border: none; color: inherit; opacity: 0.8; font-size: 1.2rem; cursor: pointer; }
+
+  /* --- LAYOUT & HEADER (ALIGNED) --- */
+  .card { background-color: var(--color-bg-card); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); border: 1px solid var(--color-border); margin-bottom: 1.5rem; padding: 1.5rem; }
+  .card-title { font-size: 1.25rem; font-weight: 600; margin: -1.5rem -1.5rem 1.5rem; padding: 1.25rem 1.5rem; color: var(--text-heading); border-bottom: 1px solid var(--color-border); display: flex; align-items: center; gap: 0.75rem; }
+  .card-title .fa-solid { color: var(--color-primary); }
+
+  .page-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+  .page-title { font-size: 1.875rem; font-weight: 700; margin: 0; color: var(--text-heading); }
+  .page-subtitle { font-size: 0.875rem; color: var(--text-muted); margin: 0; font-family: var(--font-mono); }
+  .badge { display: inline-block; padding: 0.25rem 0.75rem; font-size: 0.875rem; font-weight: 500; border-radius: 9999px; }
+  .badge.status-in-progress { background-color: var(--color-primary-light); color: var(--color-primary); }
+
+  .details-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(350px,1fr)); gap: 1rem 2.5rem; }
+  .info-list { list-style:none; padding:0; margin:0; }
+  .info-item { display:flex; justify-content:space-between; align-items:center; padding: 0.75rem 0; border-bottom:1px solid #f3f4f6; font-size:.875rem; }
+  .info-item:last-child { border-bottom:none; }
+  .info-label { font-weight:500; color: var(--text-muted); }
+  .info-value { font-weight:500; color: var(--text-body); text-align:right; }
+  .info-value.important { color: var(--text-heading); font-weight: 600; }
+
+  /* --- FORMS (ALIGNED) --- */
+  .form-group { margin-bottom: 1rem; }
+  .form-group label { display:block; font-weight:500; color: var(--text-body); margin-bottom: 0.375rem; font-size:.875rem; }
+  .form-group textarea, .form-group select, .form-group input { width:100%; padding: 0.5rem 0.75rem; border:1px solid #d1d5db; border-radius: var(--radius-md); font-size:.875rem; box-sizing:border-box; }
+  .form-group textarea:focus, .form-group select:focus, .form-group input:focus { border-color: var(--color-primary); outline:0; box-shadow:0 0 0 2px rgba(37, 99, 235, 0.2); }
+
+  /* --- SUMMARY & TABLE (ALIGNED) --- */
+  .results-summary-card { display: grid; grid-template-columns: repeat(4,1fr); gap:1px; background-color: var(--color-border); border:1px solid var(--color-border); border-radius: var(--radius-md); overflow:hidden; margin-bottom:1.5rem; }
+  .summary-item { background-color: var(--color-bg-card); padding: 1rem; text-align:center; }
+  .summary-item__value { font-size:1.75rem; font-weight:700; display:block; line-height:1; }
+  .summary-item__label { font-size:.875rem; font-weight:500; color: var(--text-muted); margin-top:0.5rem; display:flex; align-items:center; justify-content:center; gap:0.375rem; }
+  .summary-item--pending .summary-item__value{color: var(--text-body);} .summary-item--pass .summary-item__value{color: var(--color-success);} .summary-item--deviation .summary-item__value{color: var(--color-warning);} .summary-item--fail .summary-item__value{color: var(--color-danger);}
+
+  .filter-bar { display:flex; justify-content:flex-end; align-items:center; margin-bottom:1.25rem; }
+  .group-selector select { min-width:250px; }
+  .qc-results-table { width:100%; border-collapse:collapse; font-size:.875rem; border:1px solid var(--color-border); border-radius: var(--radius-lg); overflow:hidden; box-shadow: var(--shadow-sm); }
+  .qc-results-table thead th { background:var(--color-bg-subtle); color: var(--text-muted); font-weight:500; padding: 0.75rem 1rem; border-bottom:1px solid var(--color-border); text-align:left; text-transform:uppercase; font-size: 0.75rem; }
+  .qc-results-table tbody td { padding: 0.625rem 1rem; border-bottom:1px solid var(--color-border); vertical-align:middle; }
+  .qc-results-table tbody tr:last-child td { border-bottom:none; }
+  .qc-results-table tbody tr:hover { background-color: var(--color-bg-subtle); }
+  .qc-results-table select, .qc-results-table input { width:100%; box-sizing:border-box; border-radius:6px; border:1px solid #d1d5db; padding: 0.5rem; font-size:.875rem; }
+  .qc-results-table input[readonly] { background-color:#f3f4f6; cursor:default; border-color:#e5e7eb; }
+  .remark-input { font-weight:600; text-align:center; border-radius:999px !important; text-transform:uppercase; font-size:.75rem !important; padding: 0.25rem 0.625rem !important; border:1px solid transparent; background-color:transparent; }
+  .remark-input.status-pass{background-color:var(--color-success-light);color:var(--color-success);} .remark-input.status-deviation{background-color:var(--color-warning-light);color:#c2410c;} .remark-input.status-fail{background-color:var(--color-danger-light);color:var(--color-danger);}
+  tr.status-pass-row td:first-child{border-left:4px solid var(--color-success);} tr.status-deviation-row td:first-child{border-left:4px solid var(--color-warning);} tr.status-fail-row td:first-child{border-left:4px solid var(--color-danger);}
+
+  .btn-complete-qc { background: var(--color-primary); color:#fff; border:none; padding: 0.75rem 1.5rem; font-size:1rem; font-weight:600; border-radius: var(--radius-md); cursor:pointer; transition:all .2s; display:flex; align-items:center; gap:0.625rem; width:100%; justify-content:center; box-shadow: var(--shadow-md); }
+  .btn-complete-qc:hover { background: #1d4ed8; }
+  .btn-complete-qc:disabled { background:#9ca3af; cursor:not-allowed; box-shadow:none; }
+  .invalid-feedback.d-block { font-size:.875rem; color:#dc2626; margin-top:0.375rem; }
+  .as-readonly { background:#f3f4f6 !important; color:#6b7280 !important; cursor:not-allowed !important; }
+</style>
+
+<div class="qc-results-page">
+
+  {% if messages %}
+  <div class="messages-container">
+    {% for message in messages %}<div class="message-box {{ message.tags }}" role="alert"><span>{% if 'success' in message.tags %}<i class="fa-solid fa-check-circle"></i>{% elif 'error' in message.tags %}<i class="fa-solid fa-times-circle"></i>{% elif 'warning' in message.tags %}<i class="fa-solid fa-exclamation-triangle"></i>{% else %}<i class="fa-solid fa-info-circle"></i>{% endif %} {{ message }}</span><button type="button" class="close-btn" onclick="this.parentElement.remove()">&times;</button></div>{% endfor %}
+  </div>
+  {% endif %}
+
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">QC Test Results Entry</h1>
+      <p class="page-subtitle">Entry: {{ qc_entry.entry_no }} / Batch: {{ qc_entry.batch_no }} / Product: {{ qc_entry.product.name }}</p>
+    </div>
+    <div class="header-status"><span class="badge status-in-progress">IN PROGRESS</span></div>
+  </header>
+
+  <form method="post" novalidate id="qc-results-form">
+    {% csrf_token %}
+    {{ results_form.batch_no }}{{ results_form.status }}{{ results_form.selected_group }}
+
+    <div class="card">
+      <h2 class="card-title"><i class="fa-solid fa-file-invoice"></i> Entry Details</h2>
+      <div class="details-grid">
+        <div>
+          <ul class="info-list">
+            <li class="info-item"><span class="info-label">Entry No.</span><span class="info-value important">{{ qc_entry.entry_no }}</span></li>
+            <li class="info-item"><span class="info-label">Stage</span><span class="info-value">{{ qc_entry.get_stage_display }}</span></li>
+            <li class="info-item"><span class="info-label">Entry Date</span><span class="info-value">{{ qc_entry.entry_date|date:"Y-m-d H:i" }}</span></li>
+            <li class="info-item"><span class="info-label">Prod. By</span><span class="info-value">{{ qc_entry.created_by.get_full_name|default:"N/A" }}</span></li>
+          </ul>
+          <ul class="info-list mt-4">
+            <li class="info-item"><span class="info-label">QC By</span><span class="info-value">{{ request.user.get_full_name }}</span></li>
+            <li class="info-item"><span class="info-label">Sample Desc.</span><span class="info-value">{{ qc_entry.sample_description|default:"-" }}</span></li>
+            <li class="info-item"><span class="info-label">Freq.</span><span class="info-value">{{ qc_entry.frequency|default:"-" }}</span></li>
+            <li class="info-item"><span class="info-label">Quantity</span><span class="info-value">{{ qc_entry.qty|default:"-" }}</span></li>
+            <li class="info-item"><span class="info-label">Description. Note</span><span class="info-value">{{ qc_entry.sample_description_text|default:"-" }}</span></li>
+            <li class="info-item"><span class="info-label">Test For</span><span class="info-value">{{ qc_entry.test_required_for|default:"-" }}</span></li>
+          </ul>
+        </div>
+        <div>
+          <div class="form-group"><label for="id_ar_type">AR Category</label>{{ results_form.ar_type }}</div>
+          <div class="form-group"><label for="id_ar_no">AR No.</label>{{ results_form.ar_no }}{% for err in results_form.ar_no.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}</div>
+          <div class="form-group"><label for="id_sample_received_at">Sample Received Date & Time</label>{{ results_form.sample_received_at }}{% for err in results_form.sample_received_at.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}</div>
+          <div class="form-group"><label for="id_instrument_id">Instrument ID</label>{{ results_form.instrument_id }}{% for err in results_form.instrument_id.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}</div>
+          <div class="form-group flex justify-end mt-2"><button type="submit" name="save_phase2_header" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition-all"><i class="fa-solid fa-floppy-disk mr-1"></i> Save Details</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-summary-card" id="results-summary">
+      <div class="summary-item summary-item--pending"><span class="summary-item__value" data-summary="pending">0</span><span class="summary-item__label"><i class="fa-regular fa-circle"></i> Pending</span></div>
+      <div class="summary-item summary-item--pass"><span class="summary-item__value" data-summary="pass">0</span><span class="summary-item__label"><i class="fa-solid fa-check"></i> Passed</span></div>
+      <div class="summary-item summary-item--deviation"><span class="summary-item__value" data-summary="deviation">0</span><span class="summary-item__label"><i class="fa-solid fa-triangle-exclamation"></i> Deviation</span></div>
+      <div class="summary-item summary-item--fail"><span class="summary-item__value" data-summary="fail">0</span><span class="summary-item__label"><i class="fa-solid fa-xmark"></i> Failed</span></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title"><i class="fa-solid fa-vials"></i> Test Parameters</h2>
+      <div class="filter-bar"><div class="group-selector">{{ results_form.group }}{% for err in results_form.group.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}</div></div>
+      <div class="overflow-x-auto">
+        <table class="qc-results-table">
+          <thead><tr><th style="width:5%; text-align:center;">#</th><th style="width:25%;">Test Parameter</th><th style="width:15%;">Specification</th><th style="width:15%;">Acceptance</th><th style="width:15%;">Result</th><th style="width:10%; text-align:center;">Unit</th><th style="width:15%; text-align:center;">Status</th></tr></thead>
+          <tbody id="spec-rows"><tr><td colspan="7" style="text-align:center; color: var(--color-text-light); padding:48px 0;">Loading test parameters…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title"><i class="fa-solid fa-flag-checkered"></i> Final Decision & Submission</h2>
+      <div class="details-grid">
+        <div class="form-group"><label for="id_general_remarks">General Remarks</label>{{ results_form.general_remarks }}{% for err in results_form.general_remarks.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}</div>
+        <div>
+          <div class="form-group"><label for="id_decision_status">Final QC Decision</label>{{ results_form.decision_status }}{% for err in results_form.decision_status.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}</div>
+          <div class="form-group"><label for="id_release_by_qc_at">Sample Release Date & Time</label>{{ results_form.release_by_qc_at }}{% for err in results_form.release_by_qc_at.errors %}<div class="invalid-feedback d-block">{{ err }}</div>{% endfor %}</div>
+        </div>
+      </div>
+      <div class="mt-4 pt-4 border-t border-slate-200">
+        <button type="submit" class="btn-complete-qc" id="complete-qc-btn"><i class="fa-solid fa-check-double"></i> Complete & Submit QC</button>
+      </div>
+    </div>
+
+  </form>
+</div>
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  const $tbody = $('#spec-rows');
+  const $groupSel = $('[name="group"]');
+  const $selectedGroupHidden = $('[name="selected_group"]');
+  const $decision = $('#id_decision_status');
+  const $releaseDateInput = $('#id_release_by_qc_at');
+  const $completeBtn = $('#complete-qc-btn');
+  const $summary = $('#results-summary');
+  const allSpecs = [];
+
+  // Ensure general remarks textarea gets at least 5 rows
+  $('textarea[name="general_remarks"]').attr('rows', 5);
+
+  // Load product specs for this QC entry
+  $.getJSON("{% url 'qc:get_product_details' %}", { product: {{ qc_entry.product.id }} })
+    .done(function(resp) {
+      if (!resp.specs || resp.specs.length === 0) {
+        $tbody.html(
+          '<tr><td colspan="7" style="text-align:center; color:var(--color-text-light); padding:48px 0;">' +
+          'No test parameters found for this product.' +
+          '</td></tr>'
+        );
+        return;
+      }
+      allSpecs.push(...resp.specs);
+      renderTableRows(allSpecs);
+      $groupSel.trigger('change');
+    })
+    .fail(function() {
+      $tbody.html(
+        '<tr><td colspan="7" style="text-align:center; color:var(--color-danger); padding:48px 0;">' +
+        'Error loading test parameters. Please refresh the page.' +
+        '</td></tr>'
+      );
+      $completeBtn.prop('disabled', true);
+    });
+
+  function renderTableRows(specs) {
+    $tbody.empty();
+    specs.forEach((spec, i) => {
+      const specText = spec.min_val != null ? `${spec.min_val} – ${spec.max_val}` : (spec.allowed_choices || 'N/A');
+      const accText  = spec.acceptance_criteria != null ? spec.acceptance_criteria : '—';
+      const unit     = spec.unit || '—';
+
+      // Detect appearance robustly (covers "Appearance", "Apperance", etc.)
+      const isAppearanceByName    = /appear/i.test((spec.name || ''));
+      const isAppearanceByChoices = /complies/i.test((spec.allowed_choices || ''));
+      const isAppearance          = isAppearanceByName || isAppearanceByChoices;
+
+      const resultInputHtml = isAppearance
+        ? `<select name="spec_result_${spec.id}" class="compliance-select" required>
+             <option value="">— Select —</option>
+             <option value="complies">Complies</option>
+             <option value="does_not_comply">Does not comply</option>
+           </select>`
+        : `<input type="text" name="spec_result_${spec.id}" class="result-input" placeholder="Enter value…" required>`;
+
+      const $row = $('<tr>')
+        .attr('data-spec-id', spec.id)
+        .attr('data-group', spec.group || '')
+        .attr('data-min', spec.min_val)
+        .attr('data-max', spec.max_val)
+        .attr('data-acceptance', spec.acceptance_criteria)
+        .append(`<td style="text-align:center; color:var(--color-text-light);">${i + 1}</td>`)
+        .append(`<td>${spec.name}</td>`)
+        .append(`<td><input type="text" readonly value="${specText}"></td>`)
+        .append(`<td><input type="text" readonly value="${accText}"></td>`)
+        .append(`<td>${resultInputHtml}</td>`)
+        .append(`<td style="text-align:center;">${unit}</td>`)
+        .append('<td><input readonly class="remark-input"></td>`');
+
+      $tbody.append($row);
+    });
+  }
+
+  function recalcRow($row) {
+    const $complianceSelect = $row.find('.compliance-select');
+    const $resultInput      = $row.find('.result-input');
+    const $remarkInput      = $row.find('.remark-input');
+    const minVal            = parseFloat($row.data('min'));
+    const maxVal            = parseFloat($row.data('max'));
+    const accValRaw         = $row.data('acceptance');
+    const accVal            = accValRaw != null && accValRaw !== '' ? parseFloat(accValRaw) : NaN;
+    let status = '';
+
+    if ($complianceSelect.length) {
+      const val = $complianceSelect.val();
+      if (val === 'complies') status = 'pass';
+      else if (val === 'does_not_comply') status = 'fail';
+    } else {
+      const resultVal = $resultInput.val().trim();
+      const result    = parseFloat(resultVal);
+      if (resultVal !== '' && !isNaN(result)) {
+        if (!isNaN(minVal) && !isNaN(maxVal) && result >= minVal && result <= maxVal) {
+          status = 'pass';
+        } else if (!isNaN(accVal)) {
+          if ((accVal < minVal && result >= accVal && result < minVal) ||
+              (accVal > maxVal && result > maxVal && result <= accVal)) {
+            status = 'deviation';
+          } else {
+            status = 'fail';
+          }
+        } else {
+          status = 'fail';
+        }
+      }
+    }
+
+    $row.removeClass('status-pass-row status-deviation-row status-fail-row');
+    $remarkInput.removeClass('status-pass status-deviation status-fail').val('');
+
+    if (status === 'pass') {
+      $remarkInput.val('Pass').addClass('status-pass');
+      $row.addClass('status-pass-row');
+    } else if (status === 'deviation') {
+      $remarkInput.val('Deviation').addClass('status-deviation');
+      $row.addClass('status-deviation-row');
+    } else if (status === 'fail') {
+      $remarkInput.val('Fail').addClass('status-fail');
+      $row.addClass('status-fail-row');
+    }
+  }
+
+  function getCurrentDateTimeString() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth()+1).padStart(2,'0');
+    const d = String(now.getDate()).padStart(2,'0');
+    const h = String(now.getHours()).padStart(2,'0');
+    const n = String(now.getMinutes()).padStart(2,'0');
+    return `${y}-${m}-${d}T${h}:${n}`;
+  }
+
+  function updateGlobalState() {
+    let hasFail = false, hasDeviation = false, isPending = false, hasVisible = false;
+    const counts = { pass:0, fail:0, deviation:0, pending:0 };
+
+    $tbody.find('tr:visible').each(function(){
+      hasVisible = true;
+      const remark = $(this).find('.remark-input').val();
+      switch(remark) {
+        case 'Pass':      counts.pass++;      break;
+        case 'Deviation': counts.deviation++; hasDeviation = true; break;
+        case 'Fail':      counts.fail++;      hasFail = true; break;
+        default:          counts.pending++;   isPending = true;
+      }
+    });
+
+    for (const k in counts){
+      $summary.find(`[data-summary="${k}"]`).text(counts[k]);
+    }
+    if(!hasVisible){
+      $summary.find('[data-summary="pending"]').text(0);
+    }
+
+    let newDec = '';
+    if(hasVisible){
+      if(hasFail) newDec = 'fail';
+      else if(hasDeviation) newDec = 'approved_under_deviation';
+      else if(!isPending) newDec = 'approved';
+    }
+    if(newDec && newDec !== $decision.val()){
+      $decision.val(newDec);
+      $releaseDateInput.val(getCurrentDateTimeString());
+    }
+  }
+
+  function handleResultChange(){
+    recalcRow($(this).closest('tr'));
+    updateGlobalState();
+  }
+
+  $tbody.on('input change', '.compliance-select, .result-input', handleResultChange);
+
+  $groupSel.on('change', function(){
+    const g = $(this).val();
+    $selectedGroupHidden.val(g || '');
+    $tbody.find('tr').each(function(){
+      $(this).toggle(!g || $(this).data('group') === g);
+    });
+    updateGlobalState();
+  });
+
+  // ---------- AR Type + AR No + Final Decision Validation ----------
+  $(function () {
+    const $arType = $('#id_ar_type');
+    const $arNo   = $('#id_ar_no');
+    const $form   = $('#qc-results-form');
+
+    if ($arType.length) {
+      $arType.prop('disabled', true).addClass('as-readonly');
+      if (!$('#id_ar_type_hidden').length) {
+        $('<input>', {
+          type: 'hidden',
+          id: 'id_ar_type_hidden',
+          name: 'ar_type',
+          value: $arType.val() || ''
+        }).insertAfter($arType);
+      } else {
+        $('#id_ar_type_hidden').val($arType.val() || '');
+      }
+    }
+
+    if ($arNo.length) {
+      $arNo.prop('readonly', true).addClass('as-readonly');
+    }
+
+    function fetchARNo(arTypeVal){
+      if (!arTypeVal || $arNo.val()) return;
+      $.getJSON("{% url 'qc:generate_ar_no' %}", { ar_type: arTypeVal })
+        .done(data => { if (data.ar_no) { $arNo.val(data.ar_no); } })
+        .fail(() => console.error('Failed to fetch AR No.'));
+    }
+
+    if ($arType.val()) {
+      fetchARNo($arType.val());
+    }
+
+    $arType.on('change', function(){
+      $('#id_ar_type_hidden').val($(this).val() || '');
+      fetchARNo($(this).val());
+    });
+
+    // 🔴 Require Final QC Decision when clicking Complete button
+    $form.on('submit', function (e) {
+      const submitter = e.originalEvent && e.originalEvent.submitter;
+      if (!submitter || submitter.id !== 'complete-qc-btn') {
+        // allow header "Save Details" without decision
+        return;
+      }
+
+      if (!$decision.val()) {
+        e.preventDefault();
+        let $err = $('#decision-status-error');
+        if (!$err.length) {
+          $err = $('<div>', {
+            id: 'decision-status-error',
+            class: 'invalid-feedback d-block',
+            text: 'Final QC Decision is required.'
+          });
+          $decision.after($err);
+        }
+        $decision.addClass('is-invalid').focus();
+      } else {
+        $('#decision-status-error').remove();
+        $decision.removeClass('is-invalid');
+      }
+    });
+  });
+</script>
+
+{% endblock maincontent %}

@@ -1,0 +1,71 @@
+{% extends "main/index.html" %}
+{% block title %}{% if mode == "edit" %}Edit Ledger{% else %}New Ledger{% endif %}{% endblock %}
+{% block maincontent %}
+<div class="min-h-[calc(100vh-6rem)] bg-slate-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-slate-900">
+            {% if mode == "edit" %}Edit Ledger{% else %}Create Ledger{% endif %}
+          </h1>
+          {% if obj %}
+            <p class="text-sm text-slate-600 mt-1">GL Code: <span class="font-mono font-semibold">{{ obj.no }}</span></p>
+          {% endif %}
+        </div>
+        <a href="{% url 'accounts_budget:gl_account_list' %}"
+           class="px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 text-sm font-semibold hover:bg-slate-50">
+          Back
+        </a>
+      </div>
+
+      <form method="post" class="mt-6 space-y-4">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Unit</label>
+            {{ form.unit }}
+            {{ form.unit.errors }}
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-slate-700">Department</label>
+            {{ form.department }}
+            {{ form.department.errors }}
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700">Budget Head</label>
+            {{ form.budget_head }}
+            {{ form.budget_head.errors }}
+          </div>
+          <div class="md:col-span-2">
+            <label class="text-sm font-semibold text-slate-700">GL Name</label>
+            {{ form.name }}
+            {{ form.name.errors }}
+          </div>
+          <div>
+            <label class="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+              {{ form.is_active }} Active
+            </label>
+            {{ form.is_active.errors }}
+          </div>
+        </div>
+
+        <button type="submit"
+                class="px-5 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
+          Save
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  /* Tailwind-safe Django widget fallback */
+  input, select { border: 1px solid #e2e8f0; padding: .55rem .75rem; border-radius: .75rem; width: 100%; }
+  input:focus, select:focus { outline: none; box-shadow: 0 0 0 3px rgba(99,102,241,.25); border-color: #818cf8; }
+</style>
+{% endblock %}

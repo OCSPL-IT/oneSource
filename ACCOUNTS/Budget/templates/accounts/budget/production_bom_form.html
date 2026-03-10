@@ -1,0 +1,1412 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}
+  {% if view_only or is_locked %}View BOM{% elif is_new %}Create BOM{% else %}Edit BOM{% endif %}
+{% endblock %}
+
+{% block maincontent %}
+
+<!-- Tailwind (CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- TomSelect (keep JS same; theme swapped to cleaner default) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.default.min.css">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+  /* ============================
+     Claude-like shell + tokens
+     ============================ */
+  :root{
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --border: #e5e7eb;
+    --border2: #dbe3ee;
+    --shadow: 0 1px 0 rgba(2,6,23,.04), 0 12px 28px rgba(2,6,23,.06);
+    --shadow2: 0 18px 40px rgba(2,6,23,.10);
+    --radius: 18px;
+  }
+
+  .page-shell{
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 18% -10%, rgba(99,102,241,.12), transparent 58%),
+      radial-gradient(900px 520px at 92% 0%, rgba(16,185,129,.10), transparent 55%),
+      var(--bg);
+  }
+
+  /* ============================
+     TomSelect: stacking + clean
+     (do NOT change behavior)
+     ============================ */
+  .ts-wrapper { position: relative !important; z-index: 60 !important; }
+  .ts-wrapper.single { isolation: isolate !important; }
+
+  .ts-control{
+    min-height: 44px;
+    border-radius: 0.95rem !important;
+    border: 1px solid var(--border) !important;
+    padding: .50rem .70rem !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  .ts-control.focus{
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 3px rgba(79,70,229,.14) !important;
+  }
+  .ts-control .item{ font-weight: 800; color: var(--ink); }
+  .ts-control input{ font-weight: 650; color: var(--ink); }
+
+  .ts-dropdown{
+    position: absolute !important;
+    z-index: 999999 !important;
+    background: #fff !important;
+    opacity: 1 !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 0.95rem !important;
+    box-shadow: var(--shadow2) !important;
+    overflow: hidden !important;
+  }
+  .ts-dropdown .ts-dropdown-content{
+    background: #fff !important;
+    opacity: 1 !important;
+  }
+  .ts-dropdown .option{ padding: .60rem .80rem !important; font-weight: 750 !important; }
+  .ts-dropdown .active{ background: rgba(79,70,229,.10) !important; color:#1e1b4b !important; }
+
+  /* ============================
+     Tables + pills + buttons
+     ============================ */
+  .card{
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .soft-input{
+    border-radius: 0.95rem;
+    border: 1px solid var(--border);
+    background: #fff;
+  }
+  .soft-input:focus{
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79,70,229,.14);
+  }
+
+  /* Tab styling (keeps your existing JS class toggles) */
+  .tab-btn{
+    position: relative;
+    padding-bottom: 14px;
+  }
+  .tab-btn.active{
+    color: #1d4ed8;
+  }
+
+  /* Sticky bar */
+  .topbar{
+    background: rgba(255,255,255,.82);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Table header */
+  .table-wrap{
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+  }
+  thead th{
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:hover{
+    background: rgba(2,6,23,.02);
+  }
+
+  /* Better “readonly chip” */
+  .chip{
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .35rem .65rem;
+    background: #fff;
+    font-weight: 800;
+    font-size: 12px;
+    color: #334155;
+  }
+
+  /* Small helper text */
+  .hint{
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--muted);
+  }
+</style>
+
+<div class="page-shell">
+  <form method="post" id="bom-form" class="pb-10">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="actionField" value="save">
+
+    <!-- =========================
+         Top App Bar (sticky)
+         ========================= -->
+    <div class="sticky top-0 z-40 topbar">
+      <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+
+          <!-- Title / Meta -->
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="text-[20px] sm:text-2xl font-black text-slate-900 truncate">
+                {% if view_only or is_locked %}View BOM{% elif is_new %}Create BOM{% else %}Edit BOM{% endif %}
+              </h1>
+
+              <span class="chip
+                {% if view_only or is_locked %}border-blue-200 bg-blue-50 text-blue-700{% else %}border-amber-200 bg-amber-50 text-amber-800{% endif %}">
+                {% if view_only or is_locked %}View Only{% else %}Draft / Editable{% endif %}
+              </span>
+            </div>
+
+            <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span class="chip">
+                <span class="text-slate-400 font-black">BOM</span>
+                {% if bom and bom.bom_code %}
+                  <span class="font-mono text-slate-900">{{ bom.bom_code }}</span>
+                {% else %}
+                  <span class="font-mono text-slate-900">AUTO</span>
+                {% endif %}
+              </span>
+
+              <span class="chip">
+                <span class="text-slate-400 font-black">Allowed</span>
+                <span class="font-extrabold text-slate-700">Key RM, RM, SFG, FG, Packing</span>
+              </span>
+
+              <span class="hint">
+                Select FG → Sync inputs → Maintain norms (Budget Norm is manual).
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions (IDs/behavior unchanged) -->
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'accounts_budget:production_bom_list' %}"
+               class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-50">
+              {% if view_only or is_locked %}← Back{% else %}Cancel{% endif %}
+            </a>
+
+            {% if view_only or is_locked %}
+              <span class="inline-flex items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-black text-blue-700 shadow-sm">
+                👁 View Only
+              </span>
+            {% else %}
+              <button type="submit"
+                      onclick="document.getElementById('actionField').value='save'"
+                      class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-50">
+                💾 Save Draft
+              </button>
+
+              <button type="submit"
+                      onclick="document.getElementById('actionField').value='submit'"
+                      class="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-black text-white shadow-[0_10px_25px_rgba(2,6,23,.18)] hover:bg-slate-800">
+                ✅ Submit
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================
+         Page Content
+         ========================= -->
+    <div class="max-w-[1700px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+
+      <!-- FG Card -->
+      <div class="card">
+        <div class="p-5 sm:p-6">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-base font-black text-slate-900">FG Details</h2>
+              <p class="mt-1 text-sm font-semibold text-slate-500">
+                Choose the Finished Good and keep input + waste norms updated.
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-black uppercase tracking-widest text-slate-500">Finished Good (FG)</label>
+
+              <input type="hidden" name="fg_name" id="id_fg_name" value="{{ form.fg_name.value|default_if_none:'' }}">
+
+              <select id="fg_picker"
+                      class="mt-1 w-full"
+                      placeholder="Type 2+ letters to search FG..."
+                      {% if is_locked or view_only %}disabled{% endif %}>
+                {% if form.fg_name.value %}
+                  <option value="{{ form.fg_name.value }}" selected>
+                    {{ form.fg_name.value }}{% if form.fg_alpha_name.value %} ({{ form.fg_alpha_name.value }}){% endif %}
+                  </option>
+                {% endif %}
+              </select>
+
+              {% if form.fg_name.errors %}
+                <div class="mt-2 text-sm font-bold text-red-600">{{ form.fg_name.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="block text-xs font-black uppercase tracking-widest text-slate-500">Short Name / Alpha</label>
+              <div class="mt-1">
+                {{ form.fg_alpha_name }}
+              </div>
+              {% if form.fg_alpha_name.errors %}
+                <div class="mt-2 text-sm font-bold text-red-600">{{ form.fg_alpha_name.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div>
+              <label class="block text-xs font-black uppercase tracking-widest text-slate-500">Current Status</label>
+              <input type="text"
+                     readonly
+                     class="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-black
+                            {% if view_only or is_locked %}text-blue-700{% else %}text-slate-600{% endif %}"
+                     value="{% if view_only or is_locked %}Approved / View Only{% else %}Draft / Editable{% endif %}">
+            </div>
+
+            <div>
+              <label class="block text-xs font-black uppercase tracking-widest text-slate-500">Active</label>
+              <div class="mt-1 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2">
+                {{ form.is_active }}
+                <span class="text-sm font-semibold text-slate-600">Enable this BOM</span>
+              </div>
+              {% if form.is_active.errors %}
+                <div class="mt-2 text-sm font-bold text-red-600">{{ form.is_active.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs Card -->
+      <div class="card overflow-hidden">
+
+        <!-- Tabs header -->
+        <div class="px-5 sm:px-6 pt-4">
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex gap-6 border-b border-slate-200 w-full">
+              <button type="button"
+                      class="tab-btn active -mb-px border-b-2 border-blue-600 pb-3 text-sm font-black text-blue-700"
+                      onclick="switchTab(event, 'inputTab')">
+                Input Materials
+              </button>
+              <button type="button"
+                      class="tab-btn -mb-px border-b-2 border-transparent pb-3 text-sm font-black text-slate-500 hover:text-blue-700"
+                      onclick="switchTab(event, 'effTab')">
+                Waste &amp; Effluent
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- =========================
+             TAB: INPUTS
+             ========================= -->
+        <div id="inputTab" class="tab-content active">
+          <div class="px-5 sm:px-6 py-4">
+
+            <!-- Toolbar -->
+            <div class="rounded-[16px] border border-slate-200 bg-slate-50 p-4">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div class="text-sm font-semibold text-slate-700">
+                  <span class="inline-flex items-center rounded-full bg-sky-100 px-2.5 py-1 text-xs font-black text-sky-800">Note</span>
+                  <span class="ml-2">
+                    Sync loads FG items (Key RM / RM / SFG). Add Row allows selecting from ALL (Key RM / RM / SFG / FG / Packing).
+                  </span>
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" id="inputSyncBtn"
+                          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                          {% if is_locked or view_only %}disabled{% endif %}>
+                    ↻ Sync Inputs
+                  </button>
+
+                  <button type="button" id="inputAddBtn"
+                          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-900 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                          {% if is_locked or view_only %}disabled{% endif %}>
+                    ＋ Add Row
+                  </button>
+
+                  <button type="button" id="inputDelSelBtn"
+                          class="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-50"
+                          {% if is_locked or view_only %}disabled{% endif %}>
+                    Delete Selected
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table -->
+            <div class="mt-4">
+              {{ input_formset.management_form }}
+
+              {% if input_formset.non_form_errors %}
+                <div class="mb-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">
+                  {{ input_formset.non_form_errors }}
+                </div>
+              {% endif %}
+
+              <div class="table-wrap overflow-x-auto">
+                <table class="min-w-[1150px] w-full text-sm">
+                  <thead class="text-slate-600">
+                    <tr>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[90px]">#</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[240px]">Category</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[520px]">Material</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[170px]">Budget Norm</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[170px]">Target Norm</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-center text-xs font-black uppercase tracking-widest w-[70px]">Del</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="inputBody" class="divide-y divide-slate-100">
+                    {% for f in input_formset.forms %}
+                      {% if f.instance.pk or f.has_changed or f.errors %}
+                      <tr class="input-row {% if f.DELETE.value %}hidden{% endif %}">
+                        <td class="px-4 py-3 align-middle">
+                          <div class="flex items-center gap-3">
+                            <input type="checkbox" class="row-select h-4 w-4 rounded border-slate-300 text-blue-600"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                            <span class="row-num inline-flex min-w-[20px] justify-center text-xs font-black text-slate-500">-</span>
+                          </div>
+
+                          {{ f.id }}
+                          {{ f.DELETE.as_hidden }}
+                          {% if f.fields.sr_no %}{{ f.sr_no.as_hidden }}{% endif %}
+                          {% if f.fields.bom_item_code %}{{ f.bom_item_code.as_hidden }}{% endif %}
+                          {% if f.fields.unit %}{{ f.unit.as_hidden }}{% endif %}
+                        </td>
+
+                        <td class="px-4 py-3">
+                          <input type="text"
+                                 class="mat-type-display w-full rounded-2xl border border-transparent bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700"
+                                 value="{% if f.fields.material_category %}{{ f.material_category.value|default_if_none:'' }}{% endif %}"
+                                 readonly>
+                          {% if f.fields.material_category %}{{ f.material_category.as_hidden }}{% endif %}
+                        </td>
+
+                        <td class="px-4 py-3">
+                          <select class="mat-picker w-full"
+                                  placeholder="Type 2+ letters to search material..."
+                                  {% if is_locked or view_only %}disabled{% endif %}>
+                            {% if f.fields.bom_item_code and f.bom_item_code.value %}
+                              <option value="{{ f.bom_item_code.value }}" selected>
+                                {{ f.material_name.value|default_if_none:f.bom_item_code.value }}
+                              </option>
+                            {% elif f.material_name.value %}
+                              <option value="{{ f.material_name.value }}" selected>{{ f.material_name.value }}</option>
+                            {% endif %}
+                          </select>
+                          {{ f.material_name.as_hidden }}
+                        </td>
+
+                        <td class="px-4 py-3">
+                          {% if f.fields.budget_norm %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.budget_norm.html_name }}"
+                                   value="{{ f.budget_norm.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% elif f.fields.norm %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.norm.html_name }}"
+                                   value="{{ f.norm.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% else %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+                          {% endif %}
+                        </td>
+
+                        <td class="px-4 py-3">
+                          {% if f.fields.target_norm %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.target_norm.html_name }}"
+                                   value="{{ f.target_norm.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% elif f.fields.mat_qty_mt %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.mat_qty_mt.html_name }}"
+                                   value="{{ f.mat_qty_mt.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% else %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+                          {% endif %}
+                        </td>
+
+                        <td class="px-4 py-3 text-center align-middle">
+                          <button type="button"
+                                  class="row-remove inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                                  {% if is_locked or view_only %}disabled{% endif %}>
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                      {% endif %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <p class="mt-3 hint">
+                Blank rows will be ignored automatically on Save/Submit.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- =========================
+             TAB: WASTE
+             ========================= -->
+        <div id="effTab" class="tab-content hidden">
+          <div class="px-5 sm:px-6 py-4">
+            <div class="rounded-[16px] border border-slate-200 bg-slate-50 p-4">
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                <div class="text-sm font-semibold text-slate-700">
+                  Record <span class="font-black">Process</span> and <span class="font-black">Unprocess</span> waste generation.
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" id="effAddBtn"
+                          class="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                          {% if is_locked or view_only %}disabled{% endif %}>
+                    ＋ Add Waste
+                  </button>
+
+                  <button type="button" id="effDelSelBtn"
+                          class="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-2 text-sm font-black text-red-600 shadow-sm hover:bg-red-50 disabled:opacity-50"
+                          {% if is_locked or view_only %}disabled{% endif %}>
+                    Delete Selected
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              {{ eff_formset.management_form }}
+
+              <div class="table-wrap overflow-x-auto">
+                <table class="min-w-[1150px] w-full text-sm">
+                  <thead class="text-slate-600">
+                    <tr>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[90px]">#</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[240px]">Waste Type</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[520px]">Waste Name</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[170px]">Waste Budget Norm</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-left text-xs font-black uppercase tracking-widest w-[170px]">Waste Target Norm</th>
+                      <th class="sticky top-0 z-10 px-4 py-3 text-center text-xs font-black uppercase tracking-widest w-[70px]">Del</th>
+                    </tr>
+                  </thead>
+
+                  <tbody id="effBody" class="divide-y divide-slate-100">
+                    {% for f in eff_formset.forms %}
+                      {% if f.instance.pk or f.has_changed or f.errors %}
+                      <tr class="eff-row {% if f.DELETE.value %}hidden{% endif %}">
+                        <td class="px-4 py-3 align-middle">
+                          <div class="flex items-center gap-3">
+                            <input type="checkbox" class="row-select h-4 w-4 rounded border-slate-300 text-blue-600"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                            <span class="row-num inline-flex min-w-[20px] justify-center text-xs font-black text-slate-500">-</span>
+                          </div>
+                          {{ f.id }}{{ f.DELETE.as_hidden }}
+                          {% if f.fields.sr_no %}{{ f.sr_no.as_hidden }}{% endif %}
+                        </td>
+
+                        <td class="px-4 py-3">
+                          <select name="{{ f.waste_type.html_name }}"
+                                  class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100 waste-type-select"
+                                  {% if is_locked or view_only %}disabled{% endif %}>
+                            <option value="" {% if not f.waste_type.value %}selected{% endif %}>-- Select Type --</option>
+                            <option value="Process" {% if f.waste_type.value|default_if_none:''|lower == "process" or f.waste_type.value|default_if_none:''|lower == "p" %}selected{% endif %}>Process</option>
+                            <option value="Unprocess" {% if f.waste_type.value|default_if_none:''|lower == "unprocess" or f.waste_type.value|default_if_none:''|lower == "u" %}selected{% endif %}>Unprocess</option>
+                          </select>
+                        </td>
+
+                        <td class="px-4 py-3">
+                          <select name="{{ f.waste_name.html_name }}"
+                                  class="w-full waste-name-select"
+                                  placeholder="Select Waste..."
+                                  {% if is_locked or view_only %}disabled{% endif %}>
+                            {% if f.waste_name.value %}
+                              <option value="{{ f.waste_name.value }}" selected>{{ f.waste_name.value }}</option>
+                            {% endif %}
+                          </select>
+                        </td>
+
+                        <td class="px-4 py-3">
+                          {% if f.fields.waste_budget_norm %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.waste_budget_norm.html_name }}"
+                                   value="{{ f.waste_budget_norm.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% elif f.fields.norm %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.norm.html_name }}"
+                                   value="{{ f.norm.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% else %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+                          {% endif %}
+                        </td>
+
+                        <td class="px-4 py-3">
+                          {% if f.fields.waste_target_norm %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.waste_target_norm.html_name }}"
+                                   value="{{ f.waste_target_norm.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% elif f.fields.qty %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                   name="{{ f.qty.html_name }}"
+                                   value="{{ f.qty.value|default_if_none:'' }}"
+                                   {% if is_locked or view_only %}disabled{% endif %}>
+                          {% else %}
+                            <input type="number" step="0.000001"
+                                   class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+                          {% endif %}
+                        </td>
+
+                        <td class="px-4 py-3 text-center align-middle">
+                          <button type="button"
+                                  class="row-remove inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                                  {% if is_locked or view_only %}disabled{% endif %}>
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                      {% endif %}
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+
+              <p class="mt-3 hint">
+                Waste name list depends on Waste Type.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- =========================
+           Empty Form Templates
+           (KEEP exactly: ids/classes/fields)
+           ========================= -->
+      <template id="inputEmptyTpl">
+        <tr class="input-row hover:bg-slate-50">
+          <td class="px-4 py-3 align-middle">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" class="row-select h-4 w-4 rounded border-slate-300 text-blue-600">
+              <span class="row-num inline-flex min-w-[20px] justify-center text-xs font-black text-slate-500">-</span>
+            </div>
+
+            {{ input_formset.empty_form.id }}{{ input_formset.empty_form.DELETE.as_hidden }}
+            {% if input_formset.empty_form.fields.sr_no %}{{ input_formset.empty_form.sr_no.as_hidden }}{% endif %}
+            {% if input_formset.empty_form.fields.bom_item_code %}{{ input_formset.empty_form.bom_item_code.as_hidden }}{% endif %}
+            {% if input_formset.empty_form.fields.unit %}{{ input_formset.empty_form.unit.as_hidden }}{% endif %}
+          </td>
+
+          <td class="px-4 py-3">
+            <input type="text" class="mat-type-display w-full rounded-2xl border border-transparent bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700" readonly>
+            {% if input_formset.empty_form.fields.material_category %}
+              {{ input_formset.empty_form.material_category.as_hidden }}
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3">
+            <select class="mat-picker w-full" placeholder="Type 2+ letters to search material..."></select>
+            {{ input_formset.empty_form.material_name.as_hidden }}
+          </td>
+
+          <td class="px-4 py-3">
+            {% if input_formset.empty_form.fields.budget_norm %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ input_formset.empty_form.budget_norm.html_name }}">
+            {% elif input_formset.empty_form.fields.norm %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ input_formset.empty_form.norm.html_name }}">
+            {% else %}
+              <input type="number" step="0.000001" class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3">
+            {% if input_formset.empty_form.fields.target_norm %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ input_formset.empty_form.target_norm.html_name }}">
+            {% elif input_formset.empty_form.fields.mat_qty_mt %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ input_formset.empty_form.mat_qty_mt.html_name }}">
+            {% else %}
+              <input type="number" step="0.000001" class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3 text-center align-middle">
+            <button type="button"
+                    class="row-remove inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600">
+              ✕
+            </button>
+          </td>
+        </tr>
+      </template>
+
+      <template id="effEmptyTpl">
+        <tr class="eff-row hover:bg-slate-50">
+          <td class="px-4 py-3 align-middle">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" class="row-select h-4 w-4 rounded border-slate-300 text-blue-600">
+              <span class="row-num inline-flex min-w-[20px] justify-center text-xs font-black text-slate-500">-</span>
+            </div>
+
+            {{ eff_formset.empty_form.id }}{{ eff_formset.empty_form.DELETE.as_hidden }}
+            {% if eff_formset.empty_form.fields.sr_no %}{{ eff_formset.empty_form.sr_no.as_hidden }}{% endif %}
+          </td>
+
+          <td class="px-4 py-3">
+            <select name="{{ eff_formset.empty_form.waste_type.html_name }}"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100 waste-type-select">
+              <option value="" selected>-- Select Type --</option>
+              <option value="Process">Process</option>
+              <option value="Unprocess">Unprocess</option>
+            </select>
+          </td>
+
+          <td class="px-4 py-3">
+            <select name="{{ eff_formset.empty_form.waste_name.html_name }}"
+                    class="w-full waste-name-select"
+                    placeholder="Select Waste..."></select>
+          </td>
+
+          <td class="px-4 py-3">
+            {% if eff_formset.empty_form.fields.waste_budget_norm %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ eff_formset.empty_form.waste_budget_norm.html_name }}">
+            {% elif eff_formset.empty_form.fields.norm %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ eff_formset.empty_form.norm.html_name }}">
+            {% else %}
+              <input type="number" step="0.000001" class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3">
+            {% if eff_formset.empty_form.fields.waste_target_norm %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ eff_formset.empty_form.waste_target_norm.html_name }}">
+            {% elif eff_formset.empty_form.fields.qty %}
+              <input type="number" step="0.000001"
+                     class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                     name="{{ eff_formset.empty_form.qty.html_name }}">
+            {% else %}
+              <input type="number" step="0.000001" class="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" disabled>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3 text-center align-middle">
+            <button type="button"
+                    class="row-remove inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600">
+              ✕
+            </button>
+          </td>
+        </tr>
+      </template>
+
+    </div>
+  </form>
+</div>
+
+<!-- =========================
+     SCRIPT (UNCHANGED LOGIC)
+     ========================= -->
+<script>
+  const VIEW_ONLY = {{ view_only|default_if_none:False|yesno:"true,false" }};
+  const LOCKED = ({{ is_locked|default_if_none:False|yesno:"true,false" }} || VIEW_ONLY);
+  const MATERIAL_PREFILL = {{ material_prefill_json|default:"[]"|safe }};
+
+  function switchTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+      btn.classList.remove('border-blue-600','text-blue-700');
+      btn.classList.add('border-transparent','text-slate-500');
+    });
+
+    const panel = document.getElementById(tabName);
+    if (panel) { panel.classList.remove('hidden'); panel.classList.add('active'); }
+
+    const btn = evt.currentTarget;
+    btn.classList.add('active');
+    btn.classList.add('border-blue-600','text-blue-700');
+    btn.classList.remove('border-transparent','text-slate-500');
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+
+    // Tailwind-ish for django widgets
+    const alphaEl = document.querySelector('[name="fg_alpha_name"]');
+    if (alphaEl && alphaEl.type !== "checkbox") {
+      alphaEl.classList.add(
+        "w-full","rounded-2xl","border","border-slate-200","bg-white","px-3","py-2",
+        "text-sm","font-semibold","focus:border-blue-500","focus:ring-2","focus:ring-blue-100"
+      );
+    }
+
+    const formEl     = document.getElementById("bom-form");
+    const fgHidden   = document.getElementById("id_fg_name");
+    const fgPicker   = document.getElementById("fg_picker");
+    const alphaField = document.querySelector('[name="fg_alpha_name"]');
+
+    const fgLookupUrl       = "{% url 'accounts_budget:production_bom_fg_lookup_json' %}";
+    const fgSyncUrl         = "{% url 'accounts_budget:production_bom_inputs_for_fg_json' %}";
+    const materialLookupUrl = "{% url 'accounts_budget:production_bom_material_lookup_json' %}";
+
+    // ✅ Allowed material types (includes Finished Goods)
+    const ALLOWED_TYPES = new Set([
+      "raw material",
+      "key raw material",
+      "sfg",
+      "fg",
+      "finished good",
+      "finished goods",
+      "semi finished good",
+      "semi finished goods",
+      "semi-finished good",
+      "semi-finished goods",
+      "finished goods (fg)",
+      "finished good (fg)",
+      // ✅ NEW: Packing Material
+      "packing material",
+      "packing materials",
+      "pack material",
+      "packing",
+      "pm",
+    ]);
+
+    function normalizeType(t){
+      return (t || "").toString().trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function isAllowedType(t){
+      const x = normalizeType(t);
+      if (ALLOWED_TYPES.has(x)) return true;
+      if (x.includes("finished") && x.includes("good")) return true; // Finished Good(s), Semi Finished Good(s)
+      // ✅ NEW: tolerate "Packing Material (PM)" etc
+      if (x.includes("packing") && x.includes("material")) return true;
+      if (["p.m", "p.m.", "p m", "pm"].includes(x)) return true;
+
+      if (["f.g","f.g.","f g"].includes(x)) return true;
+
+      return false;
+    }
+
+    function _escRe(s){
+      return (s || "").toString().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    // ✅ FIX: do NOT remove "2-METHOXY..." etc. Only remove "1 - NAME" patterns
+    function cleanMaterialName(code, name){
+      let n = (name || "").toString().trim();
+      const c = (code || "").toString().trim();
+      if(!n) return "";
+
+      if (c) {
+        const re = new RegExp("^\\s*" + _escRe(c) + "\\s*(?:[-–—]|:)?\\s*", "i");
+        n = n.replace(re, "").trim();
+      }
+
+      // remove leading numbering only if there is a SPACE after separator: "1 - NAME"
+      n = n.replace(/^\s*\d+\s*(?:[-–—]|:)\s+/,"").trim();
+      return n;
+    }
+
+    const TS_BASE_CONFIG = {
+      dropdownParent: 'body',
+      maxItems: 1,
+      create: false,
+      closeAfterSelect: true,
+      allowEmptyOption: true,
+      plugins: ['clear_button'],
+      render: {
+        option: function(data, escape) { return '<div class="py-1">' + escape(data.text || '') + '</div>'; },
+        item: function(data, escape) { return '<div>' + escape(data.text || '') + '</div>'; }
+      }
+    };
+
+    function q(row, sel){ return row.querySelector(sel); }
+    function setIf(el, val){ if(el) el.value = (val ?? ""); }
+
+    // ---------------- Prefill map (edit/view labels)
+    const PREFILL_MAP = {};
+    try {
+      (MATERIAL_PREFILL || []).forEach(o => {
+        const code = (o?.value || o?.code || "").toString().trim();
+        const text = (o?.text || o?.name || "").toString().trim();
+        const type = (o?.type || o?.material_category || "").toString().trim();
+        const unit = (o?.unit || "").toString().trim();
+        if (code) PREFILL_MAP[code] = { code, text: text || code, type, unit };
+      });
+    } catch(e) {}
+
+    // ---------------- INPUTS
+    function applyMaterialToRow(row, value){
+      const codeInput  = q(row, 'input[name$="-bom_item_code"]');
+      const unitInput  = q(row, 'input[name$="-unit"]');
+      const nameInput  = q(row, 'input[name$="-material_name"]');
+      const catHidden  = q(row, 'input[name$="-material_category"]');
+      const catDisplay = q(row, ".mat-type-display");
+
+      const sel = q(row, ".mat-picker");
+      const key = (value || "").toString().trim();
+
+      if (!key) {
+        setIf(codeInput, "");
+        setIf(unitInput, "");
+        setIf(nameInput, "");
+        setIf(catHidden, "");
+        if (catDisplay) catDisplay.value = "";
+        renumberInputs();
+        return;
+      }
+
+      let opt = null;
+      if (sel && sel.tomselect && sel.tomselect.options && sel.tomselect.options[key]) {
+        opt = sel.tomselect.options[key];
+      }
+
+      const code = (opt?.code || key || "").toString().trim();
+
+      // keep existing category if TomSelect meta is missing
+      const existingTyp = (catHidden?.value || "").toString().trim();
+      const typ  = ((opt?.type || existingTyp || "")).toString().trim();
+
+      const unit = (opt?.unit || (unitInput?.value || "")).toString().trim();
+      const nm0  = (opt?.name || opt?.text || nameInput?.value || "").toString().trim();
+      const nm   = cleanMaterialName(code, nm0);
+
+      if (typ && !isAllowedType(typ)) {
+        setIf(codeInput, "");
+        setIf(unitInput, "");
+        setIf(nameInput, "");
+        setIf(catHidden, "");
+        if (catDisplay) catDisplay.value = "";
+        renumberInputs();
+        return;
+      }
+
+      setIf(codeInput, code);
+      setIf(unitInput, unit);
+      setIf(nameInput, nm || "");
+
+      setIf(catHidden, typ || "");
+      if (catDisplay) catDisplay.value = (typ || "");
+      renumberInputs();
+    }
+
+    function ensureMaterialTomSelect(row){
+      const sel = q(row, ".mat-picker");
+      if (!sel || sel.tomselect) return sel?.tomselect;
+
+      const ts = new TomSelect(sel, {
+      ...TS_BASE_CONFIG,
+      valueField: "value",
+      labelField: "text",
+      searchField: ["text","value","code","type","name"],
+
+      // ✅ allow 1-letter search (your requirement)
+      shouldLoad: (query) => (query || "").length >= 1,
+
+      // ✅ NEW: when user clicks ▼ without typing, load first page once
+      preload: true,
+      onDropdownOpen: function () {
+        if (this._didInitialLoad) return;
+        this._didInitialLoad = true;
+        this.load(""); // fetch first 50 (your backend already limits to 50)
+      },
+
+      // ✅ UI only: show Category + Code in dropdown
+      render: {
+        option: function (data, escape) {
+          const name = escape(data.text || "");
+          const typ  = (data.type || "").toString().trim();
+          const code = (data.code || data.value || "").toString().trim();
+
+          const typBadge = typ
+            ? `<span class="ml-2 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-black text-slate-700">${escape(typ)}</span>`
+            : "";
+
+          const codeBadge = code
+            ? `<span class="ml-2 inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-black text-slate-500 font-mono">${escape(code)}</span>`
+            : "";
+
+          return `
+            <div class="py-1">
+              <div class="flex flex-wrap items-center gap-1">
+                <span class="font-extrabold text-slate-900">${name}</span>
+                ${typBadge}
+                ${codeBadge}
+              </div>
+            </div>
+          `;
+        },
+        item: function (data, escape) {
+          const name = escape(data.text || "");
+          const typ  = (data.type || "").toString().trim();
+          const typBadge = typ
+            ? `<span class="ml-2 inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-black text-slate-700">${escape(typ)}</span>`
+            : "";
+          return `<div class="flex items-center gap-1"><span class="font-extrabold">${name}</span>${typBadge}</div>`;
+        }
+      },
+
+      load: function (query, callback) {
+        fetch(materialLookupUrl + "?q=" + encodeURIComponent(query || ""), {
+          headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+          .then(r => r.json())
+          .then(data => {
+            let res = (data.results || []);
+
+            // ✅ filter allowed types (includes Packing Material)
+            res = res.filter(o => isAllowedType(o.type || o.material_category || ""));
+
+            // ✅ UI show NAME only (keep existing behavior)
+            res = res.map(o => {
+              const code = (o.code || o.value || o.bom_item_code || "").toString().trim();
+              const rawName = (o.name || o.material_name || o.text || "").toString().trim();
+              const nameOnly = cleanMaterialName(code, rawName) || rawName || code;
+
+              return {
+                ...o,
+                value: code || o.value,
+                code: code,
+                type: (o.type || o.material_category || "").toString().trim(),
+                unit: (o.unit || "").toString().trim(),
+                name: nameOnly,
+                text: nameOnly,
+              };
+            });
+
+            callback(res);
+          })
+          .catch(() => callback());
+      },
+
+      onChange: (val) => applyMaterialToRow(row, val || "")
+    });
+
+      // init selection for edit/view
+      const codeEl = q(row, 'input[name$="-bom_item_code"]');
+      const nameEl = q(row, 'input[name$="-material_name"]');
+      const catEl  = q(row, 'input[name$="-material_category"]');
+      const existingCode = (codeEl?.value || "").trim();
+      const existingName = (nameEl?.value || "").trim();
+      const existingCat  = (catEl?.value || "").trim();
+
+      if (existingCode) {
+        const pf = PREFILL_MAP[existingCode] || null;
+        const typ = ((pf?.type || existingCat || "")).toString().trim();
+        const unit = (pf?.unit || "").toString().trim();
+
+        let label = (pf?.text || existingName || existingCode || "").toString().trim();
+        label = cleanMaterialName(existingCode, label) || label || existingCode;
+
+        ts.addOption({
+          value: existingCode,
+          text: label,
+          code: existingCode,
+          name: label,
+          type: typ,
+          unit: unit,
+        });
+
+        ts.setValue(existingCode, true);
+        applyMaterialToRow(row, existingCode);
+
+        const catDisplay = q(row, ".mat-type-display");
+        if (catDisplay && typ) catDisplay.value = typ;
+      }
+
+      row.querySelectorAll('input[name$="-budget_norm"], input[name$="-norm"], input[name$="-target_norm"], input[name$="-mat_qty_mt"]')
+        .forEach(el => {
+          el.addEventListener("input", renumberInputs);
+          el.addEventListener("change", renumberInputs);
+        });
+
+      return ts;
+    }
+
+    // ---------------- WASTE
+    const WASTE_BY_TYPE = {
+      "Process": [
+        "Acidic Aq. Layer", "Basic", "Nuetral", "Sodium Cyanide Effluent",
+        "Sodium Cyanide", "Ammonium Chloride effluent", "Sulphuric above 50% effluent",
+        "Sulphuric below 50 % effluent", "Residue", "DIPEA Aq. Layer",
+      ],
+      "Unprocess": [
+        "Scrubber HCl 30-32%", "Scrubber Basic Effluent", "Scrubber Acidic Effluent",
+        "QC effluent", "Drainage Effluent", "Dyke Effluent",
+        "PCO Cleaning / cleaning Effluent", "Ejector effluent",
+        "Blowdown effluent (cooling tower)","SBS effluent","Spent HBr (48%)","Scrubber Nox effluent",
+      ]
+    };
+
+    function ensureWasteTomSelect(row){
+      const nameSel = row.querySelector(".waste-name-select");
+      if (!nameSel || nameSel.tomselect) return nameSel?.tomselect;
+
+      if (!nameSel.querySelector('option[value=""]')) {
+        const o = document.createElement("option");
+        o.value = "";
+        o.textContent = "";
+        nameSel.appendChild(o);
+      }
+
+      const ts = new TomSelect(nameSel, {
+        ...TS_BASE_CONFIG,
+        valueField: "value",
+        labelField: "text",
+        searchField: ["text"],
+      });
+
+      function refreshWasteOptions(keepValue){
+        const typeSel = row.querySelector(".waste-type-select");
+        const wt = (typeSel?.value || "").trim();
+        const list = (WASTE_BY_TYPE[wt] || []).map(x => ({ value: x, text: x }));
+
+        const cur = ts.getValue();
+        ts.clearOptions();
+
+        if (wt) {
+          ts.enable();
+          ts.addOptions(list);
+        } else {
+          ts.disable();
+        }
+        ts.refreshOptions(false);
+
+        if (keepValue && cur && list.some(o => o.value === cur)) ts.setValue(cur, true);
+        else ts.clear(true);
+
+        renumberEff();
+      }
+
+      const typeSel = row.querySelector(".waste-type-select");
+      if (typeSel) {
+        typeSel.addEventListener("change", () => {
+          refreshWasteOptions(false);
+          setTimeout(() => ts.open(), 50);
+        });
+      }
+
+      refreshWasteOptions(true);
+      return ts;
+    }
+
+    // ---------------- COMMON row ops
+    function markDeleteField(delEl, val=true){
+      if (!delEl) return;
+      if ((delEl.type || "").toLowerCase() === "checkbox") delEl.checked = !!val;
+      else delEl.value = val ? "on" : "";
+    }
+    function softDeleteRow(row, prefix){
+      const del = row.querySelector(`input[name^="${prefix}-"][name$="-DELETE"]`);
+      markDeleteField(del, true);
+      row.classList.add("hidden");
+    }
+
+    function addRow(prefix, bodyId, tplId){
+      if (LOCKED) return null;
+
+      const t = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+      const idx = parseInt(t.value || "0", 10);
+      const tpl = document.getElementById(tplId).innerHTML.replaceAll("__prefix__", idx);
+
+      const temp = document.createElement("tbody");
+      temp.innerHTML = tpl;
+      const row = temp.firstElementChild;
+
+      document.getElementById(bodyId).appendChild(row);
+      t.value = idx + 1;
+
+      if (prefix === "input") ensureMaterialTomSelect(row);
+      if (prefix === "eff") ensureWasteTomSelect(row);
+
+      renumberInputs();
+      renumberEff();
+      return row;
+    }
+
+    function isZeroish(v){
+      const s = (v ?? "").toString().trim();
+      return s === "" || s === "0" || s === "0.0" || s === "0.00" || s === "0.000" || s === "0.000000";
+    }
+    function isBlankInputRow(row){
+      const code = q(row, 'input[name$="-bom_item_code"]')?.value?.trim() || "";
+      const name = q(row, 'input[name$="-material_name"]')?.value?.trim() || "";
+      const norm = (q(row, 'input[name$="-budget_norm"]') || q(row, 'input[name$="-norm"]'))?.value ?? "";
+      const targ = (q(row, 'input[name$="-target_norm"]') || q(row, 'input[name$="-mat_qty_mt"]'))?.value ?? "";
+      return (!code && !name && isZeroish(norm) && isZeroish(targ));
+    }
+    function isBlankEffRow(row){
+      const wt = q(row, 'select[name$="-waste_type"]')?.value?.trim() || "";
+      const wn = q(row, 'select[name$="-waste_name"]')?.value?.trim() || "";
+      const bn = (q(row, 'input[name$="-waste_budget_norm"]') || q(row, 'input[name$="-norm"]'))?.value ?? "";
+      const tn = (q(row, 'input[name$="-waste_target_norm"]') || q(row, 'input[name$="-qty"]'))?.value ?? "";
+      return (!wt && !wn && isZeroish(bn) && isZeroish(tn));
+    }
+
+    function renumberInputs(){
+      let i = 1;
+      document.querySelectorAll(`#inputBody .input-row`).forEach(row => {
+        if (row.classList.contains("hidden")) return;
+        const blank = isBlankInputRow(row);
+
+        const num = row.querySelector(".row-num");
+        const sr  = row.querySelector(`input[name^="input-"][name$="-sr_no"]`);
+
+        if (blank) {
+          if (num) num.textContent = "-";
+          if (sr) sr.value = "";
+          return;
+        }
+        if (num) num.textContent = i;
+        if (sr) sr.value = i;
+        i++;
+      });
+    }
+
+    function renumberEff(){
+      let i = 1;
+      document.querySelectorAll(`#effBody .eff-row`).forEach(row => {
+        if (row.classList.contains("hidden")) return;
+
+        const blank = isBlankEffRow(row);
+        const num = row.querySelector(".row-num");
+        const sr  = row.querySelector(`input[name^="eff-"][name$="-sr_no"]`);
+
+        if (blank) {
+          if (num) num.textContent = "-";
+          if (sr) sr.value = "";
+          return;
+        }
+        if (num) num.textContent = i;
+        if (sr) sr.value = i;
+        i++;
+      });
+    }
+
+    function deleteSelected(prefix, bodyId) {
+      const body = document.getElementById(bodyId);
+      const chks = Array.from(body.querySelectorAll(".row-select:checked"));
+      if(!chks.length) return;
+
+      if(confirm(`Delete ${chks.length} rows?`)) {
+        chks.forEach(chk => softDeleteRow(chk.closest('tr'), prefix));
+        body.querySelectorAll(".row-select").forEach(c => c.checked=false);
+      }
+
+      if (prefix === "input") renumberInputs();
+      if (prefix === "eff") renumberEff();
+    }
+
+    // ---------------- FG picker + sync
+    if (fgPicker) {
+      new TomSelect(fgPicker, {
+        ...TS_BASE_CONFIG,
+        valueField: "value",
+        labelField: "text",
+        searchField: ["text"],
+        loadThrottle: 300,
+        shouldLoad: q => (q||"").length >= 2,
+        load: function(query, callback) {
+          fetch(fgLookupUrl + "?q=" + encodeURIComponent(query || ""), {
+            headers: {"X-Requested-With":"XMLHttpRequest"}
+          })
+          .then(r => r.json())
+          .then(data => callback(data.results || []))
+          .catch(() => callback());
+        },
+        onChange: function(value){
+          if (fgHidden) fgHidden.value = value || "";
+
+          if (alphaField) {
+            const opt = this.options[value];
+            if(opt && opt.text){
+              const m = opt.text.match(/\(([^)]+)\)\s*$/);
+              if (m) alphaField.value = m[1];
+            }
+          }
+
+          if (!LOCKED) syncInputsForFG(value || "");
+        }
+      });
+    }
+
+    async function fetchFGInputs(fgValue){
+      const url = `${fgSyncUrl}?fg_name=${encodeURIComponent(fgValue)}`;
+      const res = await fetch(url, { headers: {"X-Requested-With":"XMLHttpRequest"} });
+
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
+      const text = await res.text();
+
+      if (!res.ok) {
+        console.error("FG inputs HTTP error", res.status, text);
+        throw new Error(`HTTP ${res.status}`);
+      }
+      if (!contentType.includes("application/json")) {
+        console.error("FG inputs not JSON. Got:", contentType, text.slice(0, 500));
+        throw new Error("Not JSON (likely login redirect or error page)");
+      }
+
+      let data;
+      try { data = JSON.parse(text); }
+      catch(e){
+        console.error("FG inputs JSON parse error:", e, text.slice(0, 500));
+        throw e;
+      }
+
+      // ✅ accept both shapes: {rows:[]} or {results:[]} or {data:[]}
+      let rows = (data.rows || data.results || data.data || []);
+      rows = rows.filter(r => isAllowedType(r.material_category || r.type || ""));
+      return rows;
+    }
+
+    async function syncInputsForFG(fgValue){
+      if (!fgValue || LOCKED) return;
+
+      try {
+        const rows = await fetchFGInputs(fgValue);
+
+        document.querySelectorAll("#inputBody .input-row").forEach(r => softDeleteRow(r, "input"));
+
+        rows.forEach(r => {
+          const row = addRow("input", "inputBody", "inputEmptyTpl");
+          if (!row) return;
+
+          const code = (r.bom_item_code || r.value || r.code || "").toString().trim();
+          const rawName = (r.material_name || r.bom_item_name || r.bom_item_name || r.text || r.name || "").toString().trim();
+          const typ  = (r.material_category || r.type || "").toString().trim();
+          const unit = (r.unit || "").toString().trim();
+
+          // ✅ keep "2-METHOXY..." intact
+          const name = cleanMaterialName(code, rawName);
+
+          const ts = ensureMaterialTomSelect(row);
+          if (ts && code) {
+            ts.addOption({ value: code, text: (name || code), code, name: (name || code), type: typ, unit });
+            ts.setValue(code, true);
+          }
+
+          const catHidden  = row.querySelector('input[name$="-material_category"]');
+          const catDisplay = row.querySelector(".mat-type-display");
+          if (catHidden)  catHidden.value = typ || "";
+          if (catDisplay) catDisplay.value = typ || "";
+
+          applyMaterialToRow(row, code);
+        });
+
+        renumberInputs();
+      } catch(e) {
+        console.error(e);
+        alert("Could not load FG inputs. Open Console (F12) → Network/Console to see the error.");
+      }
+    }
+
+    // ---------------- BUTTONS
+    document.getElementById("inputSyncBtn")?.addEventListener("click", () => {
+      if(!fgHidden?.value) return alert("Please select Finished Good first.");
+      syncInputsForFG(fgHidden.value);
+    });
+
+    document.getElementById("inputAddBtn")?.addEventListener("click", () => {
+      if(!fgHidden?.value) return alert("Please select Finished Good first.");
+      addRow("input", "inputBody", "inputEmptyTpl");
+    });
+
+    document.getElementById("inputDelSelBtn")?.addEventListener("click", () => deleteSelected("input", "inputBody"));
+
+    document.getElementById("effAddBtn")?.addEventListener("click", () => {
+      addRow("eff", "effBody", "effEmptyTpl");
+    });
+
+    document.getElementById("effDelSelBtn")?.addEventListener("click", () => deleteSelected("eff", "effBody"));
+
+    document.addEventListener("click", e => {
+      if(e.target.closest(".row-remove")) {
+        const row = e.target.closest("tr");
+        if(row.classList.contains("input-row")) softDeleteRow(row, "input");
+        if(row.classList.contains("eff-row")) softDeleteRow(row, "eff");
+        renumberInputs();
+        renumberEff();
+      }
+    });
+
+    // INIT existing rows
+    document.querySelectorAll("#inputBody .input-row").forEach(r => ensureMaterialTomSelect(r));
+    document.querySelectorAll("#effBody .eff-row").forEach(r => ensureWasteTomSelect(r));
+
+    renumberInputs();
+    renumberEff();
+
+    // BEFORE SUBMIT: delete blank rows
+    if (formEl && !LOCKED) {
+      formEl.addEventListener("submit", function(){
+        document.querySelectorAll("#inputBody .input-row").forEach(row => {
+          if (row.classList.contains("hidden")) return;
+          if (isBlankInputRow(row)) softDeleteRow(row, "input");
+        });
+
+        document.querySelectorAll("#effBody .eff-row").forEach(row => {
+          if (row.classList.contains("hidden")) return;
+          if (isBlankEffRow(row)) softDeleteRow(row, "eff");
+        });
+
+        renumberInputs();
+        renumberEff();
+      });
+    }
+  });
+</script>
+
+{% endblock %}

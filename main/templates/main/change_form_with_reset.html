@@ -1,0 +1,22 @@
+{# templates/main/change_form_with_reset.html #}
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+  {{ block.super }}
+  {% if reset_password_url %}
+    <li>
+      <a class="button" href="{{ reset_password_url }}"
+         onclick="return confirm('Reset this user\\'s password and set a temporary one?');">
+        {% trans "Reset password" %}
+      </a>
+    </li>
+  {% endif %}
+  {% if password_change_url %}
+    <li>
+      <a class="button" href="{{ password_change_url }}">
+        {% trans "Set password…" %}
+      </a>
+    </li>
+  {% endif %}
+{% endblock %}

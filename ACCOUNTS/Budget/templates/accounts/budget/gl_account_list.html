@@ -1,0 +1,107 @@
+{% extends "main/index.html" %}
+{% block title %}Ledger Master{% endblock %}
+{% block maincontent %}
+<div class="min-h-[calc(100vh-6rem)] bg-slate-50">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Ledger Master</h1>
+        <p class="text-sm text-slate-600">Excel-driven (Unit / Department / Budget Head / GL)</p>
+      </div>
+      <div class="flex gap-2">
+        <a href="{% url 'accounts_budget:budget_heads_upload' %}"
+           class="px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-800 text-sm font-semibold hover:bg-slate-50">
+          Upload Excel
+        </a>
+        <a href="{% url 'accounts_budget:gl_account_create' %}"
+           class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
+          New Ledger
+        </a>
+      </div>
+    </div>
+
+    <form class="mt-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+      <input name="q" value="{{ q }}" placeholder="Search code / name / head..."
+             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40"/>
+
+      <input name="unit" value="{{ unit }}" placeholder="Unit"
+             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40"/>
+
+      <input name="department" value="{{ department }}" placeholder="Department"
+             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40"/>
+
+      <input name="budget_head" value="{{ budget_head }}" placeholder="Budget Head"
+             class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500/40"/>
+
+      <div class="md:col-span-4">
+        <button class="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-black">
+          Filter
+        </button>
+      </div>
+    </form>
+
+    <div class="mt-6 bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr>
+              <th class="text-left px-3 py-2">GL Code</th>
+              <th class="text-left px-3 py-2">GL Name</th>
+              <th class="text-left px-3 py-2">Unit</th>
+              <th class="text-left px-3 py-2">Department</th>
+              <th class="text-left px-3 py-2">Budget Head</th>
+              <th class="text-center px-3 py-2">Active</th>
+              <th class="text-right px-3 py-2">Action</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-200">
+            {% for r in rows %}
+            <tr>
+              <td class="px-3 py-2 font-mono">{{ r.no }}</td>
+              <td class="px-3 py-2">{{ r.name }}</td>
+              <td class="px-3 py-2">{{ r.unit }}</td>
+              <td class="px-3 py-2">{{ r.department }}</td>
+              <td class="px-3 py-2">{{ r.budget_head }}</td>
+
+              <td class="px-3 py-2 text-center">
+                {% if r.is_active %}
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-emerald-50 text-emerald-700">Yes</span>
+                {% else %}
+                  <span class="px-2 py-0.5 rounded-full text-xs bg-rose-50 text-rose-700">No</span>
+                {% endif %}
+              </td>
+
+              <td class="px-3 py-2 text-right">
+                <div class="inline-flex items-center gap-2">
+                  <a href="{% url 'accounts_budget:gl_account_edit' r.id %}"
+                     class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 text-sm font-semibold hover:bg-slate-50">
+                    Edit
+                  </a>
+
+                  <form method="post"
+                        action="{% url 'accounts_budget:gl_account_delete' r.id %}"
+                        class="inline"
+                        onsubmit="return confirm('Delete this ledger?');">
+                    {% csrf_token %}
+                    <button type="submit"
+                            class="px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 text-sm font-semibold hover:bg-rose-100">
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+
+            {% empty %}
+            <tr><td colspan="7" class="px-3 py-6 text-center text-slate-500">No ledgers found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

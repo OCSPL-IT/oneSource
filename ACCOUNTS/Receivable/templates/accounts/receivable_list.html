@@ -1,0 +1,457 @@
+{% extends "main/index.html" %}
+{% load static inr_format %}
+
+{% block title %}Receivables List{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Receivables</h1>
+            <p class="text-sm text-slate-500 mt-1">Manage customer invoices, track payments, and update statuses.</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2">
+            <a href="{% url 'accounts:receivable_new' %}"
+               class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 transition-all focus:ring-4 focus:ring-indigo-500/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>New Receivable</span>
+            </a>
+
+            <a href="{% url 'accounts:receivable_list_excel' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+               class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 transition-all focus:ring-4 focus:ring-emerald-500/30">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M7 10l5 5m0 0l5-5m-5 5V3"></path>
+                </svg>
+                <span>Export Excel</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <form method="get" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 items-end">
+
+            <!-- Customer Search -->
+            <div class="lg:col-span-2">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Customer</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    <input type="text" name="customer" value="{{ request.GET.customer }}"
+                           placeholder="Search customer name..."
+                           class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow">
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+                <select name="status"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                    <option value="">All</option>
+                    <option value="OPEN" {% if request.GET.status == 'OPEN' %}selected{% endif %}>Open</option>
+                    <option value="PARTIAL" {% if request.GET.status == 'PARTIAL' %}selected{% endif %}>Partial</option>
+                    <option value="CLOSED" {% if request.GET.status == 'CLOSED' %}selected{% endif %}>Closed</option>
+                </select>
+            </div>
+
+            <!-- Type -->
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Type</label>
+                <select name="type"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                    <option value="">All</option>
+                    {% if type_choices %}
+                        {% for v, lbl in type_choices %}
+                            <option value="{{ v }}" {% if request.GET.type == v %}selected{% endif %}>{{ lbl }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="CHEQUE" {% if request.GET.type == 'CHEQUE' %}selected{% endif %}>Cheque</option>
+                        <option value="NEFT" {% if request.GET.type == 'NEFT' %}selected{% endif %}>NEFT</option>
+                        <option value="RTGS" {% if request.GET.type == 'RTGS' %}selected{% endif %}>RTGS</option>
+                        <option value="CASH" {% if request.GET.type == 'CASH' %}selected{% endif %}>Cash</option>
+                    {% endif %}
+                </select>
+            </div>
+
+            <!-- Company Group -->
+            <div>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Group</label>
+                <select name="company_group"
+                        class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                    <option value="">All</option>
+                    <option value="OCSPL" {% if request.GET.company_group == 'OCSPL' %}selected{% endif %}>OCSPL</option>
+                    <option value="OCCHEM" {% if request.GET.company_group == 'OCCHEM' %}selected{% endif %}>OCCHEM</option>
+                </select>
+            </div>
+
+            <!-- Entry Date Range -->
+            <div class="sm:col-span-2 lg:col-span-2">
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Entry Date Range</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="date" name="from" value="{{ request.GET.from }}"
+                           class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                    <input type="date" name="to" value="{{ request.GET.to }}"
+                           class="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="sm:col-span-2 lg:col-span-2 flex gap-2">
+                <button type="submit"
+                        class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-all">
+                    Filter
+                </button>
+
+                {% if request.GET.customer or request.GET.status or request.GET.type or request.GET.company_group or request.GET.from or request.GET.to %}
+                    <a href="."
+                       class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors">
+                        Clear
+                    </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Table Section -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200">
+                <thead class="bg-slate-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer / Invoice</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Type / Group</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Entry Date</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice / Due</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Cheque Details</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Invoice Amount</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Received</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Receipt (ERP)</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Narration</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody class="bg-white divide-y divide-slate-200">
+                    {% for r in receivables %}
+                    <tr class="hover:bg-slate-50 transition-colors group">
+
+                        <!-- Customer & Invoice -->
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-medium text-slate-900">{{ r.customer_name }}</div>
+                            <div class="flex flex-wrap items-center gap-2 mt-1">
+                                <span class="text-xs font-mono text-slate-500 bg-slate-100 inline-block px-1.5 py-0.5 rounded">
+                                    {{ r.invoice_number }}
+                                </span>
+                                {% if r.customer_code %}
+                                    <span class="text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 px-1.5 py-0.5 rounded">
+                                        {{ r.customer_code }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Type / Group -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex flex-col gap-1">
+                                {% if r.type %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100 w-fit">
+                                        {{ r.type }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-slate-300 text-sm">-</span>
+                                {% endif %}
+
+                                {% if r.company_group %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-100 w-fit">
+                                        {{ r.company_group }}
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-50 text-slate-600 border border-slate-200 w-fit">
+                                        ALL
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Entry Date -->
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-center">
+                            {% if r.entry_date %}
+                                <span class="text-slate-700 font-medium" title="Entry Date">
+                                    {{ r.entry_date|date:"d M, Y" }}
+                                </span>
+                            {% else %}
+                                <span class="text-slate-300">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Invoice / Due -->
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-center">
+                            <div class="flex flex-col gap-1">
+                                {% if r.invoice_date %}
+                                    <span class="text-slate-700 font-medium" title="Invoice Date">
+                                        {{ r.invoice_date|date:"d M, Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-slate-300">-</span>
+                                {% endif %}
+
+                                {% if r.due_date %}
+                                    <span class="text-slate-400" title="Due Date">
+                                        Due: {{ r.due_date|date:"d M, Y" }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-slate-300">-</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Cheque Details -->
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                            {% if r.cheque_no %}
+                            <div class="flex flex-col">
+                                <span class="font-mono text-slate-800">#{{ r.cheque_no }}</span>
+                                {% if r.cheque_date %}
+                                <span class="text-xs text-slate-400">{{ r.cheque_date|date:"d M, Y" }}</span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="text-slate-300">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Invoice Amount -->
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-700 text-right font-mono tabular-nums">
+                            {{ r.invoice_amount|inr }}
+                        </td>
+
+                        <!-- Received (APPLICATION only) -->
+                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <div class="text-sm text-emerald-600 font-medium font-mono tabular-nums">
+                                {{ r.display_received_amount|default:r.received_amount|inr }}
+                            </div>
+
+                            {# SAFE: uses non-underscore attrs (set from view Option A) #}
+                            {% if r.is_received_split and r.received_amount_original and r.received_amount_original != r.received_amount %}
+                                <div class="mt-1 text-[11px] text-slate-500 font-mono">
+                                    Split from: {{ r.received_amount_original|inr }}
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Receipt (ERP) -->
+                        <td class="px-6 py-4 whitespace-nowrap">
+                        {% if r.erp_receipt_no or r.erp_last_receipt_date or r.erp_instrument_no or r.erp_paid_amount %}
+
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="min-w-0">
+                                    {% if r.erp_paid_amount and r.erp_paid_amount != 0 %}
+                                        <div class="text-sm font-semibold text-emerald-700 font-mono tabular-nums">
+                                            {{ r.erp_paid_amount|inr }}
+                                        </div>
+                                    {% else %}
+                                        <div class="text-sm font-semibold text-slate-400 font-mono tabular-nums">-</div>
+                                    {% endif %}
+
+                                    <div class="mt-1 text-[11px] text-slate-600 font-mono">
+                                        {% if r.erp_receipt_no %}
+                                            <span class="font-semibold">#{{ r.erp_receipt_no }}</span>
+                                        {% else %}
+                                            <span class="text-slate-400">Receipt</span>
+                                        {% endif %}
+
+                                        {% if r.erp_last_receipt_date %}
+                                            <span class="text-slate-300 mx-1">|</span>
+                                            <span class="text-slate-500">{{ r.erp_last_receipt_date }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if r.erp_instrument_no %}
+                                    <div class="mt-1 text-[11px] text-slate-500 font-mono">
+                                        Inst: {{ r.erp_instrument_no }}
+                                    </div>
+                                    {% endif %}
+
+                                    {# Optional: show ERP "Against Invoice/Doc" if your view sets it #}
+                                    {% if r.erp_against_invoice %}
+                                    <div class="mt-1 text-[11px] text-slate-500 font-mono">
+                                        Against: <span class="font-semibold">{{ r.erp_against_invoice }}</span>
+                                    </div>
+                                    {% elif r.erp_against_doc %}
+                                    <div class="mt-1 text-[11px] text-slate-500 font-mono">
+                                        Against: <span class="font-semibold">{{ r.erp_against_doc }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="flex flex-col items-end gap-1 shrink-0">
+                                    {# Optional: match-level badge if your view sets r.erp_match_level #}
+                                    {% if r.erp_match_level %}
+                                        {% if r.erp_match_level == "INV_INST" %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                                Invoice+Instrument
+                                            </span>
+                                        {% elif r.erp_match_level == "PARTY_INST" %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                                                Party+Instrument
+                                            </span>
+                                        {% elif r.erp_match_level == "INST_ONLY" %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-100">
+                                                Instrument Only
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-50 text-slate-700 border border-slate-200">
+                                                {{ r.erp_match_level }}
+                                            </span>
+                                        {% endif %}
+                                    {% endif %}
+
+                                    {# You already set this flag in Python — show it clearly #}
+                                    {% if r.erp_paid_is_fallback %}
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-50 text-slate-700 border border-slate-200"
+                                              title="ERP amount was 0 but receipt meta existed; showing App received as fallback.">
+                                            Fallback
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                        {% else %}
+                            <span class="text-sm text-slate-300">-</span>
+                        {% endif %}
+                        </td>
+
+                        <!-- Balance -->
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-900 font-bold text-right font-mono tabular-nums">
+                            {{ r.display_balance_amount|default:r.balance_amount|inr }}
+                        </td>
+
+                        <!-- Narration -->
+                        <td class="px-6 py-4 text-sm text-slate-600">
+                            {% if r.narration %}
+                                <div class="max-w-[22rem] truncate" title="{{ r.narration }}">{{ r.narration }}</div>
+                            {% elif r.remarks %}
+                                <div class="max-w-[22rem] truncate" title="{{ r.remarks }}">{{ r.remarks }}</div>
+                            {% else %}
+                                <span class="text-slate-300">-</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Status -->
+                        <td class="px-6 py-4 whitespace-nowrap text-center">
+                            {% if r.status == 'CLOSED' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                                Closed
+                            </span>
+                            {% elif r.status == 'PARTIAL' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                                Partial
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                Open
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div class="inline-flex items-center gap-2 justify-end">
+                                {% url 'accounts:receivable_edit' r.pk as edit_url %}
+                                {% url 'accounts:receivable_delete' r.pk as delete_url %}
+
+                                {% if edit_url %}
+                                <a href="{{ edit_url }}"
+                                   class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i> Edit
+                                </a>
+                                {% else %}
+                                <span class="text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg inline-flex items-center gap-1 cursor-not-allowed">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i> Edit
+                                </span>
+                                {% endif %}
+
+                                {% if delete_url %}
+                                <a href="{{ delete_url }}"
+                                   class="text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1"
+                                   onclick="return confirm('Delete this receivable entry? This action cannot be undone.');">
+                                    <i class="fa-solid fa-trash text-xs"></i> Delete
+                                </a>
+                                {% else %}
+                                <span class="text-slate-400 bg-slate-50 px-3 py-1.5 rounded-lg inline-flex items-center gap-1 cursor-not-allowed">
+                                    <i class="fa-solid fa-trash text-xs"></i> Delete
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                    </tr>
+
+                    {% empty %}
+                    <tr>
+                        <td colspan="12" class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center justify-center text-slate-500">
+                                <svg class="w-10 h-10 text-slate-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01M9 12h.01"></path>
+                                </svg>
+                                <p class="text-base font-medium">No receivables found</p>
+                                <p class="text-sm text-slate-400 mt-1">Try adjusting your filters or create a new entry.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Footer -->
+        {% if is_paginated %}
+        <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
+            <div class="text-sm text-slate-500">
+                Showing page <span class="font-medium text-slate-900">{{ page_obj.number }}</span> of
+                <span class="font-medium text-slate-900">{{ page_obj.paginator.num_pages }}</span>
+            </div>
+
+            <div class="flex gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?customer={{ request.GET.customer|urlencode }}&status={{ request.GET.status|urlencode }}&type={{ request.GET.type|urlencode }}&company_group={{ request.GET.company_group|urlencode }}&from={{ request.GET.from|urlencode }}&to={{ request.GET.to|urlencode }}&page={{ page_obj.previous_page_number }}"
+                   class="inline-flex items-center px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+                    Previous
+                </a>
+                {% else %}
+                <span class="inline-flex items-center px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 bg-slate-50 cursor-not-allowed">
+                    Previous
+                </span>
+                {% endif %}
+
+                {% if page_obj.has_next %}
+                <a href="?customer={{ request.GET.customer|urlencode }}&status={{ request.GET.status|urlencode }}&type={{ request.GET.type|urlencode }}&company_group={{ request.GET.company_group|urlencode }}&from={{ request.GET.from|urlencode }}&to={{ request.GET.to|urlencode }}&page={{ page_obj.next_page_number }}"
+                   class="inline-flex items-center px-3 py-1.5 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+                    Next
+                </a>
+                {% else %}
+                <span class="inline-flex items-center px-3 py-1.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-400 bg-slate-50 cursor-not-allowed">
+                    Next
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

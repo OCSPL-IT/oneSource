@@ -1,0 +1,167 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<link rel="stylesheet" href="{% static 'etp/css/etp.css' %}">
+
+
+<div class="max-w-4xl mx-auto mt-3 bg-white p-4 rounded-lg shadow-md">
+    <!-- Messages Section -->
+    {% if messages %}
+    <div class="mt-1 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+            <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                        {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+                <span class="flex-1">{{ message }}</span>
+                <!-- Close Button -->
+                <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none" 
+                        onclick="this.parentElement.remove()">
+                    ✖
+                </button>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    <div class="container mx-auto px-6 ">
+        <div class="flex items-center justify-between mb-4">
+            <!-- Back to Main Page Button -->
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                Back to Main Page
+            </a>
+            <!-- Heading -->
+            <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Add Effluent Record</h2>
+            <!-- Back to Create Button -->
+            <a href="{% url 'view_effluent_records' %}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                View Records
+            </a>
+        </div>
+    </div>
+    <hr>
+
+    <form method="POST" novalidate class="mt-4">
+        {% csrf_token %}
+
+        <!-- render the hidden voucher_no input -->
+        {{ record_form.voucher_no }}
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div>
+                <label class="block text-sm font-medium">Record Date</label>
+                {{ record_form.record_date }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Product Name</label>
+                {{ record_form.product_name }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Stage Name</label>
+                {{ record_form.stage_name }}
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Batch No</label>
+                {{ record_form.batch_no }}
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium">Block</label>
+                {{ record_form.block }}
+            </div>
+        </div>
+
+        <h3 class="text-lg font-medium mb-2">Effluent Quantities</h3>
+
+        {{ formset.management_form }}
+        <div id="form-container" class="space-y-4">
+            {% for form in formset %}
+            <div class="form-row relative grid grid-cols-5 gap-4 border p-4 rounded-lg bg-gray-50">
+                <div>
+                    <label class="block text-sm font-medium">Category</label>
+                    {{ form.category }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Nature</label>
+                    {{ form.effluent_nature }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Planned Qty</label>
+                    {{ form.plan_quantity }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Actual Qty</label>
+                    {{ form.actual_quantity }}
+                </div>
+                <div>
+                    <label class="block text-sm font-medium">Qty (kg)</label>
+                    {{ form.quantity_kg }}
+                </div>
+            
+                {{ form.id }}
+                <input type="hidden" name="{{ form.prefix }}-density" value="{{ form.initial.density|default:0 }}" />
+            
+                <!-- ✅ Remove button -->
+                <button type="button"
+                    class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center remove-row"
+                    title="Remove Row">
+                    &minus;
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+        <!-- 🔁 Hidden empty form template for dynamic rows -->
+        <div id="empty-form" class="hidden">
+            <div class="form-row relative grid grid-cols-5 gap-4 border p-4 rounded-lg bg-gray-50">
+            <div>
+                <label class="block text-sm font-medium">Category</label>
+                <select class="w-full p-2 border rounded category-select" name="effluentqty_set-__prefix__-category">
+                <option value="">–– Select Category ––</option>
+                <option value="Process">Process</option>
+                <option value="Unprocess">Unprocess</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Nature</label>
+                <select class="w-full p-2 border rounded nature-select" name="effluentqty_set-__prefix__-effluent_nature">
+                <option value="">–– Select Nature ––</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Planned Qty</label>
+                <input type="number" step="0.01" class="w-full p-2 border rounded" name="effluentqty_set-__prefix__-plan_quantity" value="0" readonly>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Actual Qty</label>
+                <input type="number" step="0.01" class="w-full p-2 border rounded actual-input" name="effluentqty_set-__prefix__-actual_quantity" value="0">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Qty (kg)</label>
+                <input type="number" step="0.01" class="w-full p-2 border rounded bg-gray-50" name="effluentqty_set-__prefix__-quantity_kg" value="0" readonly>
+            </div>
+            <input type="hidden" name="effluentqty_set-__prefix__-density" value="1" />
+            <input type="hidden" name="effluentqty_set-__prefix__-id" />
+            <button type="button"
+                    class="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center remove-row"
+                    title="Remove Row">&minus;</button>
+            </div>
+        </div>
+        <!-- 🔘 Add Row Button -->
+        <div class="mt-4">
+            <button type="button" id="add-row"
+                    class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+                    <i class="fa-solid fa-square-plus"></i>
+            </button>
+        </div>
+        <button type="submit"
+                class="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Save Record
+        </button>
+    </form>
+</div>
+
+<!-- ✅ 2. jQuery & Select2 Assets -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+
+<!-- ✅ 3. Your JS to attach logic to Select2 -->
+<script src="{% static 'etp/js/etp.js' %}"></script>
+
+{% endblock maincontent %}

@@ -1,0 +1,953 @@
+{# Topic: HR Attendance (Employee vs Contract tabs) — Solapur #}
+{% load static %}
+{% load indnum %}
+
+<style>
+  .hr-card { border-radius:.75rem; border:1px solid #e2e8f0; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04); overflow:hidden; }
+  .hr-card .head { padding:.75rem 1.25rem; border-bottom:1px solid #e2e8f0; }
+  .hr-kpi { display:grid; grid-template-columns:1fr; gap:.75rem; padding:1rem 1.25rem; }
+  @media (min-width:640px){ .hr-kpi{ grid-template-columns:repeat(6,1fr); } } /* was 5, now 6 to fit Total */
+
+  /* KPI cards become clickable */
+  .kpi-tile{
+    border-radius:.75rem; border:1px solid #e2e8f0; background:#fff;
+    padding:.75rem; cursor:pointer; user-select:none;
+    transition:box-shadow .15s, border-color .15s, background-color .15s;
+  }
+  .kpi-tile:hover{ box-shadow:0 2px 5px rgba(0,0,0,.06); }
+  .kpi-tile[data-active="true"]{ outline:2px solid #38bdf8; outline-offset:2px; background:#f0f9ff; }
+
+  .status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.125rem .5rem; border-radius:.5rem; background:#eef2ff; color:#3730a3; font-weight:600; font-size:.75rem; }
+  .row-click { cursor:pointer; }
+  .row-click:hover { background:#f8fafc; }
+  .active-row { background:#f1f5f9; }
+
+  /* compact summary tables */
+  .hr-mini .hr-table-container { max-height:260px; overflow:auto; }
+  .hr-mini table { font-size:12px; }
+  .hr-mini th, .hr-mini td { padding-top:.35rem; padding-bottom:.35rem; }
+  .hr-table-container { max-height:380px; overflow:auto; }
+  #hrDetailCard table th, #hrDetailCard table td { white-space:nowrap; }
+
+  /* filter chips */
+  .chip { display:inline-flex; align-items:center; gap:.4rem; padding:.25rem .55rem; border:1px solid #e2e8f0; background:#fff; border-radius:999px; font-size:.75rem; font-weight:600; color:#334155; }
+  .chip button { font-size:14px; line-height:1; }
+
+  .btn { display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .7rem; border-radius:.5rem; border:1px solid #e2e8f0; background:#fff; font-size:.8rem; font-weight:600; color:#334155; }
+  .btn:hover { background:#f8fafc; }
+
+  /* tabs */
+  .tabs { display:flex; gap:.5rem; padding:.5rem 1.25rem .75rem; }
+  .tab-btn { padding:.4rem .8rem; border:1px solid #e2e8f0; border-radius:.5rem; background:#fff; font-weight:600; font-size:.85rem; color:#334155; }
+  .tab-btn[aria-selected="true"] { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+  .hidden { display:none; }
+
+  /* date toolbar */
+  .datebar { display:flex; gap:.5rem; align-items:center; }
+  .datebar input[type="date"]{ padding:.35rem .5rem; border:1px solid #e2e8f0; border-radius:.5rem; font-size:.85rem; color:#334155; }
+
+  /* KPI color wrappers */
+  .kpi-present{ border-color:#a7f3d0; background:#ecfdf5; }
+  .kpi-absent { border-color:#fecaca; background:#fff1f2; }
+  .kpi-late   { border-color:#fde68a; background:#fffbeb; }
+  .kpi-early  { border-color:#bae6fd; background:#f0f9ff; }
+  .kpi-leave  { border-color:#ddd6fe; background:#faf5ff; } /* new Leave palette */
+
+  /* NEW: Total KPI (non-clickable, fixed) */
+  .kpi-total{
+    border-color:#e2e8f0; background:#f8fafc;
+    cursor:default; pointer-events:none;
+  }
+
+  /* Contract section tweaks */
+  .section-title { font-size: .9rem; font-weight: 600; color:#0f172a; }
+</style>
+
+<div id="hrRoot"
+     data-branch="Solapur"
+     data-contract-count="{{ hr_dash.contract_count|default:0 }}"
+     data-att-date="{{ att_date_iso|default:'' }}"
+     data-kpi-late="{{ hr_dash.kpis.late|default:0 }}"
+     data-kpi-early="{{ hr_dash.kpis.early_go|default:0 }}">
+  <!-- TABS + KPIs -->
+  <div class="hr-card">
+    <div class="head bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-900">
+          Attendance (<span id="attDateLabel">{{ att_date|date:"d-m-y" }}</span>)
+        </h3>
+        <p class="text-xs text-slate-500">Click any summary row or KPI to cross-filter. Use chips or “Clear Filters”.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Date picker toolbar -->
+        <div class="datebar">
+          <input id="attDateInput" type="date" value="{{ att_date_iso|default:'' }}" />
+          <button id="btnAttToday" class="btn" type="button" title="Today">Today</button>
+          <button id="btnAttYday"  class="btn" type="button" title="Yesterday">Yesterday</button>
+          <button id="btnAttApply" class="btn" type="button" title="Apply date">Go</button>
+        </div>
+        <div id="filterChips" class="flex items-center gap-2"></div>
+        <button id="clearAllTopBtn" type="button" class="btn" title="Clear filters (Esc)">Clear Filters</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button id="tabEmp" class="tab-btn" aria-selected="true">Employee Attendance</button>
+      <button id="tabContract" class="tab-btn" aria-selected="false">Contract Attendance</button>
+    </div>
+
+    <!-- EMPLOYEE KPIs (CLICKABLE) -->
+    <div id="kpiEmp" class="hr-kpi">
+      <!-- NEW: Total (fixed, non-clickable) -->
+      <div id="kpiTotalCard" class="kpi-tile kpi-total" title="Total employees (all)">
+        <div class="text-[11px] uppercase tracking-wide text-slate-700">Total</div>
+        <div id="kpiTotal" class="mt-1 text-2xl font-bold text-slate-900 font-mono">0</div>
+      </div>
+
+      <div id="kpiPresentCard" class="kpi-tile kpi-present" data-kpi="present" data-active="false" title="Filter Present">
+        <div class="text-[11px] uppercase tracking-wide text-emerald-700">Present</div>
+        <div id="kpiPresent" class="mt-1 text-2xl font-bold text-emerald-900 font-mono">0</div>
+      </div>
+      <div id="kpiAbsentCard" class="kpi-tile kpi-absent" data-active="false" title="Filter Absent">
+        <div class="text-[11px] uppercase tracking-wide text-rose-700">Absent</div>
+        <div id="kpiAbsent" class="mt-1 text-2xl font-bold text-rose-900 font-mono">0</div>
+      </div>
+
+      <!-- NEW: LEAVE KPI (APL | APL) -->
+      <div id="kpiLeaveCard" class="kpi-tile kpi-leave" data-kpi="leave" data-active="false" title="Filter Leave (APL)">
+        <div class="text-[11px] uppercase tracking-wide text-violet-700">Leave</div>
+        <div id="kpiLeave" class="mt-1 text-2xl font-bold text-violet-900 font-mono">0</div>
+      </div>
+
+      <div id="kpiLateCard" class="kpi-tile kpi-late" data-kpi="late" data-active="false" title="Filter Late">
+        <div class="text-[11px] uppercase tracking-wide text-amber-700">Late</div>
+        <div id="kpiLate" class="mt-1 text-2xl font-bold text-amber-900 font-mono">0</div>
+      </div>
+      <div id="kpiEarlyCard" class="kpi-tile kpi-early" data-kpi="early" data-active="false" title="Filter Early Go">
+        <div class="text-[11px] uppercase tracking-wide text-sky-700">Early Go</div>
+        <div id="kpiEarly" class="mt-1 text-2xl font-bold text-sky-900 font-mono">0</div>
+      </div>
+    </div>
+
+    <!-- CONTRACT KPI (tab content) -->
+    <div id="kpiContractWrap" class="hr-kpi hidden">
+      <div class="kpi-tile kpi-early">
+        <div class="text-[11px] uppercase tracking-wide text-sky-700">Contract Labour</div>
+        <div id="kpiContract" class="mt-1 text-2xl font-bold text-sky-900 font-mono">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPLOYEE CONTENT (summaries + details) -->
+  <div id="empContent">
+    {# SUMMARY TABLES (all cross-filtered) #}
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-4">
+
+      <!-- STATUS -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-900">Status ({{ att_date|date:"d-m-y" }})</h3>
+          <button id="clearStatusBtn" class="btn" type="button" title="Clear Status filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="hrStatusTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr>
+                <th class="px-4 py-2 text-left">Status</th>
+                <th class="px-3 py-2 text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr>
+                <td class="px-4 py-2 text-right font-semibold">Total</td>
+                <td class="px-3 py-2 text-right font-semibold font-mono" id="statusTotal">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- DEPARTMENT (left) -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-indigo-50 to-indigo-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-900">Department ({{ att_date|date:"d-m-y" }})</h3>
+          <button id="clearDeptBtn" class="btn" type="button" title="Clear Department filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="hrDeptTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr>
+                <th class="px-4 py-2 text-left">Department</th>
+                <th class="px-3 py-2 text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr>
+                <td class="px-4 py-2 text-right font-semibold">Total</td>
+                <td class="px-3 py-2 text-right font-semibold font-mono" id="deptTotal">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- SUB-DEPARTMENT (right) -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-amber-50 to-amber-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-900">Sub-Department ({{ att_date|date:"d-m-y" }})</h3>
+          <button id="clearSubdeptBtn" class="btn" type="button" title="Clear Sub-Dept filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="hrSubdeptTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr>
+                <th class="px-4 py-2 text-left">Sub-Department</th>
+                <th class="px-3 py-2 text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr>
+                <td class="px-4 py-2 text-right font-semibold">Total</td>
+                <td class="px-3 py-2 text-right font-semibold font-mono" id="subdeptTotal">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- DESIGNATION -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-rose-50 to-rose-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-900">Designation ({{ att_date|date:"d-m-y" }})</h3>
+          <button id="clearDesigBtn" class="btn" type="button" title="Clear Designation filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="hrDesigTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr>
+                <th class="px-4 py-2 text-left">Designation</th>
+                <th class="px-3 py-2 text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr>
+                <td class="px-4 py-2 text-right font-semibold">Total</td>
+                <td class="px-3 py-2 text-right font-semibold font-mono" id="desigTotal">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- SHIFT CODE -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-sky-50 to-sky-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-900">Shift Code ({{ att_date|date:"d-m-y" }})</h3>
+          <button id="clearShiftBtn" class="btn" type="button" title="Clear Shift Code filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="hrShiftTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr>
+                <th class="px-4 py-2 text-left">Shift Code</th>
+                <th class="px-3 py-2 text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr>
+                <td class="px-4 py-2 text-right font-semibold">Total</td>
+                <td class="px-3 py-2 text-right font-semibold font-mono" id="shiftTotal">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- GRADE -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-emerald-50 to-emerald-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-900">Grade ({{ att_date|date:"d-m-y" }})</h3>
+          <button id="clearGradeBtn" class="btn" type="button" title="Clear Grade filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="hrGradeTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr>
+                <th class="px-4 py-2 text-left">Grade</th>
+                <th class="px-3 py-2 text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr>
+                <td class="px-4 py-2 text-right font-semibold">Total</td>
+                <td class="px-3 py-2 text-right font-semibold font-mono" id="gradeTotal">0</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- DETAILS TABLE -->
+    <div class="hr-card mt-6" id="hrDetailCard">
+      <div class="head bg-gradient-to-r from-sky-50 to-sky-100 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-900">
+            Details: <span id="hrDetailTitle" class="text-slate-600">All (no filter)</span>
+          </h3>
+          <p class="text-xs text-slate-500">Showing <span id="hrDetailCount">0</span> employees</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="clearFilterBtn" type="button" class="btn" title="Clear filters (Esc)">Clear Filters</button>
+          <button id="downloadCsvBtn" type="button"
+                  class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            Download CSV
+          </button>
+        </div>
+      </div>
+      <div class="hr-table-container">
+        <table class="w-full text-sm" id="hrDetailTable">
+          <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+            <tr>
+              <th class="px-3 py-2 text-left">Emp Code</th>
+              <th class="px-3 py-2 text-left">Name</th>
+              <th class="px-3 py-2 text-left">Department</th>
+              <th class="px-3 py-2 text-left">Sub-Department</th>
+              <th class="px-3 py-2 text-left">Shift</th>
+              <th class="px-3 py-2 text-left">Branch</th>
+              <th class="px-3 py-2 text-left">Status</th>
+              <th class="px-3 py-2 text-left">Late/Early Go</th>
+              <th class="px-3 py-2 text-left">Punch In/Out</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200/70" id="hrDetailBody">
+            <tr><td colspan="9" class="p-4 text-center text-slate-500">No data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTRACT CONTENT (matrices + details) -->
+  <div id="contractContent" class="hidden">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+      <!-- DEPARTMENT -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-indigo-50 to-indigo-100 flex items-center justify-between">
+          <h3 class="section-title">Contract – Department</h3>
+          <button id="cClearDeptBtn" class="btn" type="button" title="Clear Department filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="cDeptTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr><th class="px-4 py-2 text-left">Department</th><th class="px-3 py-2 text-right">Count</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr><td class="px-4 py-2 text-right font-semibold">Total</td><td class="px-3 py-2 text-right font-semibold font-mono" id="cDeptTotal">0</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- LOCATION -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-amber-50 to-amber-100 flex items-center justify-between">
+          <h3 class="section-title">Contract – Location</h3>
+          <button id="cClearLocBtn" class="btn" type="button" title="Clear Location filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="cLocTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr><th class="px-4 py-2 text-left">Location</th><th class="px-3 py-2 text-right">Count</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr><td class="px-4 py-2 text-right font-semibold">Total</td><td class="px-3 py-2 text-right font-semibold font-mono" id="cLocTotal">0</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- SHIFT -->
+      <div class="hr-card hr-mini">
+        <div class="head bg-gradient-to-r from-sky-50 to-sky-100 flex items-center justify-between">
+          <h3 class="section-title">Contract – Shift</h3>
+          <button id="cClearShiftBtn" class="btn" type="button" title="Clear Shift filter">Clear</button>
+        </div>
+        <div class="hr-table-container">
+          <table class="w-full text-sm" id="cShiftTable">
+            <thead class="text-[11px] uppercase tracking-wider text-slate-500 bg-slate-50">
+              <tr><th class="px-4 py-2 text-left">Shift</th><th class="px-3 py-2 text-right">Count</th></tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200/70"></tbody>
+            <tfoot class="bg-slate-50">
+              <tr><td class="px-4 py-2 text-right font-semibold">Total</td><td class="px-3 py-2 text-right font-semibold font-mono" id="cShiftTotal">0</td></tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTRACT DETAILS -->
+    <div class="hr-card mt-6">
+      <div class="head bg-gradient-to-r from-emerald-50 to-emerald-100 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-900">Contract Details</h3>
+          <p class="text-xs text-slate-500">Showing <span id="cDetailCount">0</span> records</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="cClearAllBtn" type="button" class="btn">Clear Filters</button>
+          <button id="cCsvBtn" type="button"
+                  class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+            Download CSV
+          </button>
+        </div>
+      </div>
+      <div class="hr-table-container">
+        <table class="w-full text-sm" id="cDetailTable">
+          <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+            <tr>
+              <th class="px-3 py-2 text-left">Punch Date</th>
+              <th class="px-3 py-2 text-left">Department</th>
+              <th class="px-3 py-2 text-left">Location</th>
+              <th class="px-3 py-2 text-left">Shift</th>
+              <th class="px-3 py-2 text-left">Emp ID</th>
+              <th class="px-3 py-2 text-left">Contractor</th>
+              <th class="px-3 py-2 text-left">Punch In</th>
+              <th class="px-3 py-2 text-left">Punch Out</th>
+              <th class="px-3 py-2 text-left">Reassigned?</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200/70" id="cDetailBody">
+            <tr><td colspan="9" class="p-4 text-center text-slate-500">No data.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Raw daily rows for client-side drilldown -->
+<script id="hrDailyData" type="application/json">{{ hr_daily_rows_json|default:"[]"|safe }}</script>
+<!-- Contract raw rows -->
+<script id="contractData" type="application/json">{{ hr_dash.contract_assignment_json|default:"[]"|safe }}</script>
+
+<script>
+/* HR dashboard with tabs: Employee (KPIs + summaries + details) and Contract (Dept/Loc/Shift + details)
+   Attendance date selector wired to ?att_date=YYYY-MM-DD */
+(function(){
+  let booted=false;
+  function boot(){
+    if (booted) return; booted=true;
+
+    const root   = document.getElementById('hrRoot');
+    const BRANCH = (root?.dataset.branch || 'Solapur').toUpperCase();
+    const CONTRACT = Number(root?.dataset.contractCount || 0);
+    const ATT_DATE_ISO = root?.dataset.attDate || '';
+
+    // Backend-provided Late/Early KPIs (counts only)
+    const KPI_LATE0  = Number(root?.dataset.kpiLate  || 0);
+    const KPI_EARLY0 = Number(root?.dataset.kpiEarly || 0);
+
+    // Data
+    const rawEmp = document.getElementById('hrDailyData')?.textContent || '[]';
+    const rawCon = document.getElementById('contractData')?.textContent || '[]';
+    let DATA = [], CONDATA = [];
+    try { DATA = JSON.parse(rawEmp)||[] } catch(e){ DATA = [] }
+    try { CONDATA = JSON.parse(rawCon)||[] } catch(e){ CONDATA = [] }
+
+    // Tabs
+    const tabEmp = document.getElementById('tabEmp');
+    const tabContract = document.getElementById('tabContract');
+    const empContent = document.getElementById('empContent');
+    const cContent   = document.getElementById('contractContent');
+    const kpiEmpWrap = document.getElementById('kpiEmp');
+    const kpiContractWrap = document.getElementById('kpiContractWrap');
+
+    // KPI els + cards
+    const kpiTotal     = document.getElementById('kpiTotal');
+    const kpiPresent   = document.getElementById('kpiPresent');
+    const kpiAbsent    = document.getElementById('kpiAbsent');
+    const kpiLeave     = document.getElementById('kpiLeave');
+    const kpiLate      = document.getElementById('kpiLate');
+    const kpiEarly     = document.getElementById('kpiEarly');
+    const kpiContract  = document.getElementById('kpiContract');
+
+    const kpiPresentCard = document.getElementById('kpiPresentCard');
+    const kpiAbsentCard  = document.getElementById('kpiAbsentCard');
+    const kpiLeaveCard   = document.getElementById('kpiLeaveCard');
+    const kpiLateCard    = document.getElementById('kpiLateCard');
+    const kpiEarlyCard   = document.getElementById('kpiEarlyCard');
+
+    // Date controls
+    const attInput   = document.getElementById('attDateInput');
+    const attGoBtn   = document.getElementById('btnAttApply');
+    const attToday   = document.getElementById('btnAttToday');
+    const attYday    = document.getElementById('btnAttYday');
+
+    // Filters / chips
+    const chipsWrap    = document.getElementById('filterChips');
+
+    // Summary table elements (EMP)
+    const statusTbody   = document.querySelector('#hrStatusTable tbody');
+    const statusTotalEl = document.getElementById('statusTotal');
+    const subdeptTbody  = document.querySelector('#hrSubdeptTable tbody');
+    const subdeptTotalEl= document.getElementById('subdeptTotal');
+    const deptTbody     = document.querySelector('#hrDeptTable tbody');
+    const deptTotalEl   = document.getElementById('deptTotal');
+    const desigTbody    = document.querySelector('#hrDesigTable tbody');
+    const desigTotalEl  = document.getElementById('desigTotal');
+    const shiftTbody    = document.querySelector('#hrShiftTable tbody');
+    const shiftTotalEl  = document.getElementById('shiftTotal');
+    const gradeTbody    = document.querySelector('#hrGradeTable tbody');
+    const gradeTotalEl  = document.getElementById('gradeTotal');
+
+    // Details (EMP)
+    const detailBody  = document.getElementById('hrDetailBody');
+    const detailTitle = document.getElementById('hrDetailTitle');
+    const detailCount = document.getElementById('hrDetailCount');
+
+    const clearBtn        = document.getElementById('clearFilterBtn');
+    const clearAllTopBtn  = document.getElementById('clearAllTopBtn');
+    const clearStatusBtn  = document.getElementById('clearStatusBtn');
+    const clearSubdeptBtn = document.getElementById('clearSubdeptBtn');
+    const clearDeptBtn    = document.getElementById('clearDeptBtn');
+    const clearDesigBtn   = document.getElementById('clearDesigBtn');
+    const clearShiftBtn   = document.getElementById('clearShiftBtn');
+    const clearGradeBtn   = document.getElementById('clearGradeBtn');
+    const dlBtn           = document.getElementById('downloadCsvBtn');
+
+    // CONTRACT elements
+    const cDeptTbody  = document.querySelector('#cDeptTable tbody');
+    const cDeptTotal  = document.getElementById('cDeptTotal');
+    const cLocTbody   = document.querySelector('#cLocTable tbody');
+    const cLocTotal   = document.getElementById('cLocTotal');
+    const cShiftTbody = document.querySelector('#cShiftTable tbody');
+    const cShiftTotal = document.getElementById('cShiftTotal');
+    const cDetailBody = document.getElementById('cDetailBody');
+    const cDetailCount= document.getElementById('cDetailCount');
+    const cClearDeptBtn  = document.getElementById('cClearDeptBtn');
+    const cClearLocBtn   = document.getElementById('cClearLocBtn');
+    const cClearShiftBtn = document.getElementById('cClearShiftBtn');
+    const cClearAllBtn   = document.getElementById('cClearAllBtn');
+    const cCsvBtn        = document.getElementById('cCsvBtn');
+
+    // State
+    const sel = { status:null, subdept:null, dept:null, desig:null, shift:null, grade:null, loe:null }; // employee
+    const csel = { dept:null, loc:null, shift:null }; // contract
+    let currentTab = 'emp'; // 'emp' | 'contract'
+
+    // Utilities
+    function canonStatus(s){
+      if (!s) return '';
+      let t = String(s).normalize('NFKC').toUpperCase();
+      t = t.replace(/[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, ' ');
+      t = t.replace(/[|｜¦│‖∣]/g, '|');
+      t = t.replace(/\s+/g, '');
+      const tokens = t.split('|').filter(Boolean).map(x => x.replace(/[^A-Z]/g,''));
+      return tokens.join('|');
+    }
+    const NORM = (v, fallback='—') => ((v ?? fallback).toString().trim() || fallback);
+    function getLateEarly(row){ return (row.late_early_go ?? row.Late_or_early ?? row['Late_or_early'] ?? '').toString(); }
+
+    /* ================= EMPLOYEE RENDERING ================= */
+    function baseFiltered(){ return DATA.filter(r => NORM(r.branch, '').toUpperCase() === BRANCH); }
+    function passesAll(r){
+      if (sel.status  && canonStatus(r.status_in_out) !== sel.status) return false;
+      if (sel.subdept && NORM(r.sub_department) !== sel.subdept) return false;
+      if (sel.dept    && NORM(r.department)     !== sel.dept) return false;
+      if (sel.desig   && NORM(r.designation)    !== sel.desig) return false;
+      if (sel.shift   && NORM(r.shift_code)     !== sel.shift) return false;
+      if (sel.grade   && NORM(r.grade)          !== sel.grade) return false;
+      if (sel.loe){
+        const loe = getLateEarly(r).toLowerCase().trim();
+        if (sel.loe === 'late'  && !loe.startsWith('late'))  return false;
+        if (sel.loe === 'early' && !loe.startsWith('early')) return false;
+      }
+      return true;
+    }
+    function detailFiltered(){ return baseFiltered().filter(passesAll); }
+    function rowsMinusDim(dim){
+      return baseFiltered().filter(r=>{
+        const tmp = { ...sel, [dim]: null };
+        return (!tmp.status  || canonStatus(r.status_in_out) === tmp.status) &&
+               (!tmp.subdept || NORM(r.sub_department)      === tmp.subdept) &&
+               (!tmp.dept    || NORM(r.department)          === tmp.dept) &&
+               (!tmp.desig   || NORM(r.designation)         === tmp.desig) &&
+               (!tmp.shift   || NORM(r.shift_code)          === tmp.shift) &&
+               (!tmp.grade   || NORM(r.grade)               === tmp.grade) &&
+               (!tmp.loe     || ((tmp.loe==='late'  && getLateEarly(r).toLowerCase().startsWith('late')) ||
+                                 (tmp.loe==='early' && getLateEarly(r).toLowerCase().startsWith('early'))));
+      });
+    }
+    function groupCounts(rows, keyFn, labelFn){
+      const acc = new Map();
+      for (const r of rows){
+        const key = keyFn(r);
+        const label = labelFn(r);
+        const k = (key===''||key==null) ? '—' : key;
+        if (!acc.has(k)) acc.set(k, { count:0, label: (label===''||label==null)?'—':label });
+        acc.get(k).count += 1;
+      }
+      const out = Array.from(acc, ([key, v]) => ({ key, label: v.label, count: v.count }));
+      out.sort((a,b)=> b.count - a.count || String(a.label).localeCompare(String(b.label)));
+      return out;
+    }
+    function renderChips(){
+      const chips = [];
+      if (sel.status)  chips.push(`<span class="chip">Status: ${sel.status}<button aria-label="Clear status"  data-clear="status">&times;</button></span>`);
+      if (sel.subdept) chips.push(`<span class="chip">Sub-Dept: ${sel.subdept}<button aria-label="Clear subdept" data-clear="subdept">&times;</button></span>`);
+      if (sel.dept)    chips.push(`<span class="chip">Department: ${sel.dept}<button aria-label="Clear dept" data-clear="dept">&times;</button></span>`);
+      if (sel.desig)   chips.push(`<span class="chip">Designation: ${sel.desig}<button aria-label="Clear desig" data-clear="desig">&times;</button></span>`);
+      if (sel.shift)   chips.push(`<span class="chip">Shift: ${sel.shift}<button aria-label="Clear shift" data-clear="shift">&times;</button></span>`);
+      if (sel.grade)   chips.push(`<span class="chip">Grade: ${sel.grade}<button aria-label="Clear grade" data-clear="grade">&times;</button></span>`);
+      if (sel.loe)     chips.push(`<span class="chip">Late/Early: ${sel.loe}<button aria-label="Clear LOE" data-clear="loe">&times;</button></span>`);
+      chipsWrap.innerHTML = chips.join('');
+      chipsWrap.querySelectorAll('button[data-clear]').forEach(btn=>{
+        btn.onclick = () => { sel[btn.dataset.clear] = null; updateAll(); setKpiActive(); };
+      });
+    }
+    function renderKPIs(){
+      if (currentTab === 'contract'){
+        kpiContractWrap.classList.remove('hidden'); kpiEmpWrap.classList.add('hidden');
+        empContent.classList.add('hidden'); cContent.classList.remove('hidden');
+        if (kpiContract) kpiContract.textContent = CONTRACT;
+        return;
+      }
+      kpiContractWrap.classList.add('hidden'); kpiEmpWrap.classList.remove('hidden');
+      empContent.classList.remove('hidden'); cContent.classList.add('hidden');
+
+      // Total is from baseFiltered (not affected by filters)
+      if (kpiTotal) kpiTotal.textContent = baseFiltered().length;
+
+      const rows = detailFiltered();
+      let present=0, absent=0, leave=0;
+      for (const r of rows){
+        const c = canonStatus(r.status_in_out);
+        if (c === 'P|P') present++;
+        else if (c === 'A|A') absent++;
+        else if (c === 'APL|APL') leave++;
+      }
+      kpiPresent.textContent = present;
+      kpiAbsent.textContent  = absent;
+      if (kpiLeave) kpiLeave.textContent = leave;
+      kpiLate.textContent  = KPI_LATE0;
+      kpiEarly.textContent = KPI_EARLY0;
+    }
+    function setKpiActive(){
+      kpiPresentCard.setAttribute('data-active', String(sel.status==='P|P'));
+      kpiAbsentCard .setAttribute('data-active', String(sel.status==='A|A'));
+      if (kpiLeaveCard) kpiLeaveCard.setAttribute('data-active', String(sel.status==='APL|APL'));
+      kpiLateCard   .setAttribute('data-active', String(sel.loe==='late'));
+      kpiEarlyCard  .setAttribute('data-active', String(sel.loe==='early'));
+    }
+    function buildTable(tbodyEl, totalEl, rows, currentKey, trDataAttr, labelRenderer=(x)=>x){
+      let total=0;
+      tbodyEl.innerHTML = rows.map(g=>{
+        total += g.count;
+        const active = (currentKey === g.key) ? 'active-row' : '';
+        return `<tr class="row-click ${active}" ${trDataAttr}="${g.key}">
+                  <td class="px-4 py-2">${labelRenderer(g.label)}</td>
+                  <td class="px-3 py-2 text-right font-mono">${g.count}</td>
+                </tr>`;
+      }).join('') || `<tr><td colspan="2" class="p-4 text-center text-slate-500">No data.</td></tr>`;
+      if (totalEl) totalEl.textContent = total;
+    }
+    function renderStatusTable(){
+      const rows = rowsMinusDim('status');
+      const grp  = groupCounts(rows, r => canonStatus(r.status_in_out) || '—', r => (r.status_in_out || '—'));
+      buildTable(statusTbody, statusTotalEl, grp, sel.status, 'data-status', (label)=>`<span class="status-badge">${label}</span>`);
+    }
+    function renderSubdeptTable(){
+      const rows = rowsMinusDim('subdept');
+      const grp  = groupCounts(rows, r => NORM(r.sub_department), r => NORM(r.sub_department));
+      buildTable(subdeptTbody, subdeptTotalEl, grp, sel.subdept, 'data-subdept');
+    }
+    function renderDeptTable(){
+      const rows = rowsMinusDim('dept');
+      const grp  = groupCounts(rows, r => NORM(r.department), r => NORM(r.department));
+      buildTable(deptTbody, deptTotalEl, grp, sel.dept, 'data-dept');
+    }
+    function renderDesigTable(){
+      const rows = rowsMinusDim('desig');
+      const grp  = groupCounts(rows, r => NORM(r.designation), r => NORM(r.designation));
+      buildTable(desigTbody, desigTotalEl, grp, sel.desig, 'data-desig');
+    }
+    function renderShiftTable(){
+      const rows = rowsMinusDim('shift');
+      const grp  = groupCounts(rows, r => NORM(r.shift_code), r => NORM(r.shift_code));
+      buildTable(shiftTbody, shiftTotalEl, grp, sel.shift, 'data-shift');
+    }
+    function renderGradeTable(){
+      const rows = rowsMinusDim('grade');
+      const grp  = groupCounts(rows, r => NORM(r.grade), r => NORM(r.grade));
+      buildTable(gradeTbody, gradeTotalEl, grp, sel.grade, 'data-grade');
+    }
+    function renderDetails(){
+      if (currentTab !== 'emp') return;
+      const rows = detailFiltered();
+      const parts = [];
+      parts.push(sel.status ? `Status=${sel.status}` : 'All Status');
+      parts.push(sel.subdept ? `Sub-Dept=${sel.subdept}` : 'All Sub-Dept');
+      parts.push(sel.dept ? `Dept=${sel.dept}` : 'All Dept');
+      parts.push(sel.desig ? `Desig=${sel.desig}` : 'All Desig');
+      parts.push(sel.shift ? `Shift=${sel.shift}` : 'All Shift');
+      parts.push(sel.grade ? `Grade=${sel.grade}` : 'All Grade');
+      parts.push(sel.loe ? `Late/Early=${sel.loe}` : 'All LOE');
+
+      detailTitle.textContent = parts.join(' · ');
+      detailCount.textContent = rows.length.toString();
+
+      if (!rows.length){
+        detailBody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">No records.</td></tr>';
+        return;
+      }
+      detailBody.innerHTML = rows.map(r => `
+        <tr>
+          <td class="px-3 py-2 font-mono">${r.employee_code || ''}</td>
+          <td class="px-3 py-2">${r.full_name || ''}</td>
+          <td class="px-3 py-2">${r.department || ''}</td>
+          <td class="px-3 py-2">${NORM(r.sub_department)}</td>
+          <td class="px-3 py-2">${r.shift_code || ''}</td>
+          <td class="px-3 py-2">${r.branch || ''}</td>
+          <td class="px-3 py-2">${r.status_in_out || ''}</td>
+          <td class="px-3 py-2">${getLateEarly(r) || ''}</td>
+          <td class="px-3 py-2">${r.punch_in_punch_out_time || ''}</td>
+        </tr>
+      `).join('');
+    }
+    function toCSV(rows){
+      const headers = [
+        'employee_code','full_name','department','sub_department',
+        'designation','shift_code','grade','branch','status_in_out',
+        'late_early_go','punch_in_punch_out_time'
+      ];
+      const esc = v => '"' + (v??'').toString().replace(/"/g,'""') + '"';
+      return [headers.join(',')].concat(rows.map(r => headers.map(h => esc(r[h])).join(','))).join('\r\n');
+    }
+
+    /* ================= CONTRACT RENDERING ================= */
+    function cBase(){ return CONDATA; }
+    function cPasses(r){
+      if (csel.dept  && NORM(r.department)      !== csel.dept) return false;
+      if (csel.loc   && NORM(r.block_location)  !== csel.loc)  return false;
+      if (csel.shift && NORM(r.shift)           !== csel.shift) return false;
+      return true;
+    }
+    function cRows(){ return cBase().filter(cPasses); }
+    function cGroup(rows, keySel, labelSel){
+      const acc = new Map();
+      for(const r of rows){
+        const k = NORM(keySel(r));
+        const l = NORM(labelSel(r));
+        const key = (k===''||k==null) ? '—' : k;
+        if (!acc.has(key)) acc.set(key, {label:l, count:0});
+        acc.get(key).count += 1;
+      }
+      const out = Array.from(acc, ([k, v]) => ({ key:k, label:v.label, count:v.count }));
+      out.sort((a,b)=> b.count - a.count || String(a.label).localeCompare(String(b.label)));
+      return out;
+    }
+    function cBuildTable(tbody, totalEl, rows, selKey, attr){
+      let total=0;
+      tbody.innerHTML = rows.map(g=>{
+        total += g.count;
+        const active = (selKey === g.key) ? 'active-row' : '';
+        return `<tr class="row-click ${active}" ${attr}="${g.key}">
+                  <td class="px-4 py-2">${g.label}</td>
+                  <td class="px-3 py-2 text-right font-mono">${g.count}</td>
+                </tr>`;
+      }).join('') || `<tr><td colspan="2" class="p-4 text-center text-slate-500">No data.</td></tr>`;
+      totalEl.textContent = total;
+    }
+    function renderContractMatrices(){
+      const rows = cRows();
+      cBuildTable(cDeptTbody,  cDeptTotal,  cGroup(rows, r=>r.department,     r=>r.department),     csel.dept,  'data-cdept');
+      cBuildTable(cLocTbody,   cLocTotal,   cGroup(rows, r=>r.block_location, r=>r.block_location), csel.loc,   'data-cloc');
+      cBuildTable(cShiftTbody, cShiftTotal, cGroup(rows, r=>r.shift,          r=>r.shift),          csel.shift, 'data-cshift');
+    }
+    function renderContractDetails(){
+      const rows = cRows();
+      cDetailCount.textContent = rows.length.toString();
+      if (!rows.length){
+        cDetailBody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">No records.</td></tr>';
+        return;
+      }
+      cDetailBody.innerHTML = rows.map(r=>`
+        <tr>
+          <td class="px-3 py-2">${(r.punch_date||'').toString().slice(0,10)}</td>
+          <td class="px-3 py-2">${NORM(r.department,'')}</td>
+          <td class="px-3 py-2">${NORM(r.block_location,'')}</td>
+          <td class="px-3 py-2">${NORM(r.shift,'')}</td>
+          <td class="px-3 py-2 font-mono">${NORM(r.employee_id,'')}</td>
+          <td class="px-3 py-2 font-mono">${NORM(r.contractor_id,'')}</td>
+          <td class="px-3 py-2">${r.punch_in ?? ''}</td>
+          <td class="px-3 py-2">${r.punch_out ?? ''}</td>
+          <td class="px-3 py-2">${String(r.is_reassigned ?? '')}</td>
+        </tr>
+      `).join('');
+    }
+    function cRenderAll(){ renderContractMatrices(); renderContractDetails(); }
+    function cClearAll(){ csel.dept = csel.loc = csel.shift = null; cRenderAll(); }
+
+    function cToCSV(rows){
+      const headers=['punch_date','department','block_location','shift','employee_id','contractor_id','punch_in','punch_out','assigned_date','is_reassigned'];
+      const esc=v=>`"${(v??'').toString().replace(/"/g,'""')}"`;
+      return [headers.join(',')].concat(rows.map(r=>headers.map(h=>esc(r[h])).join(','))).join('\r\n');
+    }
+
+    /* ================= WIRING ================= */
+    function renderChipsAndAll(){
+      renderChips();
+      if (currentTab === 'emp'){
+        renderStatusTable(); renderDeptTable(); renderSubdeptTable();
+        renderDesigTable(); renderShiftTable(); renderGradeTable(); renderDetails();
+      }
+      renderKPIs();
+      if (currentTab === 'contract'){ cRenderAll(); }
+    }
+
+    function clearAll(){
+      sel.status = sel.subdept = sel.dept = sel.desig = sel.shift = sel.grade = sel.loe = null;
+      renderChipsAndAll(); setKpiActive();
+    }
+
+    // —— DATE NAV
+    function replaceQueryAttDate(iso){
+      const url = new URL(window.location.href);
+      if (iso) url.searchParams.set('att_date', iso);
+      else url.searchParams.delete('att_date');
+      window.location.assign(url.toString());
+    }
+
+    function wireEvents(){
+      /* EMP summary click-to-filter */
+      statusTbody.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-status]'); if (!tr) return;
+        const key = tr.getAttribute('data-status') || '';
+        sel.status = (sel.status === key ? null : key);
+        renderChipsAndAll(); setKpiActive();
+      });
+      subdeptTbody.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-subdept]'); if (!tr) return;
+        const key = (tr.getAttribute('data-subdept') || '—').trim();
+        sel.subdept = (sel.subdept === key ? null : key);
+        renderChipsAndAll();
+      });
+      deptTbody.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-dept]'); if (!tr) return;
+        const key = (tr.getAttribute('data-dept') || '—').trim();
+        sel.dept = (sel.dept === key ? null : key);
+        renderChipsAndAll();
+      });
+      desigTbody.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-desig]'); if (!tr) return;
+        const key = (tr.getAttribute('data-desig') || '—').trim();
+        sel.desig = (sel.desig === key ? null : key);
+        renderChipsAndAll();
+      });
+      shiftTbody.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-shift]'); if (!tr) return;
+        const key = (tr.getAttribute('data-shift') || '—').trim();
+        sel.shift = (sel.shift === key ? null : key);
+        renderChipsAndAll();
+      });
+      gradeTbody.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-grade]'); if (!tr) return;
+        const key = (tr.getAttribute('data-grade') || '—').trim();
+        sel.grade = (sel.grade === key ? null : key);
+        renderChipsAndAll();
+      });
+
+      // KPI toggles
+      kpiPresentCard.addEventListener('click', () => { sel.status = (sel.status === 'P|P') ? null : 'P|P'; sel.loe=null; renderChipsAndAll(); setKpiActive(); });
+      kpiAbsentCard .addEventListener('click', () => { sel.status = (sel.status === 'A|A') ? null : 'A|A'; sel.loe=null; renderChipsAndAll(); setKpiActive(); });
+      if (kpiLeaveCard) kpiLeaveCard.addEventListener('click', () => { sel.status = (sel.status === 'APL|APL') ? null : 'APL|APL'; sel.loe=null; renderChipsAndAll(); setKpiActive(); });
+      kpiLateCard   .addEventListener('click', () => { sel.loe = (sel.loe === 'late')  ? null : 'late';  sel.status=null; renderChipsAndAll(); setKpiActive(); });
+      kpiEarlyCard  .addEventListener('click', () => { sel.loe = (sel.loe === 'early') ? null : 'early'; sel.status=null; renderChipsAndAll(); setKpiActive(); });
+
+      // Clear buttons (EMP)
+      clearBtn.addEventListener('click', clearAll);
+      clearAllTopBtn.addEventListener('click', clearAll);
+      clearStatusBtn.addEventListener('click', () => { sel.status=null; renderChipsAndAll(); setKpiActive(); });
+      clearSubdeptBtn.addEventListener('click', () => { sel.subdept=null; renderChipsAndAll(); });
+      clearDeptBtn.addEventListener('click', () => { sel.dept=null; renderChipsAndAll(); });
+      clearDesigBtn.addEventListener('click', () => { sel.desig=null; renderChipsAndAll(); });
+      clearShiftBtn.addEventListener('click', () => { sel.shift=null; renderChipsAndAll(); });
+      clearGradeBtn.addEventListener('click', () => { sel.grade=null; renderChipsAndAll(); });
+
+      // CSV (EMP)
+      dlBtn.addEventListener('click', () => {
+        const rows = detailFiltered();
+        const parts = [
+          sel.status  ? `S_${sel.status}`   : 'ALLS',
+          sel.subdept ? `SD_${sel.subdept.replace(/[^\w\-]+/g,'_')}` : 'ALLSD',
+          sel.dept    ? `D_${sel.dept.replace(/[^\w\-]+/g,'_')}`     : 'ALLD',
+          sel.desig   ? `DG_${sel.desig.replace(/[^\w\-]+/g,'_')}`   : 'ALLDG',
+          sel.shift   ? `SH_${sel.shift.replace(/[^\w\-]+/g,'_')}`   : 'ALLSH',
+          sel.grade   ? `G_${sel.grade.replace(/[^\w\-]+/g,'_')}`    : 'ALLG',
+          sel.loe     ? `LOE_${sel.loe}`                              : 'ALLLOE'
+        ];
+        const blob = new Blob([toCSV(rows)], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = `attendance_Solapur_${parts.join('_')}.csv`; a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      // Tabs
+      function selectTab(tab){
+        currentTab = tab;
+        tabEmp.setAttribute('aria-selected', tab === 'emp');
+        tabContract.setAttribute('aria-selected', tab === 'contract');
+        renderChipsAndAll(); setKpiActive();
+      }
+      tabEmp.addEventListener('click', ()=> selectTab('emp'));
+      tabContract.addEventListener('click', ()=> selectTab('contract'));
+
+      // Date controls
+      if (attInput && ATT_DATE_ISO && !attInput.value) attInput.value = ATT_DATE_ISO;
+      attGoBtn.addEventListener('click', ()=> replaceQueryAttDate(attInput.value || ''));
+      attInput.addEventListener('keydown', (e)=>{ if (e.key === 'Enter'){ e.preventDefault(); replaceQueryAttDate(attInput.value || ''); }});
+      attToday.addEventListener('click', ()=>{ const t = new Date(); replaceQueryAttDate(t.toISOString().slice(0,10)); });
+      attYday.addEventListener('click', ()=>{ const d = new Date(); d.setDate(d.getDate()-1); replaceQueryAttDate(d.toISOString().slice(0,10)); });
+
+      /* CONTRACT interactions */
+      cDeptTbody.addEventListener('click', (e)=>{ const tr=e.target.closest('tr[data-cdept]'); if(!tr) return; const k=tr.getAttribute('data-cdept')||'—'; csel.dept = (csel.dept===k)?null:k; cRenderAll(); });
+      cLocTbody .addEventListener('click', (e)=>{ const tr=e.target.closest('tr[data-cloc]'); if(!tr) return; const k=tr.getAttribute('data-cloc') ||'—'; csel.loc  = (csel.loc===k)?null:k;  cRenderAll(); });
+      cShiftTbody.addEventListener('click',(e)=>{ const tr=e.target.closest('tr[data-cshift]'); if(!tr) return; const k=tr.getAttribute('data-cshift')||'—'; csel.shift= (csel.shift===k)?null:k; cRenderAll(); });
+
+      cClearDeptBtn.addEventListener('click', ()=>{ csel.dept=null; cRenderAll(); });
+      cClearLocBtn .addEventListener('click', ()=>{ csel.loc=null;  cRenderAll(); });
+      cClearShiftBtn.addEventListener('click', ()=>{ csel.shift=null; cRenderAll(); });
+      if (cClearAllBtn) cClearAllBtn.addEventListener('click', cClearAll);
+
+      cCsvBtn.addEventListener('click', ()=>{
+        const rows = cRows();
+        const blob = new Blob([cToCSV(rows)], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a=document.createElement('a'); a.href=url; a.download='contract_attendance.csv'; a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    renderChipsAndAll();
+    wireEvents();
+    // default tab
+    tabEmp.setAttribute('aria-selected','true');
+    tabContract.setAttribute('aria-selected','false');
+    setKpiActive();
+  }
+
+  if (document.getElementById('hrDailyData')) boot();
+  window.initHRPane = window.initHRPane || boot;
+})();
+</script>

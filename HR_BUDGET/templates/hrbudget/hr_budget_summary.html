@@ -1,0 +1,190 @@
+{% extends "hrbudget/HRBudget_base.html" %}
+{% load static %}
+{% load l10n %}
+{% load dict_utils %} 
+
+{% block HRbudget_title %}
+<title>{{ report_title }}</title>
+{% endblock %}
+
+{% block HRbudget_report_header %}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-2xl font-bold text-gray-700">{{ report_title }}</h2>
+    {% if perms.HR_BUDGET.add_hrbudgetplan %}
+    <a href="{% url 'add_hr_budget_plan' %}" 
+       class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 text-sm font-semibold shadow-sm" 
+       style="text-decoration:none;">
+        Add/Edit Budget Plan
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block HRbudget_report_content %}
+<form method="get" class="flex items-center space-x-4 mb-4 mt-2" id="filter-form">
+    <div class="flex items-center space-x-2">
+      <label for="{{ filter_form.year.id_for_label }}" class="font-semibold">Year:</label>
+      {{ filter_form.year }}
+    </div>
+
+    <div class="flex items-center space-x-2">
+        <label for="period_type" class="font-semibold">Period Type:</label>
+        <select name="period_type" id="period_type" class="border rounded px-2 py-1">
+            <option value="monthly" {% if period_type == 'monthly' %}selected{% endif %}>Monthly</option>
+            <option value="daily" {% if period_type == 'daily' %}selected{% endif %}>Daily (Custom Range)</option>
+        </select>
+    </div>
+    
+    <div id="date-range" class="{% if period_type != 'daily' %}hidden{% endif %} flex items-center space-x-2">
+        <!-- CORRECTED: Use the new context variables to ensure values are always shown -->
+        <label>From: <input type="date" name="from_date" value="{{ from_date_str|default_if_none:'' }}"
+                class="border rounded px-2 py-1"></label>
+        <label>To: <input type="date" name="to_date" value="{{ to_date_str|default_if_none:'' }}"
+                class="border rounded px-2 py-1"></label>
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm">Go</button>
+    <button type="button" onclick="window.location.href='{% url 'monthly_hr_budget_summary' %}'" class="ml-2 bg-gray-300 px-3 py-1 rounded hover:bg-gray-400 text-sm text-black">Clear Filter</button>
+   
+   <!-- CORRECTED: The download link now uses the new robust context variables -->
+   <a href="{% url 'download_hr_budget_excel' %}?year={{ selected_year }}&period_type={{ period_type }}{% if from_date_str %}&from_date={{ from_date_str }}{% endif %}{% if to_date_str %}&to_date={{ to_date_str }}{% endif %}" 
+       class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm"
+       style="text-decoration:none;"
+       target="_blank">Download</a>
+</form>
+
+{% if processed_rows %}
+<div class="overflow-x-auto bg-white shadow-lg rounded-lg">
+    <!-- UPDATED: Added border-collapse for better sticky column rendering -->
+    <table class="min-w-full border-collapse border border-gray-300 text-sm">
+        <thead class="bg-gray-100 text-gray-700 font-semibold text-center">
+            <tr>
+                <th rowspan="2" class="sticky left-0 bg-gray-100 px-4 py-2 border align-middle text-left z-10">Name</th>
+                {% for header in date_headers %}
+                    <th colspan="2" class="px-4 py-2 border border-l-gray-400 whitespace-nowrap">{{ header.display }}</th>
+                {% endfor %}
+                <th colspan="2" class="px-4 py-2 border border-l-gray-400 whitespace-nowrap bg-blue-50">Total</th>
+            </tr>
+            <tr>
+                {% for _ in date_headers %}
+                    <th class="px-3 py-2 border border-l-gray-400 font-semibold bg-green-50">Budget</th>
+                    <th class="px-3 py-2 border font-semibold bg-blue-100">Actual</th>
+                {% endfor %}
+                <th class="px-3 py-2 border border-l-gray-400 font-extrabold bg-green-100">Budget</th>
+                <th class="px-3 py-2 border font-extrabold bg-blue-200">Actual</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row_data in processed_rows %}
+                {% if row_data.type == 'category' %}
+                    <tr id="{{ row_data.html_id }}" class="border-b bg-blue-100 font-bold cursor-pointer toggle-category"
+                        data-category-target="{{ row_data.html_id }}">
+                        <!-- UPDATED: Made Name cell sticky with correct background -->
+                        <td class="sticky left-0 bg-blue-100 px-4 py-2 border text-left whitespace-nowrap z-10">
+                            <span class="toggle-icon mr-1">[+]</span>{{ row_data.name }}
+                        </td>
+                        
+                        {% for header in date_headers %}
+                            {% with period_data=row_data.period_values|get_item:header.date_obj %}
+                                <td class="px-4 py-2 border text-right bg-green-50/50">
+                                    {{ period_data.plan|default:"0.00"|floatformat:2|indian }}
+                                </td>
+                                <td class="px-4 py-2 border text-right font-semibold {% if period_data.actual > period_data.plan %}text-red-600{% else %}text-green-600{% endif %}">
+                                    {{ period_data.actual|default:"0.00"|floatformat:2|indian }}
+                                </td>
+                            {% endwith %}
+                        {% endfor %}
+                        
+                        <td class="px-4 py-2 border text-right font-bold bg-green-100">
+                            {{ row_data.total_plan|default:"0.00"|floatformat:2|indian }}
+                        </td>
+                        <td class="px-4 py-2 border text-right font-extrabold bg-blue-200 {% if row_data.total_actual > row_data.total_plan %}text-red-600{% else %}text-green-600{% endif %}">
+                            {{ row_data.total_actual|default:"0.00"|floatformat:2|indian }}
+                        </td>
+                    </tr>
+
+                {% elif row_data.type == 'item' %}
+                     <tr class="border-b item-row hidden bg-white" data-parent-category="{{ row_data.parent_category_id }}">
+                        <!-- UPDATED: Made Name cell sticky with correct background -->
+                        <td class="sticky left-0 bg-white px-4 py-2 border pl-10 z-10">{{ row_data.name }}</td>
+                        {% for header in date_headers %}
+                             <td class="px-4 py-2 border text-right bg-gray-50"></td>
+                             <td class="px-4 py-2 border text-right">
+                                {{ row_data.period_values|get_item:header.date_obj|default:"0.00"|floatformat:2|indian }}
+                             </td>
+                        {% endfor %}
+                        <td class="px-4 py-2 border text-right bg-gray-50"></td>
+                        <td class="px-4 py-2 border text-right font-bold">
+                            {{ row_data.total_actual|default:"0.00"|floatformat:2|indian }}
+                        </td>
+                     </tr>
+
+                {% elif row_data.type == 'grand_total' %}
+                    <tr class="border-t-2 font-bold bg-gray-200">
+                        <!-- UPDATED: Made Name cell sticky with correct background -->
+                        <td class="sticky left-0 bg-gray-200 px-4 py-2 border text-left z-10">{{ row_data.name }}</td>
+                        {% for header in date_headers %}
+                            {% with period_data=row_data.period_values|get_item:header.date_obj %}
+                                <td class="px-4 py-2 border text-right">
+                                    {{ period_data.plan|default:"0.00"|floatformat:2|indian }}
+                                </td>
+                                <td class="px-4 py-2 border text-right {% if period_data.actual > period_data.plan %}text-red-600{% else %}text-green-600{% endif %}">
+                                    {{ period_data.actual|default:"0.00"|floatformat:2|indian }}
+                                </td>
+                            {% endwith %}
+                        {% endfor %}
+                        <td class="px-4 py-2 border text-right font-extrabold bg-gray-300">
+                            {{ row_data.total_plan|default:"0.00"|floatformat:2|indian }}
+                        </td>
+                        <td class="px-4 py-2 border text-right font-extrabold bg-gray-300 {% if row_data.total_actual > row_data.total_plan %}text-red-600{% else %}text-green-600{% endif %}">
+                            {{ row_data.total_actual|default:"0.00"|floatformat:2|indian }}
+                        </td>
+                    </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-center text-gray-500 italic py-10">No budget data found for the selected period.</p>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const periodSelect = document.getElementById('period_type');
+        const dateRange = document.getElementById('date-range');
+        
+        function toggleDateRange() {
+            if (periodSelect.value === 'daily') {
+                dateRange.classList.remove('hidden');
+            } else {
+                dateRange.classList.add('hidden');
+            }
+        }
+        
+        toggleDateRange();
+        periodSelect.addEventListener('change', toggleDateRange);
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const categoryRows = document.querySelectorAll('.toggle-category');
+
+        categoryRows.forEach(function (categoryRow) {
+            categoryRow.addEventListener('click', function () {
+                const targetCategoryId = categoryRow.getAttribute('data-category-target');
+                const icon = categoryRow.querySelector('.toggle-icon');
+                const subRows = document.querySelectorAll(`tr.item-row[data-parent-category="${targetCategoryId}"]`);
+
+                let isCurrentlyHidden = subRows.length > 0 && subRows[0].classList.contains('hidden');
+
+                subRows.forEach(row => {
+                    row.classList.toggle('hidden', !isCurrentlyHidden);
+                });
+
+                if (icon) {
+                    icon.textContent = isCurrentlyHidden ? '[-]' : '[+]';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

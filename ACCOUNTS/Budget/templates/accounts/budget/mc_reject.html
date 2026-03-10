@@ -1,0 +1,91 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Reject{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-200">
+        <h1 class="text-xl font-extrabold text-slate-900">{{ title|default:"Reject / Disapprove" }}</h1>
+        <p class="text-sm text-slate-500 mt-1">Confirm rejection for this item.</p>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          This action will mark the item as <b>REJECTED</b> and unlock editing for the owner (as per your existing workflow).
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div class="text-xs font-bold text-slate-500">Item</div>
+            <div class="font-semibold text-slate-900">{{ object_label|default:"-" }}</div>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <div class="text-xs font-bold text-slate-500">Current Status</div>
+            <div class="font-semibold text-slate-900">{{ mc.status|default:"-" }}</div>
+          </div>
+        </div>
+
+        <form method="post" class="pt-2 space-y-3">
+          {% csrf_token %}
+
+          {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+          {% endif %}
+
+          {# Show non-field errors (e.g., form-wide validation) #}
+          {% if form.non_field_errors %}
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+          <label class="block text-xs font-bold text-slate-600">
+            Reason / Remarks (optional)
+          </label>
+
+          {# Render the actual field expected by MCRejectForm: remarks #}
+          {{ form.remarks }}
+
+          {% if form.remarks.errors %}
+            <div class="text-xs text-rose-600 font-semibold">
+              {{ form.remarks.errors|striptags }}
+            </div>
+          {% endif %}
+
+          <div class="pt-2 flex items-center justify-end gap-2">
+            <a href="{{ next|default:'/accounts/budgets/approvals/' }}"
+               class="px-4 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50">
+              Cancel
+            </a>
+
+            <button type="submit"
+                    class="px-4 py-2 rounded-xl bg-rose-600 text-white font-bold hover:bg-rose-700">
+              Confirm Reject
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Optional: apply Tailwind-ish classes to the Django widget if the form doesn't set them.
+  (function () {
+    const el = document.querySelector('textarea[name="remarks"], input[name="remarks"]');
+    if (el) {
+      el.classList.add('w-full','rounded-xl','border','border-slate-300','px-3','py-2',
+                       'focus:border-rose-500','focus:ring','focus:ring-rose-200');
+      if (!el.getAttribute('placeholder')) el.setAttribute('placeholder', 'Enter rejection reason (optional)');
+      if (!el.getAttribute('rows') && el.tagName === 'TEXTAREA') el.setAttribute('rows', '3');
+    }
+  })();
+</script>
+{% endblock %}

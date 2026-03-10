@@ -1,0 +1,152 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto p-6 space-y-6">
+  <header class="relative">
+    <h2 class="text-2xl md:text-3xl font-semibold text-center">Canteen Attendance Records</h2>
+    <a href="{% url 'canteen_attendance_summary_report' %}"
+       class="absolute right-0 top-1/2 -translate-y-1/2 bg-indigo-500 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded shadow-md">
+      Bill Report
+    </a>
+  </header>
+
+  <!-- Centered Employee Type Cards Row -->
+  {% if employee_cards %}
+  <div class="flex flex-wrap justify-center gap-4 mb-3">
+    {% for card in employee_cards %}
+      <div class="w-48 rounded-xl shadow flex flex-col items-center justify-center {{ card.bg }} py-1">
+        <span class="text-lg {{ card.txt }}"><i class="fa-solid {{ card.icon }}"></i></span>
+        <span class="text-lg font-bold">{{ card.count }}</span>
+        <span class="text-xs {{ card.txt }} mt-1">{{ card.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Centered Shift Cards Row -->
+  {% if shift_cards %}
+  <div class="flex flex-wrap justify-center gap-4 mb-6">
+    {% for card in shift_cards %}
+      <div class="w-48 rounded-xl shadow flex flex-col items-center justify-center {{ card.bg }} py-1">
+        <span class="text-lg {{ card.txt }}"><i class="fa-solid {{ card.icon }}"></i></span>
+        <span class="text-lg font-bold">{{ card.count }}</span>
+        <span class="text-xs {{ card.txt }} mt-1">{{ card.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <form method="get" action="{% url 'attendance_list' %}"
+        class="flex flex-wrap items-end justify-center gap-4 mb-4">
+
+    <!-- From Date -->
+    <div class="flex flex-col">
+      <label class="block text-sm font-medium mb-1">From Date</label>
+      <input type="date" name="from_date" value="{{ from_date|date:'Y-m-d' }}" class="border rounded px-3 py-2 w-36" />
+    </div>
+
+    <!-- To Date -->
+    <div class="flex flex-col">
+      <label class="block text-sm font-medium mb-1">To Date</label>
+      <input type="date" name="to_date" value="{{ to_date|date:'Y-m-d' }}" class="border rounded px-3 py-2 w-36" />
+    </div>
+
+    <!-- Employee Name -->
+    <div class="flex flex-col">
+      <label class="block text-sm font-medium mb-1">Employee Name</label>
+      <input type="text" name="name" value="{{ name_q }}" placeholder="Search name"
+             class="border rounded px-3 py-2 w-48" />
+    </div>
+    
+    <!-- Shift Type (Food/Tea) -->
+    <div class="flex flex-col">
+      <label class="block text-sm font-medium mb-1">Shift Type</label>
+      <select name="shift_type" class="border rounded px-3 py-2 w-40">
+        <option value="" {% if not shift_type_q %}selected{% endif %}>All</option>
+        <option value="food" {% if shift_type_q == "food" %}selected{% endif %}>Food</option>
+        <option value="tea" {% if shift_type_q == "tea" %}selected{% endif %}>Tea</option>
+      </select>
+    </div>
+
+    <!-- Department -->
+    <div class="flex flex-col">
+      <label class="block text-sm font-medium mb-1">Department</label>
+      <select name="department" class="border rounded px-3 py-2 w-40">
+        <option value="">All</option>
+        {% for dept in department_choices %}
+        <option value="{{ dept.id }}" {% if dept.id|stringformat:"s" == dept_q %}selected{% endif %}>
+          {{ dept.name }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Employee Type -->
+    <div class="flex flex-col">
+      <label class="block text-sm font-medium mb-1">Employee Type</label>
+      <select name="employee_type" class="border rounded px-3 py-2 w-40">
+        <option value="" {% if not employee_type_q %}selected{% endif %}>All</option>
+
+        <option value="CTG" {% if employee_type_q == "CTG" %}selected{% endif %}>
+          Company / Trainee / Guest
+        </option>
+
+        <option value="Casual" {% if employee_type_q == "Casual" %}selected{% endif %}>
+          Casual
+        </option>
+      </select>
+    </div>
+
+
+    <!-- Actions -->
+    <div class="flex items-center space-x-2">
+      <button type="submit"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded">
+        <i class="fa-solid fa-filter"></i>
+      </button>
+      <a href="{% url 'attendance_list' %}"
+         class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded">
+         <i class="fa-solid fa-eraser"></i> 
+      </a>
+      <a href="{% url 'attendance_xlsx' %}?from_date={{ from_date|date:'Y-m-d' }}&to_date={{ to_date|date:'Y-m-d' }}&name={{ name_q|urlencode }}&department={{ dept_q }}&employee_type={{ employee_type_q }}&shift_type={{ shift_type_q }}"
+         class="text-green-900 px-2 py-2">
+        <i class="fa-solid fa-file-excel fa-2x"></i>
+      </a>
+    </div>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-white border">
+      <thead class="bg-gray-100">
+        <tr>
+          <th class="px-4 py-2 border">Sr No</th>
+          <th class="px-4 py-2 border">Employee</th>
+          <th class="px-4 py-2 border">Department</th>
+          <th class="px-4 py-2 border">Employee Type</th>
+          <th class="px-4 py-2 border">Punched At</th>
+          <th class="px-4 py-2 border">Shift</th>
+          <th class="px-4 py-2 border">Meal Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for att in attendances %}
+        <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+          <td class="px-4 py-2 border">{{ forloop.counter }}</td>
+          <td class="px-4 py-2 border">{{ att.employee.name }}</td>
+          <td class="px-4 py-2 border">{{ att.employee.department.name }}</td>
+          <td class="px-4 py-2 border">{{ att.employee.employee_type|default:"-" }}</td>
+          <td class="px-4 py-2 border">{{ att.punched_at|date:"Y-m-d H:i" }}</td>
+          <td class="px-4 py-2 border">{{ att.shift.name }}</td>
+          <td class="px-4 py-2 border">{{ att.meal_type|default:"-" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" class="px-4 py-2 text-center">No records found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

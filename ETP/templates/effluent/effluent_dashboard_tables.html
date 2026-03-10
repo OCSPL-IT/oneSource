@@ -1,0 +1,1626 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="erp-dashboard bg-slate-50/50 min-h-screen">
+  <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+    <style>
+      .erp-dashboard .card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / .05)
+      }
+
+      .erp-dashboard .card:hover {
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 /.1), 0 2px 4px -2px rgb(0 0 0 /.1)
+      }
+
+      .erp-dashboard .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .375rem;
+        background: #e0e7ff;
+        border: 1px solid #c7d2fe;
+        color: #4338ca;
+        padding: .25rem .75rem;
+        border-radius: 9999px;
+        font-size: .875rem;
+        font-weight: 500
+      }
+
+      .erp-dashboard .pill button {
+        color: #3730a3;
+        opacity: .7
+      }
+
+      .erp-dashboard .pill button:hover {
+        opacity: 1
+      }
+
+      .erp-dashboard .data-table-wrap {
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      .erp-dashboard .data-table-wrap::-webkit-scrollbar {
+        height: 8px;
+        width: 8px
+      }
+
+      .erp-dashboard .data-table-wrap::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 999px
+      }
+
+      .erp-dashboard .data-table-wrap::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8
+      }
+
+      .erp-dashboard .only-detail-x {
+        overflow-x: auto !important;
+      }
+
+      .erp-dashboard .data-table {
+        width: 100%;
+        font-size: .875rem;
+        border-collapse: separate;
+        border-spacing: 0;
+      }
+
+      .erp-dashboard .data-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        font-size: .75rem;
+        border-bottom: 1px solid #e2e8f0;
+        padding: .5rem .75rem;
+        white-space: nowrap;
+      }
+
+      .erp-dashboard .data-table tbody td {
+        padding: .5rem .75rem;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .erp-dashboard .data-table tbody tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .erp-dashboard .row-hover {
+        cursor: pointer
+      }
+
+      .erp-dashboard .row-hover:hover {
+        background: #f8fafc;
+      }
+
+      .erp-dashboard .active-row {
+        background: #eef2ff !important;
+        border-left: 4px solid #4f46e5;
+      }
+
+      .erp-dashboard .active-row td:first-child {
+        padding-left: calc(.75rem - 4px);
+      }
+
+      .erp-dashboard .wrap-col {
+        white-space: normal !important;
+        word-break: break-word;
+        min-width: 0;
+      }
+
+      .erp-dashboard .data-table--fixed {
+        table-layout: fixed;
+        width: 100%;
+      }
+
+      .erp-dashboard .num-cell {
+        white-space: nowrap;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
+      }
+
+      .tab {
+        border: 1px solid #e2e8f0
+      }
+
+      .tab.active {
+        background: #4f46e5;
+        color: #fff;
+        border-color: #4f46e5
+      }
+
+      .tank-card {
+        cursor: pointer;
+        transition: transform .12s ease
+      }
+
+      .tank-card:hover {
+        transform: translateY(-2px)
+      }
+
+      .tank-chip {
+        font-size: .75rem;
+        border-radius: 9999px;
+        padding: .125rem .5rem;
+        border: 1px solid #e2e8f0;
+        background: #f8fafc
+      }
+
+      .tank-selected {
+        outline: 2px solid #4f46e5
+      }
+
+      .avail-ok { color: #16a34a }
+      .avail-warn { color: #f59e0b }
+      .avail-bad { color: #dc2626 }
+
+      .ring-2 {
+        box-shadow: 0 0 0 2px rgba(79, 70, 229, .8) inset
+      }
+
+      .erp-dashboard .total-row td{
+      position: sticky;
+      bottom: 0;
+      background: #f1f5f9;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    </style>
+
+    <header class="mb-4">
+      <h1 class="text-3xl font-bold text-slate-800">Effluent Dashboard</h1>
+      <p class="mt-1 text-slate-500">Track effluent in Kg (Plan vs Actual), KL (Actual only), Hazardous Waste, Tanks &
+        Primary Treatment, MEE & ATFD, Effluent Mass Balance </p>
+    </header>
+
+    <!-- Filters -->
+    <div class="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12 items-end">
+        <div class="lg:col-span-2">
+          <label class="block text-sm font-medium text-slate-600 mb-1">From</label>
+          <input type="date" id="from"
+            class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            value="{{ default_from }}">
+        </div>
+        <div class="lg:col-span-2">
+          <label class="block text-sm font-medium text-slate-600 mb-1">To</label>
+          <input type="date" id="to"
+            class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            value="{{ default_to }}">
+        </div>
+        <div class="lg:col-span-4">
+          <label class="block text-sm font-medium text-slate-600 mb-1">Search</label>
+          <input id="q" placeholder="Product, Stage, Batch, Voucher, Nature…"
+            class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        <div class="lg:col-span-4 flex items-center gap-2 pt-1 sm:pt-6">
+          <button id="applyBtn"
+            class="inline-flex w-full justify-center items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Apply
+            Filters</button>
+          <button id="resetBtn"
+            class="inline-flex w-auto justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">Reset</button>
+        </div>
+      </div>
+      <div id="activePills" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="mb-4 flex gap-2 flex-wrap">
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium active" data-tab="kg">Kg (Plan vs Actual)</button>
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium" data-tab="kl">Effluent (KL)</button>
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium" data-tab="hw">Hazardous Waste</button>
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium" data-tab="tanks">Tanks Available Space</button>
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium" data-tab="pte">Primary Treatment</button>
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium" data-tab="mee">MEE</button>
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium" data-tab="atfd">ATFD</button>
+      <button class="tab px-3 py-2 rounded-md text-sm font-medium" data-tab="mass">Effluent Mass Balance</button>
+    </div>
+
+    <!-- ==================== TAB: KG ==================== -->
+    <div id="tab-kg">
+      <!-- (UNCHANGED) -->
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-4">
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-indigo-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Total Plan (Kg)</div>
+            <div id="kpiPlanKg" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-emerald-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Total Actual (Kg)</div>
+            <div id="kpiActualKg" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-slate-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Difference (Actual − Plan)</div>
+            <div id="kpiDiffKg" class="text-2xl font-bold">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Product-wise Summary</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left wrap-col">Product</th>
+                  <th class="text-right">Plan (Kg)</th>
+                  <th class="text-right">Actual (Kg)</th>
+                  <th class="text-right">Diff (Kg)</th>
+                </tr>
+              </thead>
+              <tbody id="tblProduct"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Stage-wise Summary</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left wrap-col">Stage</th>
+                  <th class="text-right">Plan (Kg)</th>
+                  <th class="text-right">Actual (Kg)</th>
+                  <th class="text-right">Diff (Kg)</th>
+                </tr>
+              </thead>
+              <tbody id="tblStage"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Block-wise</h3>
+          </header>
+          <div class="data-table-wrap max-h-64">
+            <table class="data-table data-table--fixed">
+              <colgroup>
+                <col style="width:28%">
+                <col style="width:24%">
+                <col style="width:24%">
+                <col style="width:24%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="text-left">Blk</th>
+                  <th class="text-right">Plan (Kg)</th>
+                  <th class="text-right">Actual (Kg)</th>
+                  <th class="text-right">Diff (Kg)</th>
+                </tr>
+              </thead>
+              <tbody id="tblBlock"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Nature-wise</h3>
+          </header>
+          <div class="data-table-wrap max-h-64">
+            <table class="data-table data-table--fixed">
+              <colgroup>
+                <col style="width:36%">
+                <col style="width:22%">
+                <col style="width:22%">
+                <col style="width:20%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="text-left wrap-col">Nature</th>
+                  <th class="text-right">Plan (Kg)</th>
+                  <th class="text-right">Actual (Kg)</th>
+                  <th class="text-right">Diff (Kg)</th>
+                </tr>
+              </thead>
+              <tbody id="tblNature"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Batch-no-wise</h3>
+          </header>
+          <div class="data-table-wrap max-h-64">
+            <table class="data-table data-table--fixed">
+              <colgroup>
+                <col style="width:38%">
+                <col style="width:20%">
+                <col style="width:22%">
+                <col style="width:20%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="text-left wrap-col">Batch No</th>
+                  <th class="text-right">Plan (Kg)</th>
+                  <th class="text-right">Actual (Kg)</th>
+                  <th class="text-right">Diff (Kg)</th>
+                </tr>
+              </thead>
+              <tbody id="tblBatch"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <header class="flex items-center justify-between p-4 border-b border-slate-200">
+          <div>
+            <h3 class="font-semibold text-slate-800">Detailed View</h3>
+            <p class="text-sm text-slate-500">Showing latest 500 records matching filters.</p>
+          </div>
+          <a id="btnExportKg"
+            class="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Download
+            Excel</a>
+        </header>
+        <div class="data-table-wrap only-detail-x max-h-[32rem]">
+          <table class="data-table no-wrap-table">
+            <thead>
+              <tr>
+                <th class="text-left">Date</th>
+                <th class="text-left">Product</th>
+                <th class="text-left">Stage</th>
+                <th class="text-left">Batch</th>
+                <th class="text-left">Voucher</th>
+                <th class="text-left">Blk</th>
+                <th class="text-left">Nature</th>
+                <th class="text-right">Plan (Kg)</th>
+                <th class="text-right">Actual (Kg)</th>
+              </tr>
+            </thead>
+            <tbody id="tblDetail"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB: KL ==================== -->
+    <div id="tab-kl" class="hidden">
+      <!-- (UNCHANGED) -->
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-1 mb-4">
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-sky-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Total Effluent (KL)</div>
+            <div id="klKpiTotal" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Product-wise (KL)</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Product</th>
+                  <th class="text-right">KL</th>
+                </tr>
+              </thead>
+              <tbody id="kl_tblProduct"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Stage-wise (KL)</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Stage</th>
+                  <th class="text-right">KL</th>
+                </tr>
+              </thead>
+              <tbody id="kl_tblStage"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Block-wise (KL)</h3>
+          </header>
+          <div class="data-table-wrap max-h-64">
+            <table class="data-table data-table--fixed">
+              <colgroup>
+                <col style="width:60%">
+                <col style="width:40%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="text-left">Blk</th>
+                  <th class="text-right">KL</th>
+                </tr>
+              </thead>
+              <tbody id="kl_tblBlock"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Nature-wise (KL)</h3>
+          </header>
+          <div class="data-table-wrap max-h-80">
+            <table class="data-table data-table--fixed">
+              <colgroup>
+                <col style="width:60%">
+                <col style="width:40%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="text-left">Nature</th>
+                  <th class="text-right">KL</th>
+                </tr>
+              </thead>
+              <tbody id="kl_tblNature"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Batch-wise (KL)</h3>
+          </header>
+          <div class="data-table-wrap max-h-64">
+            <table class="data-table data-table--fixed">
+              <colgroup>
+                <col style="width:60%">
+                <col style="width:40%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="text-left">Batch No</th>
+                  <th class="text-right">KL</th>
+                </tr>
+              </thead>
+              <tbody id="kl_tblBatch"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB: PRIMARY TREATMENT ==================== -->
+    <div id="tab-pte" class="hidden">
+      <!-- (UNCHANGED) -->
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 mb-4">
+        <button id="pteKpiReceivedBox" class="card p-5 text-left hover:shadow transition">
+          <div class="text-sm text-slate-500">Total Effluent Received</div>
+          <div id="pteKpiReceived" class="text-2xl font-bold text-slate-800">0</div>
+        </button>
+        <button id="pteKpiNeutralizedBox" class="card p-5 text-left hover:shadow transition">
+          <div class="text-sm text-slate-500">Total Effluent Neutralized</div>
+          <div id="pteKpiNeutralized" class="text-2xl font-bold text-slate-800">0</div>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Effluent Nature-wise</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Effluent Nature</th>
+                  <th class="text-right">Received</th>
+                  <th class="text-right">Neutralized</th>
+                </tr>
+              </thead>
+              <tbody id="pte_tblNature"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Chemical-wise</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Chemical</th>
+                  <th class="text-right">Qty</th>
+                </tr>
+              </thead>
+              <tbody id="pte_tblChemical"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB: HAZARDOUS WASTE ==================== -->
+    <div id="tab-hw" class="hidden">
+      <!-- (UNCHANGED) -->
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-4">
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Quantity (MT)</div>
+          <div id="hw_kpi_qty" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Transportation Cost (₹ Lakh)</div>
+          <div id="hw_kpi_transp" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+        <div class="card p-5">
+          <div class="text-sm text-slate-500">Total Cost (₹ Lakh)</div>
+          <div id="hw_kpi_total" class="text-2xl font-bold text-slate-800">0</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Transporter-wise</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Transporter</th>
+                  <th class="text-right">Qty(MT)</th>
+                  <th class="text-right">Transp (₹ L)</th>
+                  <th class="text-right">Total (₹ L)</th>
+                </tr>
+              </thead>
+              <tbody id="hw_tbl_transporter"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Type of Waste</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Type</th>
+                  <th class="text-right">Qty(MT)</th>
+                  <th class="text-right">Transp (₹ L)</th>
+                  <th class="text-right">Total (₹ L)</th>
+                </tr>
+              </thead>
+              <tbody id="hw_tbl_type"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Disposal Method</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Method</th>
+                  <th class="text-right">Qty(MT)</th>
+                  <th class="text-right">Transp (₹ L)</th>
+                  <th class="text-right">Total (₹ L)</th>
+                </tr>
+              </thead>
+              <tbody id="hw_tbl_method"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <header class="p-4 border-b border-slate-200">
+            <h3 class="font-semibold text-slate-800">Disposal Facility</h3>
+          </header>
+          <div class="data-table-wrap max-h-96">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Facility</th>
+                  <th class="text-right">Qty(MT)</th>
+                  <th class="text-right">Transp (₹ L)</th>
+                  <th class="text-right">Total (₹ L)</th>
+                </tr>
+              </thead>
+              <tbody id="hw_tbl_facility"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <header class="flex items-center justify-between p-4 border-b border-slate-200">
+          <div>
+            <h3 class="font-semibold text-slate-800">Detailed View — Hazardous Waste</h3>
+            <p class="text-sm text-slate-500">Latest 500 records.</p>
+          </div>
+          <a id="btnExportHw"
+            class="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">Download
+            Excel</a>
+        </header>
+        <div class="data-table-wrap only-detail-x max-h-[32rem]">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Date</th>
+                <th class="text-left">Challan</th>
+                <th class="text-left">Manifest</th>
+                <th class="text-left">Transporter</th>
+                <th class="text-left">Vehicle Nos</th>
+                <th class="text-left">Waste Type</th>
+                <th class="text-left">Cat.</th>
+                <th class="text-right">Qty (MT)</th>
+                <th class="text-right">Rate (₹/MT)</th>
+                <th class="text-right">Transp (₹)</th>
+                <th class="text-right">Total (₹)</th>
+                <th class="text-left">Method</th>
+                <th class="text-left">Facility</th>
+                <th class="text-left">License Upto</th>
+              </tr>
+            </thead>
+            <tbody id="hw_tbl_detail"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB: EFFLUENT TANKS ==================== -->
+    <div id="tab-tanks" class="hidden">
+      <div id="tankCards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6"></div>
+      <div class="card">
+        <header class="flex items-center justify-between p-4 border-b border-slate-200">
+          <div>
+            <h3 class="font-semibold text-slate-800">Effluent Tanks — Detailed View</h3>
+            <p class="text-sm text-slate-500">Opening / Inlet / Consume / Closing / Available Space</p>
+          </div>
+        </header>
+        <div class="data-table-wrap only-detail-x max-h-[32rem]">
+          <table class="data-table no-wrap-table">
+            <thead>
+              <tr>
+                <th class="text-left">Tank</th>
+                <th class="text-left">Date</th>
+                <th class="text-right">Opening</th>
+                <th class="text-right">Inlet</th>
+                <th class="text-right">Consume</th>
+                <th class="text-right">Closing</th>
+                <th class="text-right">Available Space</th>
+                <th class="text-right">Capacity</th>
+              </tr>
+            </thead>
+            <tbody id="tank_tbl_detail"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB: MEE ==================== -->
+    <div id="tab-mee" class="hidden">
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-4">
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-indigo-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">
+             Avg. Effluent Feed – Stripper (KL)
+            </div>
+            <div id="mee_kpi_effluent_stripper" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-emerald-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">
+              Avg. Steam Consume – Total (MT)
+            </div>
+            <div id="mee_kpi_steam_total" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-slate-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">
+              Avg. Steam Economy – Plant (F/S Ratio)
+            </div>
+            <div id="mee_kpi_steam_plant" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-rose-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">
+              Total Downtime (hrs)
+            </div>
+            <div id="mee_kpi_total_downtime" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">MEE Key Readings (Date-wise)</h3>
+          <p class="text-sm text-slate-500">
+            Effluent Feed – Stripper, Steam Consume – Total, Plant Steam Economy, and total downtime hours.
+          </p>
+        </header>
+        <div class="data-table-wrap max-h-96">
+          <table class="data-table data-table--fixed">
+            <thead>
+              <tr>
+                <th class="text-left">Date</th>
+                <th class="text-right">Effluent Feed – Stripper (KL)</th>
+                <th class="text-right">Steam Consume – Total (MT)</th>
+                <th class="text-right">Steam Economy – Plant</th>
+                <th class="text-right">Total Downtime (hrs)</th>
+              </tr>
+            </thead>
+            <tbody id="mee_tbl_bydate"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB: ATFD (✅ NEW) ==================== -->
+    <div id="tab-atfd" class="hidden">
+      <!-- KPI cards -->
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-4">
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-indigo-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Avg. Effluent Feed (KL)</div>
+            <div id="atfd_kpi_avg_feed" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-emerald-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Avg. Steam Consume (MT)</div>
+            <div id="atfd_kpi_avg_steam" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-slate-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Avg. Steam Economy (F/S Ratio)</div>
+            <div id="atfd_kpi_avg_eco" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-rose-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Total Downtime (hrs)</div>
+            <div id="atfd_kpi_total_downtime" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Date-wise table -->
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">ATFD Key Readings (Date-wise)</h3>
+          <p class="text-sm text-slate-500">
+            Effluent Feed, Steam Consume and Total downtime hours.
+          </p>
+        </header>
+        <div class="data-table-wrap max-h-96">
+          <table class="data-table data-table--fixed">
+            <thead>
+              <tr>
+                <th class="text-left">Date</th>
+                <th class="text-right">Effluent Feed (KL)</th>
+                <th class="text-right">Steam Consume (MT)</th>
+                <th class="text-right">Total Downtime (hrs)</th>
+              </tr>
+            </thead>
+            <tbody id="atfd_tbl_bydate"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+        <!-- ==================== TAB: EFFLUENT MASS BALANCE (NEW) ==================== -->
+    <div id="tab-mass" class="hidden">
+      <!-- KPI cards -->
+      <div class="grid grid-cols-1 gap-5 sm:grid-cols-4 mb-4">
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-indigo-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Avg Effluent Received (KL/D)</div>
+            <div id="mass_kpi_received" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-emerald-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Avg Effluent Neutralized (KL/D)</div>
+            <div id="mass_kpi_neutralized" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-slate-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Avg Effluent Treated (KL/D)</div>
+            <div id="mass_kpi_treated" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+
+        <div class="card flex items-center p-5">
+          <div class="flex-shrink-0 mr-4 rounded-full bg-rose-100 p-3"></div>
+          <div>
+            <div class="text-sm font-medium text-slate-500">Avg Effluent Deviation (KL/D)</div>
+            <div id="mass_kpi_deviation" class="text-2xl font-bold text-slate-800">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Date-wise table -->
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Effluent Mass Balance (Date-wise)</h3>
+          <p class="text-sm text-slate-500">
+            Effluent Received &amp; Neutralized
+            (Primary Treatment – Basic, Acidic Aq. Layer, Sodium Cyanide Effluent),
+            Stripper Feed, ATFD Feed,
+            Total Feed = Stripper Feed + ATFD Feed,
+            and Effluent Deviation = Total Feed − Effluent Received.
+          </p>
+        </header>
+        <div class="data-table-wrap max-h-96">
+          <table class="data-table data-table--fixed">
+            <thead>
+              <tr>
+                <th class="text-left">Date</th>
+                <th class="text-right">Effluent Received (KL)</th>
+                <th class="text-right">Effluent Neutralized (KL)</th>
+                <th class="text-right">Stripper Feed (KL)</th>
+                <th class="text-right">ATFD Feed (KL)</th>
+                <th class="text-right">Total Feed (KL)</th>
+                <th class="text-right">Effluent Deviation (KL)</th>
+              </tr>
+            </thead>
+            <tbody id="mass_tbl_bydate"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <script>
+    const DATA_KG = "{% url 'effluent_dashboard_data' %}";
+    const DATA_KL = "{% url 'effluent_dashboard_data_kl' %}";
+    const EXPORT_KG = "{% url 'effluent_dashboard_export' %}";
+    const EXPORT_KL = "{% url 'effluent_dashboard_export_kl' %}";
+    const DATA_HW = "{% url 'effluent_dashboard_data_hw' %}";
+    const EXPORT_HW = "{% url 'effluent_dashboard_export_hw' %}";
+    const DATA_TANKS = "{% url 'effluent_dashboard_data_tanks' %}";
+    const DATA_PTE = "{% url 'effluent_dashboard_data_primary' %}";
+    const DATA_MEE = "{% url 'effluent_dashboard_data_mee' %}";
+    const DATA_ATFD = "{% url 'effluent_dashboard_data_atfd' %}";
+    const DATA_MASS = "{% url 'effluent_dashboard_data_mass_balance' %}";
+
+
+
+    const state = {
+      from: document.getElementById('from').value,
+      to: document.getElementById('to').value,
+      q: '',
+      product: '',
+      stage: '',
+      block: '',
+      nature: '',
+      batch: '',
+      tank: '',
+      pteMetric: '',
+      pteNature: '',
+      pteChemical: ''
+      // NOTE: HW click filters are set dynamically (hw_transporter/hw_type/...) via setFilter
+    };
+
+    function qs(base, params) {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') sp.append(k, v)
+      });
+      const q = sp.toString();
+      return q ? `${base}?${q}` : base;
+    }
+
+     // ✅ PASTE HERE (helpers)
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, (m) => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+
+  async function fetchJSON(url) {
+    const res = await fetch(url, {
+      method: "GET",
+      credentials: "same-origin",
+      headers: {
+        "Accept": "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      }
+    });
+
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (!ct.includes("application/json")) {
+      const text = await res.text();
+      throw new Error(`Non-JSON response (HTTP ${res.status}). ${text.slice(0,120)}`);
+    }
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+    return data;
+  }
+
+    function indianFmt(n) {
+      const num = Number(n) || 0, sign = num < 0 ? '-' : '';
+      const s = (Math.round(Math.abs(num) * 100) / 100).toFixed(2);
+      const [iRaw, dRaw] = s.split('.');
+      let last3 = iRaw.slice(-3), rest = iRaw.slice(0, -3);
+      if (rest) last3 = ',' + last3;
+      const restWith = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+      const d = dRaw === '00' ? '' : '.' + dRaw;
+      return sign + ((rest ? restWith : '') + last3).replace(/^,/, '') + d;
+    }
+
+    function formatDateShort(iso) {
+      if (!iso) return '';
+      const a = iso.split('-');
+      return a.length === 3 ? `${a[2]}-${a[1]}-${a[0].slice(-2)}` : iso;
+    }
+
+    function formatDateTimeCompact(val) {
+      if (!val) return '-';
+      let s = String(val).trim();
+      s = s.split(/[Z+]/)[0].trim();
+      s = s.replace('T', ' ');
+      s = s.replace(/:(\d{2}):\d{2}$/, ':$1');
+      return s;
+    }
+
+    function shortBlock(x) {
+      if (!x) return '';
+      const m = String(x).trim().match(/(?:block|blk)[-\s_]*([A-Za-z0-9]+)$/i);
+      if (m) return m[1].toUpperCase();
+      const parts = String(x).split(/[-\s_]+/);
+      const last = parts[parts.length - 1] || x;
+      return last.length <= 4 ? last.toUpperCase() : x;
+    }
+
+    function signClass(v) {
+      if (v > 0) return 'text-red-600';
+      if (v < 0) return 'text-emerald-600';
+      return 'text-amber-600';
+    }
+
+    function setFilter(k, v) {
+      state[k] = (state[k] === v ? '' : v);
+      renderPills();
+      reloadActiveTab();
+    }
+    function setPteFilter(k, v) {
+      state[k] = (state[k] === v ? '' : v);
+      renderPills();
+      loadPTE();
+    }
+    function clearFilter(k) {
+      state[k] = '';
+      if (k === 'q') document.getElementById('q').value = '';
+      renderPills();
+      reloadActiveTab();
+    }
+
+    function renderPills() {
+      const wrap = document.getElementById('activePills');
+      wrap.innerHTML = '';
+      const labels = {
+        product: 'Product', stage: 'Stage', block: 'Block', nature: 'Nature', batch: 'Batch No.', q: 'Search', tank: 'Tank',
+        pteMetric: 'Primary Treatment', pteNature: 'Effluent Nature', pteChemical: 'Chemical',
+        hw_transporter: 'Transporter', hw_type: 'Waste Type', hw_method: 'Method', hw_facility: 'Facility'
+      };
+      Object.entries(state).forEach(([k, v]) => {
+        if (['from', 'to'].includes(k) || !v) return;
+        let shown = (k === 'block') ? shortBlock(v) : v;
+        if (k === 'pteMetric') shown = v === 'received' ? 'Effluent Received' : 'Effluent Neutralized';
+
+        const pill = document.createElement('span');
+        pill.className = 'pill';
+        pill.innerHTML = `<span><span class="font-normal">${labels[k] || k}:</span> ${shown}</span> <button type="button">✖</button>`;
+        pill.querySelector('button').addEventListener('click', () => {
+          if (k.startsWith('pte')) setPteFilter(k, '');
+          else clearFilter(k);
+        });
+        wrap.appendChild(pill);
+      });
+    }
+
+    function highlightActiveRows() {
+      document.querySelectorAll('tbody tr[data-dim]').forEach(tr => {
+        const { dim, value } = tr.dataset;
+        if (state[dim] && state[dim] === value) tr.classList.add('active-row');
+        else tr.classList.remove('active-row');
+      });
+    }
+
+    /* ===== KG ===== */
+    async function loadKg() {
+      const res = await fetch(qs(DATA_KG, state));
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById('kpiPlanKg').textContent = indianFmt(data.totals.plan);
+      document.getElementById('kpiActualKg').textContent = indianFmt(data.totals.kg);
+
+      const diff = (data.totals.kg || 0) - (data.totals.plan || 0);
+      const kpiDiff = document.getElementById('kpiDiffKg');
+      kpiDiff.textContent = indianFmt(diff);
+      kpiDiff.className = 'text-2xl font-bold ' + signClass(diff);
+
+      fillKgSummary('tblProduct', data.by_product, 'product', true);
+      fillKgSummary('tblStage', data.by_stage, 'stage', true);
+      fillKgSummary('tblBlock', data.by_block, 'block', true);
+      fillKgSummary('tblNature', data.by_nature, 'nature', true);
+      fillKgSummary('tblBatch', data.by_batch, 'batch', true);
+
+      const tb = document.getElementById('tblDetail'); tb.innerHTML = '';
+      (data.table || []).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${formatDateShort(r.date) || ''}</td>
+          <td>${r.product || ''}</td>
+          <td>${r.stage || ''}</td>
+          <td>${r.batch_no || ''}</td>
+          <td>${r.voucher_no || ''}</td>
+          <td>${shortBlock(r.block) || ''}</td>
+          <td>${r.nature || ''}</td>
+          <td class="text-right">${indianFmt(r.plan)}</td>
+          <td class="text-right font-bold text-slate-800">${indianFmt(r.kg)}</td>`;
+        tb.appendChild(tr);
+      });
+
+      document.getElementById('btnExportKg').href = qs(EXPORT_KG, state);
+      highlightActiveRows();
+    }
+
+    function fillKgSummary(tbodyId, rows, key, includeDiff) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = '';
+      if (!rows || rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="${includeDiff ? 4 : 3}" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      rows.forEach(r => {
+        const name = key === 'batch' ? r.batch : r[key];
+        const show = key === 'block' ? shortBlock(name) : name;
+        const tr = document.createElement('tr');
+        tr.className = 'row-hover';
+        tr.dataset.dim = key;
+        tr.dataset.value = name;
+        const wrapClass = ['product', 'stage', 'nature'].includes(key) ? 'wrap-col' : '';
+        const base = `
+          <td class="text-left ${wrapClass}">${show || '(Not specified)'}</td>
+          <td class="num-cell text-slate-600">${indianFmt(r.plan)}</td>
+          <td class="num-cell font-bold text-slate-800">${indianFmt(r.kg)}</td>`;
+        let diffCell = '';
+        if (includeDiff) {
+          const d = (r.kg || 0) - (r.plan || 0);
+          diffCell = `<td class="num-cell font-bold ${signClass(d)}">${indianFmt(d)}</td>`;
+        }
+        tr.innerHTML = base + diffCell;
+        tr.addEventListener('click', () => setFilter(key, name));
+        tb.appendChild(tr);
+      });
+    }
+
+    /* ===== KL ===== */
+    async function loadKl() {
+      const res = await fetch(qs(DATA_KL, state));
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById('klKpiTotal').textContent = indianFmt(data.totals.kl);
+
+      fillKlSummary('kl_tblProduct', data.by_product, 'product');
+      fillKlSummary('kl_tblStage', data.by_stage, 'stage');
+      fillKlSummary('kl_tblBlock', data.by_block, 'block');
+      fillKlSummary('kl_tblNature', data.by_nature, 'nature');
+      fillKlSummary('kl_tblBatch', data.by_batch, 'batch');
+
+      // If you have KL detail elements in your real file, keep these lines.
+      // (If not present, just comment these two blocks to avoid console errors.)
+      const tb = document.getElementById('kl_tblDetail');
+      if (tb) {
+        tb.innerHTML = '';
+        (data.table || []).forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${formatDateShort(r.date) || ''}</td>
+            <td>${r.product || ''}</td>
+            <td>${r.stage || ''}</td>
+            <td>${r.batch_no || ''}</td>
+            <td>${r.voucher_no || ''}</td>
+            <td>${shortBlock(r.block) || ''}</td>
+            <td>${r.nature || ''}</td>
+            <td class="text-right font-bold text-slate-800">${indianFmt(r.kl)}</td>`;
+          tb.appendChild(tr);
+        });
+      }
+      const btn = document.getElementById('btnExportKl');
+      if (btn) btn.href = qs(EXPORT_KL, state);
+
+      highlightActiveRows();
+    }
+
+    function fillKlSummary(tbodyId, rows, key) {
+      const tb = document.getElementById(tbodyId);
+      tb.innerHTML = '';
+      if (!rows || rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="2" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+      rows.forEach(r => {
+        const name = key === 'batch' ? r.batch : r[key];
+        const show = key === 'block' ? shortBlock(name) : name;
+        const tr = document.createElement('tr');
+        tr.className = 'row-hover';
+        tr.dataset.dim = key;
+        tr.dataset.value = name;
+        tr.innerHTML = `<td class="text-left">${show || '(Not specified)'}</td><td class="num-cell font-bold text-slate-800">${indianFmt(r.kl)}</td>`;
+        tr.addEventListener('click', () => setFilter(key, name));
+        tb.appendChild(tr);
+      });
+    }
+
+    /* ===== Primary Treatment ===== */
+    let _pteCache = null;
+
+    async function loadPTE() {
+      const res = await fetch(qs(DATA_PTE, {
+        from: state.from,
+        to: state.to,
+        pte_nature: state.pteNature
+      }));
+      if (!res.ok) return;
+      const data = await res.json();
+      _pteCache = data;
+      renderPTE(data);
+    }
+
+    function renderPTE(data) {
+      document.getElementById('pteKpiReceived').textContent = indianFmt(data.totals.received);
+      document.getElementById('pteKpiNeutralized').textContent = indianFmt(data.totals.neutralized);
+
+      const metric = state.pteMetric;
+
+      const nTb = document.getElementById('pte_tblNature'); nTb.innerHTML = '';
+      let nRows = [...(data.by_nature || [])];
+      if (state.pteNature) nRows = nRows.filter(r => r.effluent_nature === state.pteNature);
+      if (metric) nRows = nRows.filter(r => Number(r[metric] || 0) !== 0).sort((a, b) => Number(b[metric] || 0) - Number(a[metric] || 0));
+
+      if (nRows.length === 0) {
+        nTb.innerHTML = `<tr><td colspan="3" class="text-center text-slate-500 py-6">No data</td></tr>`;
+      } else {
+        nRows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.className = 'row-hover';
+          tr.dataset.dim = 'pteNature';
+          tr.dataset.value = r.effluent_nature;
+          const recCls = metric === 'received' ? 'font-extrabold text-slate-900' : '';
+          const neuCls = metric === 'neutralized' ? 'font-extrabold text-slate-900' : '';
+          tr.innerHTML = `
+            <td class="text-left">${r.effluent_nature || '(blank)'}</td>
+            <td class="num-cell ${recCls}">${indianFmt(r.received)}</td>
+            <td class="num-cell ${neuCls}">${indianFmt(r.neutralized)}</td>`;
+          tr.addEventListener('click', () => setPteFilter('pteNature', r.effluent_nature));
+          if (state.pteNature && state.pteNature === r.effluent_nature) tr.classList.add('active-row');
+          nTb.appendChild(tr);
+        });
+      }
+
+      const cTb = document.getElementById('pte_tblChemical'); cTb.innerHTML = '';
+      let cRows = [...(data.by_chemical || [])];
+      if (state.pteChemical) cRows = cRows.filter(r => r.chemical_name === state.pteChemical);
+      if (cRows.length === 0) {
+        cTb.innerHTML = `<tr><td colspan="2" class="text-center text-slate-500 py-6">No data</td></tr>`;
+      } else {
+        cRows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.className = 'row-hover';
+          tr.dataset.dim = 'pteChemical';
+          tr.dataset.value = r.chemical_name;
+          tr.innerHTML = `
+            <td class="text-left">${r.chemical_name || '(blank)'}</td>
+            <td class="num-cell font-bold text-slate-800">${indianFmt(r.qty)}</td>`;
+          tr.addEventListener('click', () => setPteFilter('pteChemical', r.chemical_name));
+          if (state.pteChemical && state.pteChemical === r.chemical_name) tr.classList.add('active-row');
+          cTb.appendChild(tr);
+        });
+      }
+
+      document.getElementById('pteKpiReceivedBox').classList.toggle('ring-2', metric === 'received');
+      document.getElementById('pteKpiNeutralizedBox').classList.toggle('ring-2', metric === 'neutralized');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const rec = document.getElementById('pteKpiReceivedBox');
+      const neu = document.getElementById('pteKpiNeutralizedBox');
+      rec.addEventListener('click', () => {
+        state.pteMetric = state.pteMetric === 'received' ? '' : 'received';
+        renderPills(); if (_pteCache) renderPTE(_pteCache); else loadPTE();
+      });
+      neu.addEventListener('click', () => {
+        state.pteMetric = state.pteMetric === 'neutralized' ? '' : 'neutralized';
+        renderPills(); if (_pteCache) renderPTE(_pteCache); else loadPTE();
+      });
+    });
+
+    /* ===== Hazardous Waste ===== */
+    async function loadHw() {
+      const params = {
+        from: state.from, to: state.to, q: state.q,
+        hw_transporter: state.hw_transporter,
+        hw_type: state.hw_type,
+        hw_method: state.hw_method,
+        hw_facility: state.hw_facility
+      };
+      const res = await fetch(qs(DATA_HW, params));
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const toLakh = x => indianFmt((Number(x) || 0) / 100000);
+      document.getElementById('hw_kpi_qty').textContent = indianFmt(data.totals.quantity_mt);
+      document.getElementById('hw_kpi_transp').textContent = toLakh(data.totals.transportation_cost);
+      document.getElementById('hw_kpi_total').textContent = toLakh(data.totals.total_cost);
+
+      const fill = (tbodyId, rows, dim, labelKey) => {
+        const tb = document.getElementById(tbodyId); tb.innerHTML = '';
+        if (!rows || rows.length === 0) {
+          tb.innerHTML = `<tr><td colspan="4" class="text-center text-slate-500 py-6">No data</td></tr>`;
+          return;
+        }
+        rows.forEach(r => {
+          const label = r[labelKey] || '(blank)';
+          const tr = document.createElement('tr');
+          tr.className = 'row-hover';
+          tr.dataset.dim = dim;
+          tr.dataset.value = label;
+          tr.innerHTML = `
+            <td class="text-left">${label}</td>
+            <td class="num-cell">${indianFmt(r.qty)}</td>
+            <td class="num-cell">${toLakh(r.tcost)}</td>
+            <td class="num-cell font-bold text-slate-800">${toLakh(r.tot)}</td>`;
+          tr.addEventListener('click', () => setFilter(dim, label));
+          tb.appendChild(tr);
+        });
+      };
+
+      fill('hw_tbl_transporter', data.by_transporter, 'hw_transporter', 'transporter');
+      fill('hw_tbl_type', data.by_type, 'hw_type', 'waste_type');
+      fill('hw_tbl_method', data.by_method, 'hw_method', 'method');
+      fill('hw_tbl_facility', data.by_facility, 'hw_facility', 'facility');
+
+      const tb = document.getElementById('hw_tbl_detail'); tb.innerHTML = '';
+      (data.table || []).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${formatDateShort(r.date) || ''}</td>
+          <td>${r.challan_no || ''}</td>
+          <td>${r.manifest_no || ''}</td>
+          <td>${r.transporter_name || ''}</td>
+          <td>${r.vehicle_registration_numbers || ''}</td>
+          <td>${r.type_of_waste || ''}</td>
+          <td>${r.waste_category || ''}</td>
+          <td class="num-cell">${indianFmt(r.quantity_mt)}</td>
+          <td class="num-cell">${indianFmt(r.disposal_rate_rs_per_mt)}</td>
+          <td class="num-cell">${indianFmt(r.transportation_cost)}</td>
+          <td class="num-cell font-bold text-slate-800">${indianFmt(r.total_cost)}</td>
+          <td>${r.disposal_method || ''}</td>
+          <td>${r.disposal_facility || ''}</td>
+          <td>${r.license_valid_upto ? formatDateShort(r.license_valid_upto) : ''}</td>`;
+        tb.appendChild(tr);
+      });
+
+      document.getElementById('btnExportHw').href = qs(EXPORT_HW, params);
+      highlightActiveRows();
+    }
+
+    /* ===== MEE ===== */
+    async function loadMee() {
+      const res = await fetch(qs(DATA_MEE, { from: state.from, to: state.to }));
+      if (!res.ok) return;
+      const data = await res.json();
+
+      document.getElementById('mee_kpi_effluent_stripper').textContent = indianFmt(data.totals.effluent_feed_stripper || 0);
+      document.getElementById('mee_kpi_steam_total').textContent = indianFmt(data.totals.steam_consume_total || 0);
+      document.getElementById('mee_kpi_steam_plant').textContent = indianFmt(data.totals.steam_economy_plant || 0);
+      document.getElementById('mee_kpi_total_downtime').textContent = indianFmt(data.totals.total_downtime || 0);
+
+      const tb = document.getElementById('mee_tbl_bydate');
+      tb.innerHTML = '';
+      (data.by_date || []).forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-left">${formatDateShort(r.date) || ''}</td>
+          <td class="num-cell">${indianFmt(r.effluent_feed_stripper)}</td>
+          <td class="num-cell">${indianFmt(r.steam_consume_total)}</td>
+          <td class="num-cell">${indianFmt(r.steam_economy_plant)}</td>
+          <td class="num-cell">${r.total_downtime != null ? indianFmt(r.total_downtime) : '-'}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    /* ===== ATFD (✅ NEW) ===== */
+    async function loadAtfd() {
+    const tb = document.getElementById('atfd_tbl_bydate');
+    tb.innerHTML = `<tr><td colspan="4" class="text-center text-slate-500 py-6">Loading…</td></tr>`;
+
+    // ✅ Always read latest dates from inputs (even if user didn’t click Apply)
+    state.from = document.getElementById('from').value;
+    state.to   = document.getElementById('to').value;
+
+    try {
+      const url = qs(DATA_ATFD, { from: state.from, to: state.to });
+      const data = await fetchJSON(url);
+
+      document.getElementById('atfd_kpi_avg_feed').textContent = indianFmt(data.totals.avg_effluent_feed || 0);
+      document.getElementById('atfd_kpi_avg_steam').textContent = indianFmt(data.totals.avg_steam_consume || 0);
+      document.getElementById('atfd_kpi_avg_eco').textContent = indianFmt(data.totals.avg_steam_economy || 0);
+      document.getElementById('atfd_kpi_total_downtime').textContent = indianFmt(data.totals.total_downtime || 0);
+
+      const rows = data.by_date || [];
+      tb.innerHTML = '';
+      if (!rows.length) {
+        tb.innerHTML = `<tr><td colspan="4" class="text-center text-slate-500 py-6">No data</td></tr>`;
+        return;
+      }
+
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="text-left">${formatDateShort(r.date) || ''}</td>
+          <td class="num-cell">${indianFmt(r.effluent_feed || 0)}</td>
+          <td class="num-cell">${indianFmt(r.steam_consume || 0)}</td>
+          <td class="num-cell">${r.total_downtime != null ? indianFmt(r.total_downtime) : '-'}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    } catch (err) {
+      console.error("ATFD load failed:", err);
+      tb.innerHTML = `
+        <tr>
+          <td colspan="4" class="text-center text-rose-600 py-6">
+            ATFD API error: ${escapeHtml(err.message)}
+          </td>
+        </tr>`;
+    }
+  }
+
+
+      /* ===== Effluent Mass Balance (NEW) ===== */
+    async function loadMass() {
+      const tb = document.getElementById('mass_tbl_bydate');
+      tb.innerHTML = `<tr><td colspan="7" class="text-center text-slate-500 py-6">Loading…</td></tr>`;
+
+      // Always use latest date inputs
+      state.from = document.getElementById('from').value;
+      state.to   = document.getElementById('to').value;
+
+      try {
+        const url = qs(DATA_MASS, { from: state.from, to: state.to });
+        const data = await fetchJSON(url);
+
+        const t = data.totals || {};
+        document.getElementById('mass_kpi_received').textContent   = indianFmt(t.avg_effluent_received || 0);
+        document.getElementById('mass_kpi_neutralized').textContent= indianFmt(t.avg_effluent_neutralized || 0);
+        document.getElementById('mass_kpi_treated').textContent    = indianFmt(t.avg_effluent_treated || 0);
+        document.getElementById('mass_kpi_deviation').textContent  = indianFmt(t.avg_effluent_deviation || 0);
+
+        const rows = data.by_date || [];
+        tb.innerHTML = '';
+        if (!rows.length) {
+          tb.innerHTML = `<tr><td colspan="7" class="text-center text-slate-500 py-6">No data</td></tr>`;
+          return;
+        }
+
+        let total = data.grand_totals || {};
+
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="text-left">${formatDateShort(r.date) || ''}</td>
+            <td class="num-cell">${indianFmt(r.effluent_received || 0)}</td>
+            <td class="num-cell">${indianFmt(r.effluent_neutralized || 0)}</td>
+            <td class="num-cell">${indianFmt(r.stripper_feed || 0)}</td>
+            <td class="num-cell">${indianFmt(r.atfd_feed || 0)}</td>
+            <td class="num-cell">${indianFmt(r.total_feed || 0)}</td>
+            <td class="num-cell">${indianFmt(r.effluent_deviation || 0)}</td>
+          `;
+          tb.appendChild(tr);
+        });
+
+        // ✅ TOTAL ROW (last row)
+        const trTot = document.createElement('tr');
+        trTot.className = "total-row font-bold";
+        trTot.innerHTML = `
+          <td class="text-left">TOTAL</td>
+          <td class="num-cell">${indianFmt(total.effluent_received || 0)}</td>
+          <td class="num-cell">${indianFmt(total.effluent_neutralized || 0)}</td>
+          <td class="num-cell">${indianFmt(total.stripper_feed || 0)}</td>
+          <td class="num-cell">${indianFmt(total.atfd_feed || 0)}</td>
+          <td class="num-cell">${indianFmt(total.total_feed || 0)}</td>
+          <td class="num-cell">${indianFmt(total.effluent_deviation || 0)}</td>
+        `;
+        tb.appendChild(trTot);
+      } catch (err) {
+        console.error("Mass balance load failed:", err);
+        tb.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center text-rose-600 py-6">
+              Effluent Mass Balance API error: ${escapeHtml(err.message)}
+            </td>
+          </tr>`;
+      }
+    }
+
+
+    /* ===== Tanks ===== */
+    function availClass(avail, cap) {
+      if (cap <= 0) return 'avail-ok';
+      const pct = (avail / cap) * 100.0;
+      if (pct >= 40) return 'avail-ok';
+      if (pct >= 20) return 'avail-warn';
+      return 'avail-bad';
+    }
+
+    async function loadTanks() {
+      const res = await fetch(qs(DATA_TANKS, { from: state.from, to: state.to, tank: state.tank }));
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const wrap = document.getElementById('tankCards'); wrap.innerHTML = '';
+      (data.cards || []).forEach(c => {
+        const div = document.createElement('div');
+        const isSel = String(state.tank || '') === String(c.tank_id);
+        div.className = 'card p-4 tank-card ' + (isSel ? 'tank-selected' : '');
+        div.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-semibold text-slate-800">${c.tank}</div>
+            <span class="tank-chip">Cap: ${indianFmt(c.capacity)}</span>
+          </div>
+          <div class="text-sm text-slate-500">Available (as of ${formatDateShort(state.to)})</div>
+          <div class="mt-1 text-2xl font-bold ${availClass(c.available, c.capacity)}">${indianFmt(c.available)}</div>`;
+        div.addEventListener('click', () => {
+          state.tank = (isSel ? '' : c.tank_id);
+          renderPills();
+          loadTanks();
+        });
+        wrap.appendChild(div);
+      });
+
+      const tb = document.getElementById('tank_tbl_detail'); tb.innerHTML = '';
+      const rows = (data.table || []).filter(r => !state.tank || String(r.tank_id) === String(state.tank));
+      if (rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="8" class="text-center text-slate-500 py-6">No data</td></tr>`;
+      } else {
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="text-left">${r.tank}</td>
+            <td class="text-left">${formatDateShort(r.date)}</td>
+            <td class="num-cell">${indianFmt(r.opening)}</td>
+            <td class="num-cell text-green-600 font-medium">+${indianFmt(r.inlet)}</td>
+            <td class="num-cell text-red-600 font-medium">-${indianFmt(r.consume)}</td>
+            <td class="num-cell font-bold text-slate-800">${indianFmt(r.closing)}</td>
+            <td class="num-cell font-bold text-indigo-700">${indianFmt(r.available_space)}</td>
+            <td class="num-cell">${indianFmt(r.capacity)}</td>`;
+          tb.appendChild(tr);
+        });
+      }
+      highlightActiveRows();
+    }
+
+    /* Tab handling */
+    let activeTab = 'kg';
+
+    function showTab(tab) {
+      activeTab = tab;
+      document.getElementById('tab-kg').classList.toggle('hidden', tab !== 'kg');
+      document.getElementById('tab-kl').classList.toggle('hidden', tab !== 'kl');
+      document.getElementById('tab-hw').classList.toggle('hidden', tab !== 'hw');
+      document.getElementById('tab-tanks').classList.toggle('hidden', tab !== 'tanks');
+      document.getElementById('tab-pte').classList.toggle('hidden', tab !== 'pte');
+      document.getElementById('tab-mee').classList.toggle('hidden', tab !== 'mee');
+      document.getElementById('tab-atfd').classList.toggle('hidden', tab !== 'atfd');
+      document.getElementById('tab-mass').classList.toggle('hidden', tab !== 'mass'); 
+      document.querySelectorAll('.tab').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+      reloadActiveTab();
+    }
+
+    function reloadActiveTab() {
+      if (activeTab === 'kg') loadKg();
+      else if (activeTab === 'kl') loadKl();
+      else if (activeTab === 'hw') loadHw();
+      else if (activeTab === 'tanks') loadTanks();
+      else if (activeTab === 'pte') loadPTE();
+      else if (activeTab === 'mee') loadMee();
+      else if (activeTab === 'atfd') loadAtfd(); 
+      else if (activeTab === 'mass') loadMass();   // NEW
+    }
+
+    document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+    document.getElementById('applyBtn').addEventListener('click', () => {
+      state.from = document.getElementById('from').value;
+      state.to = document.getElementById('to').value;
+      state.q = document.getElementById('q').value.trim();
+      state.product = state.stage = state.block = state.nature = state.batch = '';
+      renderPills();
+      reloadActiveTab();
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.from = "{{ default_from }}";
+      state.to = "{{ default_to }}";
+      state.q = '';
+      state.product = state.stage = state.block = state.nature = state.batch = '';
+      state.tank = '';
+      state.pteMetric = '';
+      state.pteNature = '';
+      state.pteChemical = '';
+      state.hw_transporter = '';
+      state.hw_type = '';
+      state.hw_method = '';
+      state.hw_facility = '';
+
+      document.getElementById('from').value = state.from;
+      document.getElementById('to').value = state.to;
+      document.getElementById('q').value = '';
+      renderPills();
+      reloadActiveTab();
+    });
+
+    document.getElementById('q').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('applyBtn').click();
+    });
+
+    renderPills();
+    showTab('kg');
+  </script>
+</div>
+{% endblock %}

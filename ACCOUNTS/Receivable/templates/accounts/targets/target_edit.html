@@ -1,0 +1,719 @@
+{% extends "main/index.html" %}
+{% load static inr_format %}
+
+{% block title %}Edit Payment Target{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50">
+  <div class="max-w-[90rem] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+    <!-- Header -->
+    <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div class="px-6 py-5">
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div class="space-y-1">
+            <div class="flex items-center gap-2 text-xs text-slate-500">
+              <span class="font-semibold text-slate-600">Accounts</span>
+              <span class="text-slate-300">/</span>
+              <span class="text-slate-600">Payment Targets</span>
+              <span class="text-slate-300">/</span>
+              <span class="text-slate-900 font-semibold">Edit</span>
+            </div>
+
+            <h1 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Edit Weekly Payment Target
+            </h1>
+
+            <p class="text-sm text-slate-500">
+              Week:
+              <span class="font-semibold text-slate-700">{{ target.week_start|date:"d M, Y" }}</span>
+              -
+              <span class="font-semibold text-slate-700">{{ target.week_end|date:"d M, Y" }}</span>
+              <span class="text-slate-300 mx-2">|</span>
+              Party:
+              <span class="font-semibold text-slate-700">{{ target.party_display|default:"ALL" }}</span>
+              <span class="text-slate-300 mx-2">|</span>
+              Group:
+              <span class="font-semibold text-slate-700">{{ target.company_group|default:"ALL" }}</span>
+            </p>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <a href="{% url 'accounts:payment_target_detail' target.id %}"
+               class="inline-flex items-center justify-center px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors">
+              Back
+            </a>
+
+            <button type="button" id="btnClearCacheTop"
+                    class="inline-flex items-center justify-center px-4 py-2.5 border border-rose-200 rounded-xl text-sm font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors">
+              Clear Selections
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/60">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Header</div>
+              <div class="text-sm font-semibold text-slate-900">Edit week and notes</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2a4 4 0 014-4h2"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0l-3-3m3 3l-3 3"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12a9 9 0 0115-6.708"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Entries</div>
+              <div class="text-sm font-semibold text-slate-900">Edit expected & selection</div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-500 font-bold">Save</div>
+              <div class="text-sm font-semibold text-slate-900">Update target</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" id="targetForm" class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      {% csrf_token %}
+
+      <!-- stored entries (existing + edits) -->
+      <input type="hidden" name="selected_cache" id="selected_cache" value="{{ selected_cache_json|default:'{}'|escape }}">
+
+      <!-- LEFT -->
+      <div class="xl:col-span-8 space-y-6">
+
+        <!-- Card: Configuration -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex h-8 w-8 rounded-xl bg-indigo-50 text-indigo-700 items-center justify-center font-extrabold text-sm">1</span>
+              <div>
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Target Configuration</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Edit header fields for the same target.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Company Group</label>
+              {{ form.company_group }}
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Week Start</label>
+                {{ form.week_start }}
+              </div>
+              <div>
+                <label class="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Week End</label>
+                {{ form.week_end }}
+              </div>
+            </div>
+
+            <div class="lg:col-span-2">
+              <label class="block text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mb-1">Notes / Internal Reference</label>
+              {{ form.notes }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: Edit Entries -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <span class="inline-flex h-8 w-8 rounded-xl bg-indigo-50 text-indigo-700 items-center justify-center font-extrabold text-sm">2</span>
+              <div>
+                <h2 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider">Edit Entries</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Filter, select/unselect, and change expected amounts.</p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+              <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700">
+                <span class="h-2 w-2 rounded-full bg-indigo-500"></span>
+                {{ preview_rows|length }} Bills Available
+              </span>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead class="sticky top-0 z-10">
+                <tr class="bg-slate-50 border-b border-slate-200">
+                  <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Sel.</th>
+                  <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Party Detail</th>
+                  <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Invoice</th>
+                  <th class="px-5 py-3 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Due</th>
+                  <th class="px-5 py-3 text-right text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Outstanding</th>
+                  <th class="px-5 py-3 text-right text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Expected</th>
+                </tr>
+
+                <!-- Column Filters -->
+                <tr class="bg-white border-b border-slate-200">
+                  <th class="px-5 py-2">
+                    <button type="button" id="btnClearTableFilters"
+                            class="text-[10px] font-extrabold text-indigo-700 hover:text-indigo-900 uppercase tracking-wider">
+                      Clear
+                    </button>
+                  </th>
+
+                  <th class="px-5 py-2">
+                    <input id="fltParty" type="text"
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                           placeholder="Party / Code / Company">
+                  </th>
+
+                  <th class="px-5 py-2">
+                    <input id="fltInvoice" type="text"
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                           placeholder="Invoice no">
+                  </th>
+
+                  <th class="px-5 py-2">
+                    <input id="fltDue" type="text"
+                           class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                           placeholder="Due (text)">
+                  </th>
+
+                  <th class="px-5 py-2">
+                    <div class="flex gap-2">
+                      <input id="fltOsMin" type="text"
+                             class="w-1/2 px-3 py-2 border border-slate-200 rounded-xl text-xs text-right font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                             placeholder="Min">
+                      <input id="fltOsMax" type="text"
+                             class="w-1/2 px-3 py-2 border border-slate-200 rounded-xl text-xs text-right font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                             placeholder="Max">
+                    </div>
+                  </th>
+
+                  <th class="px-5 py-2">
+                    <select id="fltSelected"
+                            class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                      <option value="">All</option>
+                      <option value="selected">Selected only</option>
+                      <option value="unselected">Unselected only</option>
+                    </select>
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody class="divide-y divide-slate-100 text-sm">
+                {% for r in preview_rows %}
+                  {% with key=r.party_code|upper|add:"||"|add:r.invoice_no|upper %}
+                  <tr class="hover:bg-indigo-50/50 transition-colors group"
+                      data-key="{{ key }}"
+                      data-outstanding="{{ r.outstanding_amount|default_if_none:'0' }}"
+                      data-party="{{ r.party_name|default:'' }} {{ r.party_code|default:'' }} {{ r.company_name|default:'' }}"
+                      data-invoice="{{ r.invoice_no|default:'' }}"
+                      data-due="{{ r.due_date|default:'' }}">
+                    <td class="px-5 py-3 align-top">
+                      <input type="checkbox"
+                             class="js-bill-check h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                             data-key="{{ key }}">
+                    </td>
+
+                    <td class="px-5 py-3">
+                      <div class="font-extrabold text-slate-900 leading-tight">{{ r.party_name }}</div>
+                      <div class="text-[11px] text-slate-500 mt-0.5">
+                        <span class="font-semibold">{{ r.party_code }}</span>
+                        <span class="text-slate-300 mx-1">•</span>
+                        {{ r.company_name }}
+                      </div>
+                    </td>
+
+                    <td class="px-5 py-3 font-mono text-xs text-slate-700">{{ r.invoice_no }}</td>
+                    <td class="px-5 py-3 text-xs text-slate-600">{{ r.due_date }}</td>
+
+                    <td class="px-5 py-3 text-right font-mono font-semibold text-slate-900">
+                      {{ r.outstanding_amount|inr }}
+                    </td>
+
+                    <td class="px-5 py-3 text-right">
+                      <input type="text"
+                             class="js-expected w-32 px-3 py-2 border border-slate-200 rounded-xl text-right font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all bg-white"
+                             placeholder="0.00"
+                             data-key="{{ key }}"
+                             data-outstanding="{{ r.outstanding_amount|default_if_none:'0' }}">
+                      <div class="text-[10px] text-slate-400 mt-1">
+                        Tip: type value to auto-select
+                      </div>
+                    </td>
+                  </tr>
+                  {% endwith %}
+                {% empty %}
+                  <tr>
+                    <td colspan="6" class="px-6 py-14 text-center text-slate-500">
+                      No bills available for this target.
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/60 text-xs text-slate-500">
+            Your existing entries are pre-loaded from the saved target. You can add/remove and edit expected amounts here.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="xl:col-span-4 space-y-6">
+        <div class="bg-slate-900 rounded-2xl shadow-xl border border-slate-800 sticky top-6 overflow-hidden">
+
+          <div class="p-6 border-b border-slate-800 flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-sm font-extrabold text-white uppercase tracking-wider">Selections</h2>
+              <p class="text-[11px] text-slate-400 mt-1">Editing saved entries</p>
+            </div>
+
+            <button type="button" id="btnClearCache"
+                    class="text-[11px] font-extrabold text-slate-300 hover:text-rose-300 uppercase tracking-wider transition-colors">
+              Clear All
+            </button>
+          </div>
+
+          <div class="p-6 grid grid-cols-2 gap-4 border-b border-slate-800">
+            <div class="rounded-2xl bg-slate-800/50 border border-slate-800 p-4">
+              <div class="text-[10px] uppercase tracking-wider text-slate-400 font-extrabold">Selected Bills</div>
+              <div class="mt-1 text-2xl font-extrabold text-white" id="kpiSelectedCount">0</div>
+              <div class="text-[11px] text-slate-500 mt-1">Current edit set</div>
+            </div>
+
+            <div class="rounded-2xl bg-emerald-900/20 border border-emerald-900/30 p-4">
+              <div class="text-[10px] uppercase tracking-wider text-emerald-200 font-extrabold">Expected Total</div>
+              <div class="mt-1 text-lg font-extrabold text-white" id="kpiExpectedTotal">₹0.00</div>
+              <div class="text-[11px] text-slate-500 mt-1">Sum of expected</div>
+            </div>
+          </div>
+
+          <div class="max-h-[420px] overflow-y-auto">
+            <table class="w-full text-left">
+              <tbody id="cacheTableBody" class="divide-y divide-slate-800">
+                <tr id="cacheEmptyRow">
+                  <td class="px-6 py-10 text-center text-slate-500 text-xs italic">
+                    No selected bills yet.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="p-6 bg-slate-800/40 border-t border-slate-800">
+            <button type="submit" name="action" value="update_save" id="btnUpdateSave"
+                    class="w-full bg-emerald-500 text-white px-6 py-3 rounded-xl font-extrabold text-sm hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center">
+              Update Target
+            </button>
+
+            <p class="mt-3 text-[11px] text-slate-500 leading-relaxed text-center">
+              This will overwrite the entry list and expected amounts for this target.
+            </p>
+
+            <div class="mt-4 flex justify-center">
+              <a href="{% url 'accounts:payment_target_detail' target.id %}"
+                 class="text-xs font-extrabold text-slate-300 hover:text-white uppercase tracking-wider">
+                Cancel
+              </a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </form>
+
+    {% if form.errors %}
+      <div class="rounded-lg border border-rose-200 bg-rose-50 p-4">
+        <p class="text-sm font-semibold text-rose-800">Please fix the errors below:</p>
+        <div class="text-sm text-rose-700 mt-2">
+          {{ form.errors }}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- UPDATED GLOBAL PAGE LOADER (WITH PERCENTAGE)                   -->
+<!-- ============================================================== -->
+<div id="pageLoader"
+     class="fixed inset-0 z-[9999] hidden items-center justify-center bg-white/80 backdrop-blur-md transition-opacity duration-300">
+  <div class="flex flex-col items-center gap-4 rounded-3xl border border-slate-200 bg-white px-10 py-8 shadow-2xl">
+    <div class="relative flex items-center justify-center">
+      <div class="h-20 w-20 rounded-full border-[6px] border-slate-100 border-t-indigo-600 animate-spin"></div>
+      <div class="absolute flex flex-col items-center justify-center">
+        <span id="pageLoadPct" class="text-lg font-black text-indigo-600 tabular-nums">0%</span>
+      </div>
+    </div>
+    <div class="text-center">
+      <div class="text-[11px] font-black uppercase tracking-widest text-slate-800">Updating Analytics</div>
+      <div id="loaderStatusText" class="text-[10px] font-bold text-slate-400 mt-1">Processing target adjustments...</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* keep Django widgets consistent */
+  select, input[type="date"], textarea, input[type="text"] {
+    width: 100%;
+    border: 1px solid #e2e8f0; /* slate-200 */
+    border-radius: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    background: white;
+  }
+  textarea { min-height: 90px; }
+
+  /* Page loader visibility helper */
+  #pageLoader.is-active { display: flex !important; }
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+</style>
+
+<script>
+(function() {
+  /**
+   * PROCESSING LOADER LOGIC
+   */
+  const pageLoader = document.getElementById("pageLoader");
+  const pctDisplay = document.getElementById("pageLoadPct");
+  let progressInterval;
+
+  function showProcessingLoader() {
+    if (!pageLoader) return;
+    pageLoader.classList.add("is-active");
+    
+    let progress = 0;
+    if (progressInterval) clearInterval(progressInterval);
+
+    // Simulated progress logic: moves fast initially, slows down near the end
+    progressInterval = setInterval(() => {
+      if (progress < 95) {
+        let increment = progress < 40 ? (Math.random() * 10) : (Math.random() * 2);
+        progress += increment;
+        if (progress > 95) progress = 95;
+        if (pctDisplay) pctDisplay.innerText = Math.floor(progress) + "%";
+      }
+    }, 350);
+  }
+
+  // Sidebar / Nav link clicks
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a");
+    if (!a) return;
+    const href = a.getAttribute("href") || "";
+    if (href && !href.startsWith("#") && !href.startsWith("javascript:") && !a.target) {
+        showProcessingLoader();
+    }
+  });
+
+  // Browser refresh
+  window.addEventListener('beforeunload', () => showProcessingLoader());
+
+  /**
+   * EDIT TARGET LOGIC (Original maintained)
+   */
+  function normalizeNumber(val) {
+    if (val === null || val === undefined) return "";
+    return String(val).replace(/,/g, "").trim();
+  }
+  function toNumber(val) {
+    const s = normalizeNumber(val);
+    if (!s) return NaN;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  }
+  function format2(val) {
+    const n = toNumber(val);
+    if (Number.isNaN(n)) return "";
+    return n.toFixed(2);
+  }
+  function upperKey(k) {
+    return String(k || "").trim().toUpperCase();
+  }
+
+  const cacheInput = document.getElementById("selected_cache");
+  const cacheBody = document.getElementById("cacheTableBody");
+  const cacheEmptyRow = document.getElementById("cacheEmptyRow");
+  const formEl = document.getElementById("targetForm");
+
+  const kpiSelectedCount = document.getElementById("kpiSelectedCount");
+  const kpiExpectedTotal = document.getElementById("kpiExpectedTotal");
+
+  let selectedCache = {};
+  try { selectedCache = JSON.parse(cacheInput.value || "{}") || {}; } catch { selectedCache = {}; }
+
+  function saveCache() { cacheInput.value = JSON.stringify(selectedCache || {}); }
+  function cacheHas(key) { return Object.prototype.hasOwnProperty.call(selectedCache, key); }
+
+  function setCache(key, expectedVal) {
+    selectedCache[key] = { expected: String(expectedVal || "").trim() };
+    saveCache();
+  }
+  function delCache(key) {
+    delete selectedCache[key];
+    saveCache();
+  }
+
+  function computeExpectedTotal() {
+    let sum = 0;
+    Object.keys(selectedCache || {}).forEach(k => {
+      const v = toNumber((selectedCache[k] && selectedCache[k].expected) ? selectedCache[k].expected : "");
+      if (!Number.isNaN(v)) sum += v;
+    });
+    return sum;
+  }
+  function updateKPIs() {
+    const cnt = Object.keys(selectedCache || {}).length;
+    if (kpiSelectedCount) kpiSelectedCount.textContent = String(cnt);
+    if (kpiExpectedTotal) kpiExpectedTotal.textContent = "₹" + (computeExpectedTotal().toFixed(2));
+  }
+
+  function renderCacheTable() {
+    const rows = cacheBody.querySelectorAll("tr[data-cache-row='1']");
+    rows.forEach(r => r.remove());
+
+    const keys = Object.keys(selectedCache || {}).sort();
+    if (keys.length === 0) {
+      cacheEmptyRow.style.display = "";
+      updateKPIs();
+      return;
+    }
+    cacheEmptyRow.style.display = "none";
+
+    keys.forEach(k => {
+      const expected = (selectedCache[k] && selectedCache[k].expected) ? selectedCache[k].expected : "";
+      const tr = document.createElement("tr");
+      tr.setAttribute("data-cache-row", "1");
+      tr.className = "group hover:bg-slate-800/40 transition-colors";
+      tr.innerHTML = `
+        <td class="px-6 py-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-[10px] font-mono text-slate-400 truncate max-w-[220px]">${k}</div>
+              <div class="text-sm font-extrabold text-white mt-1">₹${expected ? expected : "0.00"}</div>
+            </div>
+            <button type="button"
+                    class="js-remove-cache text-slate-400 hover:text-rose-300 p-1 transition-colors"
+                    data-key="${k}"
+                    title="Remove">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+        </td>
+      `;
+      cacheBody.appendChild(tr);
+    });
+
+    updateKPIs();
+  }
+
+  function syncPreviewFromCache() {
+    document.querySelectorAll("tr[data-key]").forEach(row => {
+      const key = upperKey(row.getAttribute("data-key"));
+      const chk = row.querySelector(".js-bill-check");
+      const exp = row.querySelector(".js-expected");
+      if (!chk || !exp) return;
+
+      if (cacheHas(key)) {
+        chk.checked = true;
+        row.classList.add('bg-indigo-50/50');
+        const cachedExpected = selectedCache[key].expected || "";
+        if (cachedExpected) exp.value = cachedExpected;
+      } else {
+        chk.checked = false;
+        row.classList.remove('bg-indigo-50/50');
+      }
+    });
+  }
+
+  // Checkbox selects/unselects
+  document.addEventListener("change", function (e) {
+    if (!e.target.classList.contains("js-bill-check")) return;
+    const chk = e.target;
+    const key = upperKey(chk.dataset.key || chk.getAttribute("data-key") || "");
+    const row = chk.closest("tr");
+    if (!row || !key) return;
+
+    const expectedInput = row.querySelector(".js-expected");
+    const osRaw = expectedInput.getAttribute("data-outstanding") || row.getAttribute("data-outstanding") || "0";
+
+    if (chk.checked) {
+      if (!expectedInput.value || Number.isNaN(toNumber(expectedInput.value)) || toNumber(expectedInput.value) === 0) {
+        expectedInput.value = format2(osRaw);
+      }
+      setCache(key, expectedInput.value);
+      row.classList.add('bg-indigo-50/50');
+    } else {
+      delCache(key);
+      row.classList.remove('bg-indigo-50/50');
+    }
+    renderCacheTable();
+    applyTableFilters();
+  });
+
+  // Typing expected auto-selects
+  document.addEventListener("input", function (e) {
+    if (!e.target.classList.contains("js-expected")) return;
+    const expectedInput = e.target;
+    const key = upperKey(expectedInput.dataset.key || "");
+    const row = expectedInput.closest("tr");
+    const chk = row ? row.querySelector(".js-bill-check") : null;
+
+    const v = toNumber(expectedInput.value);
+    if (!Number.isNaN(v) && v !== 0) {
+      if (chk) { chk.checked = true; row.classList.add('bg-indigo-50/50'); }
+      setCache(key, expectedInput.value);
+    } else {
+      if (cacheHas(key)) setCache(key, expectedInput.value);
+    }
+    renderCacheTable();
+    applyTableFilters();
+  });
+
+  // Remove from right panel
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".js-remove-cache");
+    if (!btn) return;
+    const key = upperKey(btn.dataset.key || "");
+    delCache(key);
+    renderCacheTable();
+    syncPreviewFromCache();
+    applyTableFilters();
+  });
+
+  function clearAllSelections() {
+    if (confirm("Clear all selections?")) {
+      selectedCache = {};
+      saveCache();
+      renderCacheTable();
+      syncPreviewFromCache();
+      applyTableFilters();
+    }
+  }
+  document.getElementById("btnClearCache").addEventListener("click", clearAllSelections);
+  const btnClearCacheTop = document.getElementById("btnClearCacheTop");
+  if (btnClearCacheTop) btnClearCacheTop.addEventListener("click", clearAllSelections);
+
+  // Updated Form Submit: Trigger Loader
+  formEl.addEventListener("submit", function (e) {
+    const submitter = e.submitter;
+    const action = (submitter && submitter.value) ? String(submitter.value) : "";
+    
+    if (action === "update_save") {
+        showProcessingLoader();
+        saveCache();
+        formEl.querySelectorAll("input[data-generated='1']").forEach(x => x.remove());
+
+        Object.keys(selectedCache || {}).forEach(k => {
+          const hk = document.createElement("input");
+          hk.type = "hidden"; hk.name = "bill_key"; hk.value = k;
+          hk.setAttribute("data-generated", "1");
+          formEl.appendChild(hk);
+
+          const he = document.createElement("input");
+          he.type = "hidden"; he.name = "expected__" + k;
+          he.value = (selectedCache[k] && selectedCache[k].expected) ? selectedCache[k].expected : "";
+          he.setAttribute("data-generated", "1");
+          formEl.appendChild(he);
+        });
+    }
+  });
+
+  // -----------------------------
+  // Header column filters (same as create enhancement)
+  // -----------------------------
+  const fltParty = document.getElementById("fltParty");
+  const fltInvoice = document.getElementById("fltInvoice");
+  const fltDue = document.getElementById("fltDue");
+  const fltOsMin = document.getElementById("fltOsMin");
+  const fltOsMax = document.getElementById("fltOsMax");
+  const fltSelected = document.getElementById("fltSelected");
+  const btnClearTableFilters = document.getElementById("btnClearTableFilters");
+
+  function normStr(v) { return String(v || "").toLowerCase().trim(); }
+  function rowIsSelected(row) { return cacheHas(upperKey(row.getAttribute("data-key"))); }
+
+  function passesFilters(row) {
+    const partyHay = normStr(row.getAttribute("data-party"));
+    const invHay = normStr(row.getAttribute("data-invoice"));
+    const dueHay = normStr(row.getAttribute("data-due"));
+
+    const qParty = normStr(fltParty ? fltParty.value : "");
+    const qInv = normStr(fltInvoice ? fltInvoice.value : "");
+    const qDue = normStr(fltDue ? fltDue.value : "");
+
+    if (qParty && !partyHay.includes(qParty)) return false;
+    if (qInv && !invHay.includes(qInv)) return false;
+    if (qDue && !dueHay.includes(qDue)) return false;
+
+    const osRaw = row.getAttribute("data-outstanding") || "0";
+    const osVal = toNumber(osRaw);
+
+    const minVal = toNumber(fltOsMin ? fltOsMin.value : "");
+    const maxVal = toNumber(fltOsMax ? fltOsMax.value : "");
+
+    if (!Number.isNaN(minVal) && Number.isFinite(minVal) && !Number.isNaN(osVal) && osVal < minVal) return false;
+    if (!Number.isNaN(maxVal) && Number.isFinite(maxVal) && !Number.isNaN(osVal) && osVal > maxVal) return false;
+
+    const selMode = (fltSelected ? fltSelected.value : "");
+    if (selMode === "selected" && !rowIsSelected(row)) return false;
+    if (selMode === "unselected" && rowIsSelected(row)) return false;
+
+    return true;
+  }
+
+  function applyTableFilters() {
+    document.querySelectorAll("tbody tr[data-key]").forEach(row => {
+      row.style.display = passesFilters(row) ? "" : "none";
+    });
+  }
+
+  function clearTableFilters() {
+    if (fltParty) fltParty.value = "";
+    if (fltInvoice) fltInvoice.value = "";
+    if (fltDue) fltDue.value = "";
+    if (fltOsMin) fltOsMin.value = "";
+    if (fltOsMax) fltOsMax.value = "";
+    if (fltSelected) fltSelected.value = "";
+    applyTableFilters();
+  }
+
+  [fltParty, fltInvoice, fltDue, fltOsMin, fltOsMax].forEach(el => {
+    if (!el) return;
+    el.addEventListener("input", applyTableFilters);
+  });
+  if (fltSelected) fltSelected.addEventListener("change", applyTableFilters);
+  if (btnClearTableFilters) btnClearTableFilters.addEventListener("click", clearTableFilters);
+
+  // Initial render
+  renderCacheTable();
+  syncPreviewFromCache();
+  applyTableFilters();
+})();
+</script>
+{% endblock %}

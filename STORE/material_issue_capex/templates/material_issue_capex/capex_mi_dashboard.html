@@ -1,0 +1,297 @@
+{% extends "main/index.html" %}
+{% load l10n %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto my-6 px-4">
+    {% if messages %}
+      <div class="space-y-2 mb-4">
+        {% for message in messages %}
+          <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                      {% if message.tags == 'success' %}bg-emerald-600{% else %}bg-rose-600{% endif %}">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()">✖</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">
+        CAPEX GRN vs Material Issue — Dashboard
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Overview of CAPEX GRN quantities, Material Issue consumption, and Location Transfer CAPEX.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <!-- Sync ERP button (POST) -->
+      <form id="sync-erp-form"
+            method="post"
+            action="{% url 'material_issue_capex:capex_mi_sync_erp' %}">
+        {% csrf_token %}
+        <button id="sync-erp-btn" type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-slate-400 px-3 py-2
+                       text-xs sm:text-sm font-semibold text-white shadow
+                       hover:bg-slate-700 focus:outline-none focus:ring-2
+                       focus:ring-emerald-500 focus:ring-offset-1">
+          <i class="fa-solid fa-arrows-rotate"></i>
+          <span>Sync ERP</span>
+        </button>
+      </form>
+
+      <!-- Excel download button -->
+      <a href="{% url 'material_issue_capex:capex_mi_export_excel' %}{% if base_qs %}?{{ base_qs }}{% elif request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}"
+         class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-green-200 px-3 py-2
+                text-xs sm:text-sm font-semibold text-slate-700 shadow-sm
+                hover:bg-slate-50 focus:outline-none focus:ring-2
+                focus:ring-slate-300 focus:ring-offset-1">
+        <i class="fa-solid fa-file-excel text-green-700"></i>
+        <span>Download Excel</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get"
+        class="mb-4 bg-white rounded-xl shadow border border-slate-200 p-4">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <div>
+        <label class="block text-xs font-semibold text-slate-600">Batch No</label>
+        <input type="text" name="batch_no" value="{{ filters.batch_no }}"
+               placeholder="Batch no..."
+               class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm
+                      bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600">Virtual Location</label>
+        <select name="virtual_location"
+                class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm
+                      bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+          <option value="">All virtual locations</option>
+          {% for vl in virtual_locations %}
+            <option value="{{ vl }}" {% if filters.virtual_location == vl %}selected{% endif %}>
+              {{ vl }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600">Item Code</label>
+        <input type="text" name="item_code" value="{{ filters.item_code }}"
+               placeholder="Item code..."
+               class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm
+                      bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600">Item Name</label>
+        <input type="text" name="item_name" value="{{ filters.item_name }}"
+               placeholder="Item name..."
+               class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm
+                      bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600">Location</label>
+        <input type="text" name="location" value="{{ filters.location }}"
+               placeholder="Location..."
+               class="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm
+                      bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+    </div>
+
+    <div class="mt-4 flex justify-end gap-2">
+      <a href="{% url 'material_issue_capex:capex_mi_dashboard' %}"
+         class="inline-flex items-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+        Clear
+      </a>
+      <button type="submit"
+              class="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow hover:bg-indigo-700">
+        Filter
+      </button>
+    </div>
+  </form>
+
+  <!-- Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-4">
+    <div class="bg-white rounded-xl shadow border border-slate-200 px-4 py-3">
+      <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Capex GRN Qty</p>
+      <p class="text-2xl font-semibold text-indigo-700">{{ cards.capex_qty }}</p>
+    </div>
+    
+    <!-- ? NEW: Location Transfer Qty -->
+    <div class="bg-white rounded-xl shadow border border-slate-200 px-4 py-3">
+      <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Location Transfer Qty</p>
+      <p class="text-2xl font-semibold text-sky-700">{{ cards.location_transfer_qty }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow border border-slate-200 px-4 py-3">
+      <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Material Issue Qty</p>
+      <p class="text-2xl font-semibold text-rose-700">{{ cards.mi_qty }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow border border-slate-200 px-4 py-3">
+      <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Closing Qty</p>
+      <p class="text-2xl font-semibold text-amber-700">{{ cards.closing_qty }}</p>
+    </div>
+
+    <div class="bg-white rounded-xl shadow border border-slate-200 px-4 py-3">
+      <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Capex GRN Total Amount</p>
+      <p class="text-2xl font-semibold text-emerald-700">{{ cards.capex_total }}</p>
+    </div>
+  </div>
+
+  <!-- Detail table -->
+  <div class="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm border-collapse">
+        <thead class="bg-slate-50 text-xs font-semibold text-slate-600 border-b border-slate-200">
+          <tr>
+            <th class="px-3 py-2 text-left">Batch No</th>
+            <th class="px-3 py-2 text-left">Location</th>
+            <th class="px-3 py-2 text-left">Virtual Location</th>
+
+            <!-- ? NEW transfer columns -->
+            <th class="px-3 py-2 text-left">To Location</th>
+            <th class="px-3 py-2 text-right whitespace-nowrap">Transfer Qty</th>
+            <th class="px-3 py-2 text-left">Item Code</th>
+            <th class="px-3 py-2 text-left">Item Name</th>
+            <th class="px-3 py-2 text-right whitespace-nowrap">Capex GRN Qty</th>
+            <th class="px-3 py-2 text-right whitespace-nowrap">Material Issue Qty</th>
+            <th class="px-3 py-2 text-right whitespace-nowrap">Closing Qty</th>
+            <th class="px-3 py-2 text-right">Rate</th>
+            <th class="px-3 py-2 text-right">Total Amount</th>
+            <th class="px-3 py-2 text-left">CAPEX Doc No</th>
+            <th class="px-3 py-2 text-left">MI Doc No</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100">
+          {% if rows %}
+            {% for row in rows %}
+              <tr class="odd:bg-white even:bg-slate-50/60 hover:bg-indigo-50/60 transition-colors">
+                <td class="px-3 py-2 whitespace-nowrap">{{ row.batch_no|default:"-" }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ row.location|default:"-" }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ row.virtual_location|default:"-" }}</td>
+
+                <!-- To Location -->
+                <td class="px-3 py-2 whitespace-nowrap">{{ row.to_location|default:"-" }}</td>
+
+                <!-- Transfer Qty -->
+                <td class="px-3 py-2 text-right">
+                  {{ row.transfer_qty|default:0|floatformat:2|localize }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap font-medium text-slate-800">{{ row.item_code }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {{ row.item_name|default:"-" }}
+                </td>
+                <td class="px-3 py-2 text-right">{{ row.capex_grn_qty|default:0|floatformat:2|localize }}</td>
+                <td class="px-3 py-2 text-right">{{ row.material_issue_qty|default:0|floatformat:2|localize }}</td>
+                <td class="px-3 py-2 text-right">{{ row.closing_qty|default:0|floatformat:2|localize }}</td>
+                <td class="px-3 py-2 text-right">{{ row.rate|default:0|floatformat:2|localize }}</td>
+                <td class="px-3 py-2 text-right">{{ row.total_amount|default:0|floatformat:2|localize }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ row.capex_doc_no|default:"-" }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{{ row.mi_doc_no|default:"-" }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="14" class="px-3 py-6 text-center text-slate-500 text-sm">
+                No records found for the selected filters.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if paginator and paginator.num_pages > 1 %}
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50">
+        <div class="text-xs sm:text-sm text-slate-600">
+          Page <span class="font-semibold">{{ page_obj.number }}</span> of
+          <span class="font-semibold">{{ paginator.num_pages }}</span>
+        </div>
+        <div class="inline-flex items-center gap-1 text-xs sm:text-sm">
+          {% if page_obj.has_previous %}
+            <a href="?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page_obj.previous_page_number }}"
+               class="px-3 py-1 rounded-l-md border border-slate-300 bg-white hover:bg-slate-100">
+              Previous
+            </a>
+          {% else %}
+            <span class="px-3 py-1 rounded-l-md border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed">
+              Previous
+            </span>
+          {% endif %}
+
+          {% for num in paginator.page_range %}
+            {% if num == page_obj.number %}
+              <span class="px-3 py-1 border-t border-b border-slate-300 bg-indigo-50 text-indigo-700 font-semibold">
+                {{ num }}
+              </span>
+            {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" or num == 1 or num == paginator.num_pages %}
+              <a href="?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ num }}"
+                 class="px-3 py-1 border-t border-b border-slate-300 bg-white hover:bg-slate-100">
+                {{ num }}
+              </a>
+            {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+              <span class="px-2">…</span>
+            {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+            <a href="?{% if base_qs %}{{ base_qs }}&{% endif %}page={{ page_obj.next_page_number }}"
+               class="px-3 py-1 rounded-r-md border border-slate-300 bg-white hover:bg-slate-100">
+              Next
+            </a>
+          {% else %}
+            <span class="px-3 py-1 rounded-r-md border border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed">
+              Next
+            </span>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Full-screen sync overlay -->
+<div id="sync-overlay"
+     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40">
+  <div class="bg-white rounded-xl shadow-lg px-6 py-4 flex items-center gap-3">
+    <svg class="h-5 w-5 animate-spin text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
+    <span class="text-sm font-medium text-slate-700">Syncing ERP data… Please wait.</span>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const syncForm = document.getElementById("sync-erp-form");
+    const syncBtn = document.getElementById("sync-erp-btn");
+    const overlay = document.getElementById("sync-overlay");
+
+    if (!syncForm || !syncBtn || !overlay) return;
+
+    syncForm.addEventListener("submit", function () {
+      syncBtn.disabled = true;
+      syncBtn.classList.add("opacity-70", "cursor-not-allowed");
+
+      syncBtn.innerHTML = `
+        <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <span>Syncing…</span>
+      `;
+      overlay.classList.remove("hidden");
+    });
+  });
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "main/index.html" %}
+{% block title %}Preventive Maintenance — Calendar{% endblock %}
+
+{% block maincontent %}
+<style>
+  /* ===== Modern Calendar Styling (with wider left gap) ===== */
+  :root {
+    /* Color Palette */
+    --pm-brand: #3b82f6;
+    --pm-brand-light: #eff6ff;
+    --pm-text-primary: #1f2937;
+    --pm-text-secondary: #6b7280;
+    --pm-text-subtle: #9ca3af;
+    --pm-bg-primary: #ffffff;
+    --pm-bg-secondary: #f9fafb;
+    --pm-border: #e5e7eb;
+
+    /* Status Colors */
+    --pm-status-done: #10b981;
+    --pm-status-done-bg: #ecfdf5;
+    --pm-status-postponed: #f59e0b;
+    --pm-status-postponed-bg: #fffbeb;
+    --pm-status-scheduled: #6366f1;
+    --pm-status-scheduled-bg: #eef2ff;
+
+    /* Layout */
+    --pm-border-radius: 0.75rem;
+    --pm-small-radius: 0.5rem;
+    --container-gutter: 1.5rem;      /* base gutter from your layout */
+    --sidebar-gap: 32px;             /* 👈 increase/decrease this to change space from sidebar */
+  }
+
+  /* Main container - Full Bleed Layout */
+  .pm-calendar {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--pm-bg-primary);
+
+    /* Break out of parent padding but add extra left gap next to sidebar */
+    margin-left: calc(-1 * var(--container-gutter));
+    margin-right: calc(-1 * var(--container-gutter));
+    padding-left: calc(var(--container-gutter) + var(--sidebar-gap));  /* 👈 more space from sidebar */
+    padding-right: calc(var(--container-gutter) + 12px);               /* keep Saturday visible */
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+
+    border-left: 1px solid var(--pm-border); /* subtle divider next to sidebar */
+  }
+
+  /* Header: Title and Actions */
+  .pm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--pm-border);
+  }
+  .pm-header h2 { margin: 0; font-weight: 700; font-size: 1.75rem; color: var(--pm-text-primary); }
+  .pm-header .actions { display: flex; gap: 0.75rem; }
+  .pm-header .btn { text-decoration: none; padding: 0.6rem 1.2rem; border-radius: var(--pm-small-radius); font-weight: 600; font-size: 0.9rem; transition: all 0.2s ease-in-out; border: 1px solid transparent; }
+  .pm-header .btn-primary { background-color: var(--pm-brand); color: white; }
+  .pm-header .btn-primary:hover { background-color: #2563eb; }
+  .pm-header .btn-secondary { background-color: var(--pm-bg-primary); color: var(--pm-text-secondary); border: 1px solid var(--pm-border); }
+  .pm-header .btn-secondary:hover { background-color: var(--pm-bg-secondary); border-color: #d1d5db; }
+
+  /* Month navigation */
+  .pm-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .pm-nav .title { font-weight: 600; font-size: 1.25rem; color: var(--pm-text-primary); }
+  .pm-nav a { text-decoration: none; color: var(--pm-text-secondary); padding: 0.5rem; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; transition: background-color 0.2s ease; }
+  .pm-nav a:hover { background-color: var(--pm-bg-secondary); }
+
+  /* Grid Safety Net: Wrapper to allow horizontal scrolling on small screens */
+  .pm-grid-wrapper{
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 12px;  /* breathing room so last column isn’t flush */
+  }
+
+  /* Grid container itself */
+  .pm-grid-container {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr)); /* allow columns to shrink to avoid clipping */
+    gap: 0.5rem;
+    min-width: 700px; /* Prevent ugly wrapping on very narrow screens */
+    padding-right: 6px; /* tiny extra space for the last column */
+  }
+
+  .pm-weekdays { display: contents; }
+  .pm-weekdays div { text-align: center; font-weight: 600; color: var(--pm-text-subtle); font-size: 0.8rem; text-transform: uppercase; padding-bottom: 0.75rem; }
+
+  /* Individual Day Cell */
+  .day-cell {
+    background: var(--pm-bg-primary);
+    border: 1px solid var(--pm-border);
+    border-radius: var(--pm-small-radius);
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    min-width: 0; /* allow shrinking inside the grid */
+  }
+  .day-cell:hover { border-color: var(--pm-brand); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1); transform: translateY(-2px); }
+  .day-cell.dim { background: var(--pm-bg-secondary); opacity: 0.7; }
+  .day-cell.dim:hover { opacity: 1; }
+
+  /* Day Header (Number) */
+  .day-head { text-align: right; padding: 0.4rem 0.5rem; font-weight: 600; color: var(--pm-text-secondary); }
+  .day-head a { text-decoration: none; color: inherit; display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; border-radius: 50%; transition: all 0.2s ease; }
+  .day-head a:hover { background-color: var(--pm-brand-light); color: var(--pm-brand); }
+  .today .day-head a { background-color: var(--pm-brand); color: white; font-weight: 700; }
+
+  /* List of Maintenance Items */
+  .day-body { padding: 0 0.4rem; display: flex; flex-direction: column; gap: 0.3rem; flex-grow: 1; min-width: 0; }
+  .event-item { display: flex; gap: 0.4rem; align-items: center; font-size: 0.75rem; padding: 0.25rem 0.4rem; border-radius: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; text-decoration: none; min-width: 0; }
+  .event-item .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex-shrink: 0; }
+  .event-item .equip { font-weight: 600; color: var(--pm-text-primary); }
+  .event-item .loc { color: var(--pm-text-secondary); overflow: hidden; text-overflow: ellipsis; }
+
+  /* Status-specific Pill styles */
+  .status-scheduled { background-color: var(--pm-status-scheduled-bg); }
+  .status-scheduled .dot { background-color: var(--pm-status-scheduled); }
+  .status-postponed { background-color: var(--pm-status-postponed-bg); }
+  .status-postponed .dot { background-color: var(--pm-status-postponed); }
+  .status-done { background-color: var(--pm-status-done-bg); }
+  .status-done .dot { background-color: var(--pm-status-done); }
+
+  /* "+ X more" link */
+  .day-more { margin-top: auto; padding: 0.5rem 0.75rem; font-size: 0.85rem; }
+  .day-more a { color: var(--pm-brand); text-decoration: none; font-weight: 600; }
+  .day-more a:hover { text-decoration: underline; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .pm-header { flex-direction: column; gap: 1rem; text-align: center; }
+    .pm-grid-container { min-width: 600px; }
+    .event-item .loc { display: none; }
+  }
+</style>
+
+<div class="pm-calendar">
+  <!-- Header -->
+  <div class="pm-header">
+    <h2>Preventive Maintenance</h2>
+    <div class="actions">
+      <a class="btn btn-secondary" href="{% url 'maintenance:dashboard' %}">Dashboard</a>
+      <a class="btn btn-primary" href="{% url 'maintenance:upload_excel' %}">Upload Schedule</a>
+    </div>
+  </div>
+
+  <!-- Month navigation -->
+  <div class="pm-nav">
+    <a href="{% url 'maintenance:calendar' %}?month={{ prev_month_str }}" title="Previous month">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </a>
+    <div class="title">{{ current|date:"F Y" }}</div>
+    <a href="{% url 'maintenance:calendar' %}?month={{ next_month_str }}" title="Next month">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </a>
+  </div>
+
+  <!-- Calendar grid wrapper for horizontal scrolling -->
+  <div class="pm-grid-wrapper">
+    <div class="pm-grid-container">
+      <!-- Weekday headers -->
+      <div class="pm-weekdays">
+        <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+      </div>
+
+      <!-- Day cells loop -->
+      {% for week in weeks_data %}
+        {% for day in week %}
+          <div class="day-cell {% if not day.in_month %}dim{% endif %} {% if day.date == today or day.date == today_date %}today{% endif %}">
+            <div class="day-head">
+              <a href="{% url 'maintenance:calendar_day' day.date|date:'Y-m-d' %}">{{ day.date.day }}</a>
+            </div>
+
+            <div class="day-body">
+              {% for it in day.items %}
+                {% with status_class=it.status|lower|default:"scheduled" %}
+                  <a href="{% url 'maintenance:calendar_day' day.date|date:'Y-m-d' %}" class="event-item status-{{ status_class }}">
+                    <span class="dot"></span>
+                    <span class="equip">{{ it.equipment_id }}</span>
+                    <span class="loc">— {{ it.location }}</span>
+                  </a>
+                {% endwith %}
+              {% empty %}
+                {# intentionally blank for clean empty days #}
+              {% endfor %}
+            </div>
+
+            {% if day.overflow_count %}
+              <div class="day-more">
+                <a href="{% url 'maintenance:calendar_day' day.date|date:'Y-m-d' %}">+{{ day.overflow_count }} more</a>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

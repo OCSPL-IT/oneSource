@@ -1,0 +1,242 @@
+{% extends "main/index.html" %}
+{% block title %}Update Maintenance{% endblock %}
+
+{% block maincontent %}
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+    {# BREADCRUMB + TITLE BAR #}
+    <div class="flex items-center justify-between gap-4 mb-6">
+      <div class="min-w-0">
+        <nav class="flex items-center text-xs text-slate-500" aria-label="Breadcrumb">
+          <a href="{% url 'maintenance:dashboard' %}" class="hover:text-slate-700">Maintenance</a>
+          <svg class="mx-2 h-3 w-3 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+          <span class="truncate">Update</span>
+        </nav>
+        <h1 class="mt-1 text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+          Update: <span class="text-indigo-600">{{ obj.equipment_id }}</span>
+        </h1>
+        <p class="mt-2 text-sm text-slate-600">
+          <span class="font-medium">Location:</span> {{ obj.location|default:"—" }}
+          <span class="mx-2 text-slate-300">•</span>
+          <span class="font-medium">Scheduled:</span> {{ obj.scheduled_date|date:"d M Y" }}
+          {% if obj.rescheduled_to %}
+            <span class="mx-2 text-slate-300">•</span>
+            <span class="font-medium">Rescheduled to:</span> {{ obj.rescheduled_to|date:"d M Y" }}
+          {% endif %}
+        </p>
+      </div>
+
+      <a href="{% url 'maintenance:dashboard' %}"
+         class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+        Back
+      </a>
+    </div>
+
+    {# FLASH MESSAGES #}
+    {% if messages %}
+      <div class="mb-6 space-y-3">
+        {% for message in messages %}
+          {% with message.tags|default:'info' as tag %}
+          <div class="flex items-start gap-3 rounded-xl px-4 py-3 text-sm
+              {% if tag == 'success' %} bg-emerald-50 text-emerald-800
+              {% elif tag == 'error' %} bg-rose-50 text-rose-800
+              {% elif tag == 'warning' %} bg-amber-50 text-amber-800
+              {% else %} bg-indigo-50 text-indigo-800 {% endif %}">
+            <div class="shrink-0 mt-0.5">
+              {% if tag == 'success' %}
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.707a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293A1 1 0 106.293 10.707l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              {% elif tag == 'error' %}
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 .5a9.5 9.5 0 100 19 9.5 9.5 0 000-19zM9 5a1 1 0 112 0v5a1 1 0 11-2 0V5zm1 9a1.25 1.25 0 110-2.5A1.25 1.25 0 0110 14z" clip-rule="evenodd"/></svg>
+              {% elif tag == 'warning' %}
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.518 11.59c.75 1.334-.213 3.01-1.743 3.01H3.482c-1.53 0-2.493-1.676-1.743-3.01l6.518-11.59z"/><path d="M11 14a1 1 0 11-2 0 1 1 0 012 0zM9 7h2v5H9V7z"/></svg>
+              {% else %}
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M18 10A8 8 0 11.001 10 8 8 0 0118 10zM9 9h2v5H9zM9 6h2v2H9z"/></svg>
+              {% endif %}
+            </div>
+            <div>{{ message }}</div>
+          </div>
+          {% endwith %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# INFO STRIP #}
+    <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div class="rounded-xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-500">Equipment</p>
+        <p class="mt-1 font-medium text-slate-900">{{ obj.equipment_id }}</p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-500">Current Status</p>
+        <p class="mt-1">
+          <span id="statusBadge" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-slate-100 text-slate-700">—</span>
+        </p>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-white p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-500">Scheduled</p>
+        <p class="mt-1 font-medium text-slate-900">{{ obj.scheduled_date|date:"d M Y" }}</p>
+      </div>
+    </div>
+
+    {# FORM #}
+    <form method="post" novalidate class="group">
+      {% csrf_token %}
+
+      <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <div class="p-6 md:p-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div>
+              <label for="id_status" class="block text-sm font-medium text-slate-700">Status <span class="text-rose-500">*</span></label>
+              {{ form.status }}
+            </div>
+
+            <div id="reschedWrap">
+              <label for="id_rescheduled_to" class="block text-sm font-medium text-slate-700">Reschedule to</label>
+              {{ form.rescheduled_to }}
+              <p class="mt-2 text-xs text-slate-500">Required if status is <strong>POSTPONED</strong>.</p>
+            </div>
+
+            <div>
+              <label for="id_downtime_minutes" class="block text-sm font-medium text-slate-700">Downtime (minutes)</label>
+              {{ form.downtime_minutes }}
+              <p id="downtimeHint" class="mt-2 text-xs text-slate-500"></p>
+            </div>
+
+            <div>
+              <label for="id_downtime_reason" class="block text-sm font-medium text-slate-700">Downtime Reason</label>
+              {{ form.downtime_reason }}
+            </div>
+
+            <div class="md:col-span-2">
+              <div class="flex items-center justify-between">
+                <label for="id_notes" class="block text-sm font-medium text-slate-700">Notes</label>
+                <span id="notesCount" class="text-xs text-slate-500">0 / 500</span>
+              </div>
+              {{ form.notes }}
+            </div>
+
+          </div>
+        </div>
+
+        {# STICKY ACTION BAR #}
+        <div class="bg-slate-50/80 backdrop-blur px-4 sm:px-6 py-4 border-t border-slate-200 sticky bottom-0">
+          <div class="flex items-center justify-end gap-2">
+            <a href="{% url 'maintenance:dashboard' %}"
+               class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+              Cancel
+            </a>
+            <button type="submit"
+              class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+              <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M17 8a1 1 0 00-1-1h-5V2a1 1 0 10-2 0v5H4a1 1 0 100 2h5v5a1 1 0 102 0V9h5a1 1 0 001-1z"/></svg>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    {% if obj.status == 'DONE' and obj.completed_at %}
+      <div class="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-800">
+        <p class="font-medium">
+          Completed at: <span class="font-semibold">{{ obj.completed_at }}</span>
+          {% if obj.completed_by %} by <span class="font-semibold">{{ obj.completed_by }}</span>{% endif %}
+        </p>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+(function () {
+  // Light-only styles for auto-enhance of default Django widgets
+  const baseInput =
+    "mt-1 block w-full rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 placeholder-slate-400";
+  const baseSelect =
+    "mt-1 block w-full rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2";
+  const baseTextarea =
+    "mt-1 block w-full rounded-lg border border-slate-300 bg-white text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm px-3 py-2 placeholder-slate-400";
+
+  function ensureClass(el, cls) {
+    if (!el) return;
+    cls.split(/\s+/).forEach(c => { if (!el.classList.contains(c)) el.classList.add(c); });
+  }
+
+  const statusSel = document.getElementById("id_status");
+  const resched = document.getElementById("id_rescheduled_to");
+  const downMin = document.getElementById("id_downtime_minutes");
+  const downReason = document.getElementById("id_downtime_reason");
+  const notes = document.getElementById("id_notes");
+  const notesCount = document.getElementById("notesCount");
+  const reschedWrap = document.getElementById("reschedWrap");
+  const downtimeHint = document.getElementById("downtimeHint");
+  const statusBadge = document.getElementById("statusBadge");
+
+  // Apply classes if missing
+  [resched, downMin, downReason].forEach(el => ensureClass(el, baseInput));
+  ensureClass(statusSel, baseSelect);
+  ensureClass(notes, baseTextarea);
+
+  // Notes counter
+  const NOTES_LIMIT = 500;
+  if (notes) {
+    notes.setAttribute("maxlength", NOTES_LIMIT);
+    const updateCount = () => {
+      const v = notes.value || "";
+      if (notesCount) notesCount.textContent = `${v.length} / ${NOTES_LIMIT}`;
+    };
+    notes.addEventListener("input", updateCount);
+    updateCount();
+  }
+
+  // Reschedule requirement for POSTPONED
+  function syncUI() {
+    const val = statusSel ? statusSel.value : "";
+    if (resched) {
+      const need = (val === "POSTPONED");
+      resched.required = need;
+      reschedWrap.style.opacity = need ? "1" : "0.65";
+      reschedWrap.querySelector("p")?.classList.toggle("hidden", !need);
+    }
+
+    // Status badge color
+    if (statusBadge) {
+      statusBadge.textContent = val || "—";
+      statusBadge.className = "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold";
+      let color = "bg-slate-100 text-slate-700";
+      if (val === "DONE") color = "bg-emerald-100 text-emerald-800";
+      else if (val === "POSTPONED") color = "bg-amber-100 text-amber-800";
+      else if (val === "IN_PROGRESS") color = "bg-indigo-100 text-indigo-800";
+      statusBadge.className += " " + color;
+    }
+  }
+
+  // Downtime hint
+  function syncDowntime() {
+    const n = Number(downMin?.value || 0);
+    if (downtimeHint) {
+      downtimeHint.textContent = n > 0 ? "Tip: Add a brief reason to track lost time." : "";
+    }
+    if (downReason && n > 0 && !downReason.placeholder) {
+      downReason.placeholder = "Add brief reason for downtime…";
+    }
+    if (downReason && n <= 0) downReason.placeholder = "";
+  }
+
+  // Minimum reschedule date = scheduled date
+  try {
+    const schedText = "{{ obj.scheduled_date|date:'Y-m-d' }}";
+    if (resched && schedText) resched.min = schedText;
+  } catch (_) {}
+
+  statusSel?.addEventListener("change", () => { syncUI(); });
+  downMin?.addEventListener("input", syncDowntime);
+
+  // Initial paint
+  syncUI();
+  syncDowntime();
+})();
+</script>
+{% endblock %}

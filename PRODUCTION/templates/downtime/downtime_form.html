@@ -1,0 +1,843 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+
+{# ───────────────────────── Flash messages ───────────────────────── #}
+{% if messages %}
+<div class="max-w-6xl mx-auto px-4 pt-4">
+  <div class="space-y-2">
+    {% for message in messages %}
+      <div
+        class="relative flex items-start justify-between gap-4 px-4 py-3 rounded-md border
+               {% if message.tags == 'debug'   %}bg-slate-50 text-slate-700 border-slate-300
+               {% elif message.tags == 'info'   %}bg-blue-50  text-blue-800  border-blue-200
+               {% elif message.tags == 'success'%}bg-emerald-50 text-emerald-800 border-emerald-200
+               {% elif message.tags == 'warning'%}bg-amber-50 text-amber-800 border-amber-200
+               {% elif message.tags == 'error'  %}bg-red-50 text-red-800 border-red-200
+               {% else %}bg-slate-50 text-slate-700 border-slate-300{% endif %}">
+        <span class="font-medium">{{ message }}</span>
+        <button type="button" class="shrink-0 leading-none" onclick="this.parentElement.remove()">✕</button>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if form.non_field_errors %}
+<div class="max-w-6xl mx-auto px-4 pt-4">
+  {% for error in form.non_field_errors %}
+  <div class="relative px-4 py-3 rounded-md border bg-red-50 border-red-200 text-red-800">
+    {{ error }}
+    <button type="button" class="absolute top-2 right-3 leading-none" onclick="this.parentElement.remove()">✕</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ───────────────────────── Sticky page header ────────────────────── #}
+<div class="sticky top-0 z-10 bg-slate-50/80 backdrop-blur supports-[backdrop-filter]:bg-slate-50/60 border-b">
+  <div class="max-w-6xl mx-auto px-4">
+    <div class="h-14 flex items-center gap-3">
+      <a href="{% url 'indexpage' %}"
+         class="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
+        ← Back
+      </a>
+      <h1 class="text-lg md:text-xl font-semibold text-slate-800">Downtime Entry</h1>
+      <div class="ml-auto">
+        <a href="{% url 'view_downtime' %}"
+           class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700">
+          View Records
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ───────────────────────── Boot data from view ───────────────────── #}
+<script id="dt_boot" type="application/json">{{ boot_json|safe }}</script>
+
+{# ───────────────────────── Form shell ────────────────────────────── #}
+<form id="downtimeForm" method="post" action="">
+  {% csrf_token %}
+
+  <div class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+
+    {# ───────── Section: Basic information ───────── #}
+    <section class="bg-white border rounded-xl shadow-sm">
+      <header class="px-4 md:px-6 py-3 border-b">
+        <h2 class="text-sm font-semibold text-slate-700 tracking-wide">Basic Information</h2>
+      </header>
+      <div class="px-4 md:px-6 py-4 space-y-4">
+
+        <!-- Row -->
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="record_dt" class="col-span-12 md:col-span-3 text-sm text-slate-600">Record Date &amp; Time</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="record_dt" name="record_dt" type="datetime-local" step="1"
+                   value="{{ record_dt_default|default:'' }}"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="idle_flag" class="col-span-12 md:col-span-3 text-sm text-slate-600">Idle</label>
+          <div class="col-span-12 md:col-span-9">
+            <select id="idle_flag" name="idle_flag"
+                    class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">— Select —</option>
+              <option value="Yes">Yes</option>
+              <option value="No" selected>No</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="block_select" class="col-span-12 md:col-span-3 text-sm text-slate-600">Block</label>
+          <div class="col-span-12 md:col-span-9">
+            <select id="block_select" name="block"
+                    class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">— Select Block —</option>
+              <option value="A-Block">A-Block</option>
+              <option value="B-Block">B-Block</option>
+              <option value="C-Block">C-Block</option>
+              <option value="D-Block">D-Block</option>
+              <option value="E-Block">E-Block</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-start">
+          <label for="equip_input" class="col-span-12 md:col-span-3 text-sm text-slate-600 pt-2">Equipment</label>
+          <div class="col-span-12 md:col-span-9">
+            <div class="relative">
+              <input id="equip_input" name="eqpt_name" type="text"
+                     class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm
+                            focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                     placeholder="Select Block first…" autocomplete="off" disabled />
+              <div id="equip_menu"
+                   class="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-slate-200 bg-white shadow hidden"></div>
+            </div>
+            <input type="hidden" id="equipment_id" name="equipment_id" />
+            <p id="equipHelp" class="text-xs text-slate-500 mt-1 hidden"></p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-start">
+          <label for="stage_input" class="col-span-12 md:col-span-3 text-sm text-slate-600 pt-2">Stage Name</label>
+          <div class="col-span-12 md:col-span-9">
+            <div class="relative">
+              <input id="stage_input" name="stage_name" type="text"
+                     class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500"
+                     placeholder="Type to search Stage…" autocomplete="off" />
+              <div id="stage_menu"
+                   class="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-md border border-slate-200 bg-white shadow hidden"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="id_fg" class="col-span-12 md:col-span-3 text-sm text-slate-600">FG Name</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="id_fg" name="product_name" type="text"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm bg-slate-100"
+                   placeholder="Auto-loaded from Stage" readonly />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-start">
+          <label for="batch_input" class="col-span-12 md:col-span-3 text-sm text-slate-600 pt-2">Batch No</label>
+          <div class="col-span-12 md:col-span-9">
+            <div class="relative">
+              <input id="batch_input" name="batch_no" type="text"
+                     class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm
+                            focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                     placeholder="Select Stage first…" autocomplete="off" disabled />
+              <div id="batch_menu"
+                   class="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-md border border-slate-200 bg-white shadow hidden"></div>
+            </div>
+            <p id="batchHelp" class="text-xs text-slate-500 mt-1 hidden"></p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    {# ───────── Section: BOM / BCT / Loss ───────── #}
+    <section class="bg-white border rounded-xl shadow-sm">
+      <header class="px-4 md:px-6 py-3 border-b">
+        <h2 class="text-sm font-semibold text-slate-700 tracking-wide">Bill of Materials</h2>
+      </header>
+      <div class="px-4 md:px-6 py-4 space-y-4">
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label class="col-span-12 md:col-span-3 text-sm text-slate-600">BOM Quantity</label>
+          <div class="col-span-12 md:col-span-9">
+            <!-- readonly number (single option) -->
+            <input id="bom_qty_input" name="bom_qty" type="number" step="1" min="0"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm bg-slate-100" readonly hidden disabled />
+            <!-- dropdown (multi option) -->
+            <select id="bom_qty_select" name="bom_qty"
+                    class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500"
+                    hidden disabled></select>
+            <p id="bomHelp" class="text-xs text-slate-500 mt-1 hidden"></p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label class="col-span-12 md:col-span-3 text-sm text-slate-600">
+            BCT <span class="text-red-600">*</span>
+          </label>
+          <div class="col-span-12 md:col-span-9">
+            <!-- readonly number (single option) -->
+            <input id="bom_bct_input" name="bom_bct" type="number" step="1" min="1"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm bg-slate-50"
+                   placeholder="Enter BCT" readonly hidden disabled />
+            <!-- dropdown (multi option) -->
+            <select id="bom_bct_select" name="bom_bct"
+                    class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500"
+                    hidden disabled></select>
+            <p id="bctHelp" class="text-xs text-slate-500 mt-1 hidden"></p>
+            <p id="bctError" class="text-xs text-red-600 mt-1 hidden">BCT is required and must be &gt; 0.</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label class="col-span-12 md:col-span-3 text-sm text-slate-600">Loss / hr (Qty ÷ BCT)</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="loss_per_hr" name="loss_per_hr" type="number" step="1"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm bg-slate-100" readonly />
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    {# ───────── Section: Timing ───────── #}
+    <section class="bg-white border rounded-xl shadow-sm">
+      <header class="px-4 md:px-6 py-3 border-b">
+        <h2 class="text-sm font-semibold text-slate-700 tracking-wide">Timing</h2>
+      </header>
+      <div class="px-4 md:px-6 py-4 space-y-4">
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="start_date" class="col-span-12 md:col-span-3 text-sm text-slate-600">Start Date</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="start_date" name="start_date" type="date"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="start_time" class="col-span-12 md:col-span-3 text-sm text-slate-600">Start Time</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="start_time" name="start_time" type="time" step="1"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="end_date" class="col-span-12 md:col-span-3 text-sm text-slate-600">End Date</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="end_date" name="end_date" type="date"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="end_time" class="col-span-12 md:col-span-3 text-sm text-slate-600">End Time</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="end_time" name="end_time" type="time" step="1"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label class="col-span-12 md:col-span-3 text-sm text-slate-600">Total Duration (Hours, decimal)</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="duration_hours" name="duration_hours" type="number" step="0.01"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm bg-slate-100" readonly />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label class="col-span-12 md:col-span-3 text-sm text-slate-600">Total Loss</label>
+          <div class="col-span-12 md:col-span-9">
+            <input id="total_loss" name="total_loss" type="number" step="1"
+                   class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm bg-slate-100" readonly />
+          </div>
+        </div>
+
+        <p id="duration_error" class="text-sm text-red-600 hidden">End must be after Start.</p>
+      </div>
+    </section>
+
+    {# ───────── Section: Classification ───────── #}
+    <section class="bg-white border rounded-xl shadow-sm">
+      <header class="px-4 md:px-6 py-3 border-b">
+        <h2 class="text-sm font-semibold text-slate-700 tracking-wide">Classification</h2>
+      </header>
+      <div class="px-4 md:px-6 py-4 space-y-4">
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="dept_select" class="col-span-12 md:col-span-3 text-sm text-slate-600">Department</label>
+          <div class="col-span-12 md:col-span-9">
+            <select id="dept_select" name="downtime_dept"
+                    class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500">
+              <option value="">— Select Department —</option>
+            </select>
+            <p id="deptHelp" class="text-xs text-slate-500 mt-1 hidden"></p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-4 items-center">
+          <label for="cat_select" class="col-span-12 md:col-span-3 text-sm text-slate-600">Category</label>
+          <div class="col-span-12 md:col-span-9">
+            <select id="cat_select" name="downtime_category" disabled
+                    class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 disabled:cursor-not-allowed">
+              <option value="">— Select Category —</option>
+            </select>
+            <p id="catHelp" class="text-xs text-slate-500 mt-1 hidden"></p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    {# ───────── Section: Reason ───────── #}
+    <section class="bg-white border rounded-xl shadow-sm">
+      <header class="px-4 md:px-6 py-3 border-b">
+        <h2 class="text-sm font-semibold text-slate-700 tracking-wide">Reason</h2>
+      </header>
+      <div class="px-4 md:px-6 py-4 space-y-2">
+        <textarea id="reason" name="reason" rows="4" maxlength="500"
+                  class="w-full rounded-md border-slate-300 px-3 py-2 shadow-sm focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter reason (max 500 characters)"></textarea>
+        <div class="flex items-center justify-between">
+          <p id="reasonHelp" class="text-xs text-slate-500">Be specific. Include context if helpful.</p>
+          <p class="text-xs text-slate-500"><span id="reason_count">0</span>/500</p>
+        </div>
+      </div>
+    </section>
+
+    {# ───────── Sticky action bar ───────── #}
+    <div class="sticky bottom-0 z-10">
+      <div class="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/70 border rounded-xl shadow-sm px-4 md:px-6 py-3 flex items-center justify-end">
+        <button type="submit" id="btnSubmit"
+                class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-white text-sm font-medium hover:bg-blue-700">
+          Save &amp; Continue
+        </button>
+      </div>
+    </div>
+
+  </div>
+</form>
+
+{# ───────────────────────── Scripts (unchanged IDs) ───────────────── #}
+<script>
+  // ---------- Boot data ----------
+  const BOOT = JSON.parse(document.getElementById("dt_boot").textContent);
+
+  // ---------- Searchable dropdown helpers ----------
+  function makeSearch({ inputEl, menuEl, items = [], onSelect }) {
+    let all = Array.from(new Set(items)).filter(Boolean);
+    let filtered = all.slice();
+    let active = -1;
+
+    function render() {
+      menuEl.innerHTML = "";
+      filtered.forEach((v, idx) => {
+        const d = document.createElement("div");
+        d.className = "px-3 py-2 cursor-pointer hover:bg-slate-100";
+        d.textContent = v;
+        d.dataset.index = idx;
+        if (idx === active) d.classList.add("bg-blue-50");
+        menuEl.appendChild(d);
+      });
+      menuEl.classList.toggle("hidden", filtered.length === 0);
+    }
+    function filter() {
+      const q = inputEl.value.trim().toLowerCase();
+      filtered = q ? all.filter(v => String(v).toLowerCase().includes(q)) : all.slice();
+      active = -1; render();
+    }
+    function choose(idx) {
+      if (idx < 0 || idx >= filtered.length) return;
+      inputEl.value = filtered[idx]; close(); onSelect && onSelect(filtered[idx]);
+    }
+    function open(){ if(filtered.length) menuEl.classList.remove("hidden"); }
+    function close(){ menuEl.classList.add("hidden"); }
+
+    inputEl.addEventListener("input", () => { filter(); open(); });
+    inputEl.addEventListener("focus", () => { filter(); open(); });
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, filtered.length - 1); render(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+      else if (e.key === "Enter")   { e.preventDefault(); choose(active >= 0 ? active : 0); }
+      else if (e.key === "Escape")  { close(); }
+    });
+    menuEl.addEventListener("click", (e) => {
+      const node = e.target.closest("[data-index]"); if (!node) return;
+      choose(parseInt(node.dataset.index, 10));
+    });
+    document.addEventListener("click", (e) => {
+      if (!menuEl.contains(e.target) && e.target !== inputEl) close();
+    });
+
+    return {
+      setItems(newItems){ all = Array.from(new Set(newItems||[])).filter(Boolean); filter(); },
+      get value(){ return inputEl.value; },
+      set value(v){ inputEl.value = v||""; filter(); },
+      clear(){ inputEl.value=""; all=[]; filtered=[]; close(); }
+    };
+  }
+
+  function makeSearchObj({ inputEl, menuEl, items = [], onSelect }) {
+    let all = Array.isArray(items) ? items.slice() : [];
+    let filtered = all.slice();
+    let active = -1;
+
+    function render() {
+      menuEl.innerHTML = "";
+      filtered.forEach((o, idx) => {
+        const d = document.createElement("div");
+        d.className = "px-3 py-2 cursor-pointer hover:bg-slate-100";
+        d.textContent = o.label || "";
+        d.dataset.index = idx;
+        if (idx === active) d.classList.add("bg-blue-50");
+        menuEl.appendChild(d);
+      });
+      menuEl.classList.toggle("hidden", filtered.length === 0);
+    }
+    function filter(){
+      const q = inputEl.value.trim().toLowerCase();
+      filtered = q ? all.filter(o => (o.label||"").toLowerCase().includes(q)) : all.slice();
+      active = -1; render();
+    }
+    function choose(idx){
+      if(idx<0 || idx>=filtered.length) return;
+      const picked = filtered[idx];
+      inputEl.value = picked.label || ""; close(); onSelect && onSelect(picked);
+    }
+    function open(){ if(filtered.length) menuEl.classList.remove("hidden"); }
+    function close(){ menuEl.classList.add("hidden"); }
+
+    inputEl.addEventListener("input", () => { filter(); open(); });
+    inputEl.addEventListener("focus", () => { filter(); open(); });
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, filtered.length - 1); render(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+      else if (e.key === "Enter") { e.preventDefault(); choose(active >= 0 ? active : 0); }
+      else if (e.key === "Escape") { close(); }
+    });
+    menuEl.addEventListener("click", (e) => {
+      const node = e.target.closest("[data-index]"); if(!node) return;
+      choose(parseInt(node.dataset.index, 10));
+    });
+    document.addEventListener("click", (e) => {
+      if (!menuEl.contains(e.target) && e.target !== inputEl) close();
+    });
+
+    return {
+      setItems(newItems){ all = Array.isArray(newItems)? newItems.slice():[]; filter(); },
+      get value(){ return inputEl.value; },
+      set value(v){ inputEl.value = v||""; filter(); },
+      clear(){ inputEl.value=""; all=[]; filtered=[]; close(); }
+    };
+  }
+
+  // ---------- Elements ----------
+  const blockSelect = document.getElementById("block_select");
+
+  const equipInput  = document.getElementById("equip_input");
+  const equipMenu   = document.getElementById("equip_menu");
+  const equipHelp   = document.getElementById("equipHelp");
+  const equipHidden = document.getElementById("equipment_id");
+
+  const stageInput  = document.getElementById("stage_input");
+  const stageMenu   = document.getElementById("stage_menu");
+  const fgInput     = document.getElementById("id_fg");
+
+  const batchInput  = document.getElementById("batch_input");
+  const batchMenu   = document.getElementById("batch_menu");
+  const batchHelp   = document.getElementById("batchHelp");
+
+  const recordDt    = document.getElementById("record_dt");
+  const idleSelect  = document.getElementById("idle_flag");
+
+  const deptSelect = document.getElementById("dept_select");
+  const deptHelp   = document.getElementById("deptHelp");
+  const catSelect  = document.getElementById("cat_select");
+  const catHelp    = document.getElementById("catHelp");
+
+  const reasonEl   = document.getElementById("reason");
+  const reasonCount = document.getElementById("reason_count");
+
+  const bomQtyInput  = document.getElementById("bom_qty_input");
+  const bomQtySelect = document.getElementById("bom_qty_select");
+  const bomHelp      = document.getElementById("bomHelp");
+
+  const bomBctInput  = document.getElementById("bom_bct_input");
+  const bomBctSelect = document.getElementById("bom_bct_select");
+  const bctHelp      = document.getElementById("bctHelp");
+  const bctError     = document.getElementById("bctError");
+
+  const lossPerHr    = document.getElementById("loss_per_hr");
+
+  const startDate   = document.getElementById("start_date");
+  const startTime   = document.getElementById("start_time");
+  const endDate     = document.getElementById("end_date");
+  const endTime     = document.getElementById("end_time");
+  const durHours    = document.getElementById("duration_hours");
+  const durationErr = document.getElementById("duration_error");
+  const totalLoss   = document.getElementById("total_loss");
+
+  // ---------- State ----------
+  let selectedBlockDisplay = "";
+  let selectedBlockKey     = ""; // 'A'..'E'
+  let selectedStage        = "";
+  let selectedFG           = "";
+  let selectedEquipment    = null;
+
+  // ---------- Instances ----------
+  const equipDD = makeSearchObj({
+    inputEl: equipInput,
+    menuEl: equipMenu,
+    items: [],
+    onSelect: (obj) => {
+      selectedEquipment = obj;
+      equipHidden.value = obj?.value || "";
+    }
+  });
+
+  const stageDD = makeSearch({
+    inputEl: stageInput,
+    menuEl: stageMenu,
+    items: BOOT.stages,
+    onSelect: onStageSelect
+  });
+
+  const batchDD = makeSearch({
+    inputEl: batchInput,
+    menuEl: batchMenu,
+    items: [],
+    onSelect: () => {}
+  });
+
+  // ---------- Utils ----------
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function nowLocalDate(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function nowLocalTime(){ const d=new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+  function nowLocalDateTimeValue(){
+    const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function safeDateFromParts(dateStr, timeStr){
+    if(!dateStr || !timeStr) return null;
+    const t = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+    const s = `${dateStr}T${t}`;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function setHiddenDisabled(el, flag){
+    if (flag) { el.setAttribute("hidden","hidden"); el.setAttribute("disabled","disabled"); }
+    else { el.removeAttribute("hidden"); el.removeAttribute("disabled"); }
+  }
+  function setRequired(el, flag){
+    if (flag) el.setAttribute("required","required");
+    else el.removeAttribute("required");
+  }
+  function show(el){ el.classList.remove("hidden"); }
+  function hide(el){ el.classList.add("hidden"); }
+
+  // ---------- Dept/Category ----------
+  function populateDepartments(){
+    deptSelect.innerHTML = "";
+    const ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "— Select Department —";
+    deptSelect.appendChild(ph);
+
+    (BOOT.departments || []).forEach(d => {
+      const o = document.createElement("option");
+      o.value = d; o.textContent = d;
+      deptSelect.appendChild(o);
+    });
+  }
+
+  function onDeptChange(){
+    const d = deptSelect.value || "";
+    catSelect.innerHTML = "";
+    const ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "— Select Category —";
+    catSelect.appendChild(ph);
+
+    if (!d){
+      catSelect.disabled = true; return;
+    }
+    const cats = (BOOT.categories_by_dept && BOOT.categories_by_dept[d]) ? BOOT.categories_by_dept[d] : [];
+    if (!cats.length){
+      catHelp.textContent = "No categories for selected department.";
+      show(catHelp);
+      catSelect.disabled = true; return;
+    }
+    hide(catHelp);
+    cats.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      catSelect.appendChild(o);
+    });
+    catSelect.disabled = false;
+  }
+
+  // ---------- Duration & Totals ----------
+  function recomputeDuration(){
+    const s = safeDateFromParts(startDate.value, startTime.value);
+    const e = safeDateFromParts(endDate.value, endTime.value);
+    hide(durationErr);
+    durHours.value = "";
+    totalLoss.value = "";
+
+    if(!s || !e) return;
+    const diffMs = e - s;
+    if (diffMs < 0){
+      durationErr.textContent = "End must be after Start.";
+      show(durationErr); return;
+    }
+    const hoursDecimal = (diffMs / 1000) / 3600;
+    durHours.value = Number(hoursDecimal.toFixed(2));
+    updateTotalLoss();
+  }
+
+  function currentQty(){
+    if (!bomQtyInput.hasAttribute("hidden")) {
+      const v = parseInt(bomQtyInput.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    if (!bomQtySelect.hasAttribute("hidden")) {
+      const v = parseInt(bomQtySelect.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    return NaN;
+  }
+
+  function currentBct(){
+    if (!bomBctInput.hasAttribute("hidden") && !bomBctInput.disabled) {
+      const v = parseInt(bomBctInput.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    if (!bomBctSelect.hasAttribute("hidden") && !bomBctSelect.disabled) {
+      const v = parseInt(bomBctSelect.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    return NaN;
+  }
+
+  function updateLossPerHr(){
+    const q = currentQty();
+    const b = currentBct();
+    if (!isFinite(q) || !isFinite(b) || b <= 0) {
+      lossPerHr.value = "";
+      updateTotalLoss();
+      return;
+    }
+    lossPerHr.value = String(Math.round(q / b));
+    updateTotalLoss();
+  }
+
+  function updateTotalLoss(){
+    const lph = parseInt(lossPerHr.value, 10);
+    const hrs = parseFloat(durHours.value);
+    if (!isFinite(lph) || !isFinite(hrs)) { totalLoss.value = ""; return; }
+    totalLoss.value = String(Math.round(lph * hrs));
+  }
+
+  // ---------- BOM UI ----------
+  function clearBomUI(){
+    hide(bomHelp); hide(bctHelp); hide(bctError);
+
+    setHiddenDisabled(bomQtyInput,  true);
+    setHiddenDisabled(bomQtySelect, true);
+    bomQtyInput.value = ""; bomQtySelect.innerHTML = "";
+
+    setHiddenDisabled(bomBctInput,  true);
+    setHiddenDisabled(bomBctSelect, true);
+    setRequired(bomBctInput, false);
+    setRequired(bomBctSelect, false);
+    bomBctInput.readOnly = true;
+    bomBctInput.value = ""; bomBctSelect.innerHTML = "";
+
+    lossPerHr.value = ""; totalLoss.value = "";
+  }
+
+  function updateBomUI(){
+    clearBomUI();
+
+    const stage = (selectedStage || "").trim();
+    const fg    = (selectedFG || "").trim();
+    if(!stage || !fg) return;
+
+    const key = `${stage.toLowerCase()}||${fg.toLowerCase()}`;
+    const rec = BOOT.bom_meta_by_stage_fg ? BOOT.bom_meta_by_stage_fg[key] : null;
+
+    const quantities = rec?.quantities ? rec.quantities.slice() : [];
+    const bcts       = rec?.bcts ? rec.bcts.slice() : [];
+
+    // Quantity
+    if (quantities.length === 0){
+      bomHelp.textContent = "No Quantity found for this Stage + FG.";
+      show(bomHelp);
+    } else if (quantities.length === 1){
+      bomQtyInput.value = String(quantities[0]);
+      setHiddenDisabled(bomQtyInput, false);
+    } else {
+      const ph = document.createElement("option");
+      ph.value = ""; ph.textContent = "— Please select Quantity —";
+      bomQtySelect.appendChild(ph);
+      quantities.forEach(q => {
+        const o = document.createElement("option");
+        o.value = String(q); o.textContent = String(q);
+        bomQtySelect.appendChild(o);
+      });
+      bomQtySelect.onchange = () => updateLossPerHr();
+      setHiddenDisabled(bomQtySelect, false);
+    }
+
+    // BCT (mandatory)
+    if (bcts.length === 0){
+      bomBctInput.placeholder = "Enter BCT";
+      bomBctInput.readOnly = false;
+      setHiddenDisabled(bomBctInput, false);
+      setRequired(bomBctInput, true);
+      bctHelp.textContent = "Enter BCT manually (required).";
+      show(bctHelp);
+    } else if (bcts.length === 1){
+      bomBctInput.value = String(bcts[0]);
+      setHiddenDisabled(bomBctInput, false);
+      setRequired(bomBctInput, true);
+    } else {
+      const ph2 = document.createElement("option");
+      ph2.value = ""; ph2.textContent = "— Please select BCT —";
+      bomBctSelect.appendChild(ph2);
+      bcts.forEach(b => {
+        const o = document.createElement("option");
+        o.value = String(b); o.textContent = String(b);
+        bomBctSelect.appendChild(o);
+      });
+      bomBctSelect.onchange = () => { hide(bctError); updateLossPerHr(); };
+      setHiddenDisabled(bomBctSelect, false);
+      setRequired(bomBctSelect, true);
+    }
+
+    updateLossPerHr();
+  }
+
+  // ---------- Auto-fill on load ----------
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!recordDt.value) recordDt.value = nowLocalDateTimeValue();
+
+    if (!startDate.value) startDate.value = nowLocalDate();
+    if (!startTime.value) startTime.value = nowLocalTime();
+    if (!endDate.value)   endDate.value   = nowLocalDate();
+    if (!endTime.value)   endTime.value   = nowLocalTime();
+    recomputeDuration();
+
+    populateDepartments();
+    deptSelect.addEventListener("change", onDeptChange);
+
+    const updateReasonCount = () => { reasonCount.textContent = String((reasonEl.value||"").length); };
+    reasonEl.addEventListener("input", updateReasonCount);
+    updateReasonCount();
+  });
+
+  // ---------- Block -> Equipment ----------
+  function onBlockChange(display){
+    selectedBlockDisplay = display;
+    selectedBlockKey = (BOOT.block_display_to_key[display] || "");
+
+    selectedEquipment = null;
+    equipHidden.value = "";
+    equipDD.clear();
+    equipInput.disabled = true;
+    hide(equipHelp);
+
+    if(!selectedBlockKey) return;
+    const eqItems = BOOT.equipment_by_block[selectedBlockKey] || [];
+    if(eqItems.length === 0){
+      equipHelp.textContent = "No equipment found for this Block.";
+      show(equipHelp);
+    } else {
+      equipDD.setItems(eqItems);
+      equipInput.disabled = false;
+      equipInput.placeholder = "Type to search Equipment…";
+    }
+  }
+  blockSelect.addEventListener("change", (e)=> onBlockChange(e.target.value || "") );
+
+  // ---------- Stage -> FG -> Batch ----------
+  function onStageSelect(stage){
+    selectedStage = stage;
+
+    selectedFG = BOOT.fg_by_stage[stage] || "";
+    fgInput.value = selectedFG;
+
+    batchDD.clear(); batchInput.disabled = true; hide(batchHelp);
+    if(!selectedFG){
+      batchHelp.textContent = "No FG mapping found for this Stage.";
+      show(batchHelp);
+      updateBomUI();
+      return;
+    }
+    const key = `${stage}||${selectedFG}`;
+    const batches = BOOT.batches_by_stage_fg[key] || [];
+    if(batches.length === 0){
+      batchHelp.textContent = "No batches found for this Stage + FG.";
+      show(batchHelp);
+    } else {
+      batchDD.setItems(batches);
+      batchInput.disabled = false;
+      batchInput.placeholder = "Type to search Batch…";
+    }
+
+    updateBomUI();
+  }
+
+  // Validate Stage on blur
+  document.getElementById("stage_input").addEventListener("blur", (e)=>{
+    const val = e.target.value.trim();
+    if(!val || !BOOT.stages.includes(val)){
+      e.target.value = "";
+      onStageSelect("");
+    }
+  });
+
+  // ---------- Duration listeners ----------
+  [startDate, startTime, endDate, endTime].forEach(el => {
+    el.addEventListener("change", recomputeDuration);
+    el.addEventListener("input",  recomputeDuration);
+  });
+
+  bomQtyInput.addEventListener("input", () => { hide(bctError); updateLossPerHr(); });
+  bomBctInput.addEventListener("input", () => { hide(bctError); updateLossPerHr(); });
+
+  // ---------- Submit: enforce BCT ----------
+  document.getElementById("downtimeForm").addEventListener("submit", (e) => {
+    if (typeof recomputeDuration === "function") recomputeDuration();
+    if (typeof updateLossPerHr === "function")  updateLossPerHr();
+
+    let bctVal = null;
+    if (!bomBctInput.hasAttribute("hidden") && !bomBctInput.disabled) {
+      bctVal = bomBctInput.value ? parseInt(bomBctInput.value, 10) : NaN;
+    } else if (!bomBctSelect.hasAttribute("hidden") && !bomBctSelect.disabled) {
+      bctVal = bomBctSelect.value ? parseInt(bomBctSelect.value, 10) : NaN;
+    }
+
+    if (!Number.isFinite(bctVal) || bctVal <= 0) {
+      show(bctError);
+      e.preventDefault();
+      if (!bomBctInput.hasAttribute("hidden") && !bomBctInput.disabled) bomBctInput.focus();
+      else if (!bomBctSelect.hasAttribute("hidden") && !bomBctSelect.disabled) bomBctSelect.focus();
+      return false;
+    }
+  });
+</script>
+
+{% endblock maincontent %}

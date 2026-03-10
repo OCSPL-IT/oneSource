@@ -1,0 +1,89 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Account Categories{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-[calc(100vh-6rem)] bg-slate-50">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Account Categories</h1>
+        <p class="text-sm text-slate-500">Chart of Accounts → Categories</p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="{% url 'accounts_budget:coa_subcategory_list' %}"
+           class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+          <i class="fa-solid fa-layer-group text-slate-400"></i>
+          Subcategories
+        </a>
+
+        <a href="{% url 'accounts_budget:coa_category_create' %}"
+           class="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+          <i class="fa-solid fa-plus"></i>
+          New Category
+        </a>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200">
+            <tr class="text-left text-slate-600">
+              <th class="px-4 py-3 font-semibold">Code</th>
+              <th class="px-4 py-3 font-semibold">Name</th>
+              <th class="px-4 py-3 font-semibold">Type</th>
+              <th class="px-4 py-3 font-semibold">Active</th>
+              <th class="px-4 py-3 font-semibold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for r in rows %}
+              <tr class="hover:bg-slate-50/60">
+                <td class="px-4 py-3 text-slate-700">
+                  {{ r.code|default:r.no|default:"-" }}
+                </td>
+                <td class="px-4 py-3">
+                  <div class="font-medium text-slate-900">{{ r.name|default:"-" }}</div>
+                  {% if r.description %}
+                    <div class="text-xs text-slate-500 mt-0.5">{{ r.description }}</div>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-slate-700">
+                  {{ r.income_balance_sheet|default:r.type|default:"-" }}
+                </td>
+                <td class="px-4 py-3">
+                  {% if r.is_active is False %}
+                    <span class="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 border border-red-200">Inactive</span>
+                  {% else %}
+                    <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">Active</span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <a href="{% url 'accounts_budget:coa_category_edit' r.pk %}"
+                     class="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                    <i class="fa-solid fa-pen-to-square text-slate-400"></i>
+                    Edit
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-4 py-10 text-center text-slate-500">
+                  No categories found. Click <span class="font-medium">New Category</span> to create one.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

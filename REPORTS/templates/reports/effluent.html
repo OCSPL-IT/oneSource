@@ -1,0 +1,730 @@
+{# templates/reports/effluent.html — DISPLAY/STYLE TOGGLE VERSION #}
+
+<style>
+  /* Keep things tidy; no reliance on [hidden] anymore */
+  #effRoot .table-container { max-height: calc(100vh - 18rem); overflow: auto; }
+  #effRoot table { font-size: 12px; border-collapse: separate; border-spacing: 0; }
+  #effRoot th, #effRoot td { padding-top:.45rem; padding-bottom:.45rem; }
+  #effRoot thead th { position: sticky; top: 0; background: #fff; z-index: 10; font-size: 11px; letter-spacing:.02em; }
+
+  #effRoot .pill {
+    padding:.25rem .6rem;
+    border-radius:999px;
+    border:1px solid #e2e8f0;
+    background:#fff;
+    font-size:.75rem;
+    font-weight:600;
+    color:#475569;
+    cursor:pointer;
+    white-space: nowrap;
+  }
+  #effRoot .pill[data-active="true"]{ background:#eef2ff; border-color:#c7d2fe; color:#4338ca; }
+  #effRoot .row-click { cursor: pointer; }
+  #effRoot .row-click:hover { background:#f8fafc; }
+  #effRoot .th-sort { user-select:none; cursor:pointer; }
+  #effRoot .th-sort:hover { background:#eef2ff; }
+  #effRoot .sort-ind { font-size:10px; color:#64748b; margin-left:.25rem; }
+
+  #effRoot .range-wrap { display:flex; flex-wrap:wrap; align-items:end; gap:.5rem; }
+  #effRoot .range-wrap label { display:block; font-size:11px; color:#475569; margin-bottom:2px; }
+  #effRoot .range-wrap input[type="date"] { border:1px solid #e2e8f0; border-radius:.5rem; padding:.35rem .5rem; font-size:.85rem; }
+  #effRoot .chip { display:inline-flex; align-items:center; gap:.35rem; padding:.25rem .55rem; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; font-size:.75rem; color:#334155 }
+
+  .card { border:1px solid #e2e8f0; border-radius:.75rem; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.04); overflow:hidden; }
+  .card-hd { padding:.75rem 1rem; border-bottom:1px solid #e2e8f0; }
+  .card-bd { padding:.5rem; }
+
+  /* FG summary table */
+  #effRoot .summary-table { table-layout: fixed; width: 100%; }
+  #effRoot .w-fg     { width: 240px; }
+  #effRoot .w-plan   { width: 140px; }
+  #effRoot .w-actual { width: 140px; }
+
+  /* mini-summary tables (Block / Category / Nature) */
+  #effRoot .summary-table-sm {
+    width: 100%;
+    table-layout: auto;
+  }
+  #effRoot .summary-table-sm th,
+  #effRoot .summary-table-sm td {
+    padding-left: .6rem;
+    padding-right:.6rem;
+  }
+
+  /* numbers: keep on one line */
+  #effRoot .num {
+    white-space: nowrap;
+  }
+
+  #effRoot .w-date    { width: 7.5rem; }
+  #effRoot .w-block   { width: 8rem; }
+  #effRoot .w-prod    { width: 20rem; }
+  #effRoot .w-stage   { width: 18rem; }
+  #effRoot .w-batch   { width: 12rem; }
+  #effRoot .w-voucher { width: 26rem; }
+  #effRoot .w-cat     { width: 12rem; }
+  #effRoot .w-nat     { width: 16rem; }
+  #effRoot .w-num     { width: 8rem; text-align:right; }
+
+  #effRoot .filters-row { display:flex; align-items:center; flex-wrap:wrap; gap:.5rem; margin:.25rem 0 .35rem; }
+  #effRoot .chip .x { cursor:pointer; font-weight:700; margin-left:.25rem; }
+
+  .eff-expand-toggle { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; color:#475569; }
+  .eff-expand-toggle[disabled] { opacity:.4; cursor:not-allowed; }
+  .eff-expand-toggle svg { width:14px; height:14px; transition: transform .2s ease; }
+  .eff-expand-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+  .stage-row { background:#f1f5f9; }
+
+  /* === Nature column word-wrap ONLY (in Nature mini table) === */
+  #effRoot #effNatTable td.col-nature,
+  #effRoot #effNatTable td.col-nature .pill {
+    white-space: normal;
+    word-break: break-word;
+  }
+</style>
+
+<div id="effRoot"
+     class="space-y-6"
+     data-default-from="{{ range_from|date:'Y-m-d' }}"
+     data-default-to="{{ range_to|date:'Y-m-d' }}">
+
+  <!-- Header + Date controls -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-base font-semibold text-slate-900">Effluent (kg)</h1>
+      <p class="text-xs text-slate-500">All widgets use the selected dates below.</p>
+    </div>
+
+    <div class="range-wrap">
+      <div>
+        <label for="effFrom">From</label>
+        <input type="date" id="effFrom">
+      </div>
+      <div>
+        <label for="effTo">To</label>
+        <input type="date" id="effTo">
+      </div>
+
+      <button class="pill" id="effPresetMTD" data-active="false">MTD</button>
+      <button class="pill" id="effPresetFY"  data-active="false">Y-TD (to yesterday)</button>
+      <button class="pill" id="effApply">Apply</button>
+
+      <span class="chip">Period:
+        <b id="effRangeFromTxt">{{ range_from|date:'d-m-y' }}</b> →
+        <b id="effRangeToTxt">{{ range_to|date:'d-m-y' }}</b>
+      </span>
+
+      <button id="btnExpandAll"   class="pill">Expand All</button>
+      <button id="btnCollapseAll" class="pill">Collapse All</button>
+      <button id="btnCsvAllDetailsRange" class="pill">Download All Details</button>
+    </div>
+  </div>
+
+  <!-- FG summary -->
+  <div class="card">
+    <div class="card-hd">
+      <div class="relative">
+        <div class="absolute inset-x-0 -top-px h-1 bg-gradient-to-r from-indigo-300 via-sky-300 to-emerald-300"></div>
+      </div>
+      <h2 class="text-sm font-semibold text-slate-900">
+        Effluent Plan vs Actual <span class="text-slate-500 font-normal">(kg)</span>
+      </h2>
+    </div>
+    <div class="table-container">
+      <table class="summary-table w-full text-[13px] leading-5">
+        <colgroup>
+          <col class="w-fg"><col class="w-plan"><col class="w-actual">
+        </colgroup>
+        <thead class="bg-slate-50">
+          <tr class="border-b border-slate-200/80">
+            <th class="px-3 py-2 text-left font-semibold border-r">
+              FG <span class="font-normal lowercase text-slate-500">(alpha)</span>
+            </th>
+            <th class="px-3 py-2 text-right font-semibold text-indigo-800 bg-indigo-50 border-x border-indigo-100">
+              Plan
+            </th>
+            <th class="px-3 py-2 text-right font-semibold text-indigo-800 bg-indigo-50 border-r border-indigo-100">
+              Actual
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200/70">
+          {% for r in eff_rows %}
+          <tr class="group hover:bg-slate-50 transition-colors">
+            <td class="px-3 py-2 border-r bg-white group-hover:bg-slate-50">
+              <div class="flex items-center gap-2">
+                <button type="button"
+                        class="eff-expand-toggle"
+                        data-key="{{ r.row_key }}"
+                        {% if r.has_stages %}aria-expanded="false"{% else %}disabled aria-disabled="true"{% endif %}>
+                  {% if r.has_stages %}
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                  {% endif %}
+                </button>
+                <span class="font-semibold truncate" title="{{ r.fg }}">{{ r.alias }}</span>
+              </div>
+            </td>
+
+            {# FG MTD Plan + count in brackets #}
+            <td class="px-3 py-2 text-right font-mono">
+              <span class="num" data-num="{{ r.prod_mtd.plan|default:'0' }}"></span>
+              <span class="text-[11px] text-slate-500 ml-1">
+                ({{ r.prod_mtd.plan_ct|default:'0' }})
+              </span>
+            </td>
+
+            {# FG MTD Actual + count in brackets #}
+            <td class="px-3 py-2 text-right font-mono">
+              <span class="num" data-num="{{ r.prod_mtd.actual|default:'0' }}"></span>
+              <span class="text-[11px] text-slate-500 ml-1">
+                ({{ r.prod_mtd.act_ct|default:'0' }})
+              </span>
+            </td>
+          </tr>
+
+          {% for st in r.stages %}
+          <tr class="stage-row" data-parent-key="{{ st.parent_key }}" style="display:none">
+            <td class="pl-10 pr-3 py-2 italic text-slate-600 bg-slate-50 border-r">
+              {{ st.stage }}
+            </td>
+
+            {# Stage MTD Plan + count in brackets #}
+            <td class="px-3 py-2 text-right font-mono">
+              <span class="num" data-num="{{ st.prod_mtd.plan|default:'0' }}"></span>
+              <span class="text-[11px] text-slate-500 ml-1">
+                ({{ st.prod_mtd.plan_ct|default:'0' }})
+              </span>
+            </td>
+
+            {# Stage MTD Actual + count in brackets #}
+            <td class="px-3 py-2 text-right font-mono">
+              <span class="num" data-num="{{ st.prod_mtd.actual|default:'0' }}"></span>
+              <span class="text-[11px] text-slate-500 ml-1">
+                ({{ st.prod_mtd.act_ct|default:'0' }})
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+
+        <!-- GRAND TOTAL -->
+        <tfoot class="bg-slate-50 border-t">
+          <tr>
+            <th class="px-3 py-2 text-right">Grand Total</th>
+            <th id="effSumPlanTot" class="px-3 py-2 text-right font-mono">0</th>
+            <th id="effSumActualTot" class="px-3 py-2 text-right font-mono">0</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Block / Category / Nature (3 cards, equal width) -->
+  <div class="flex flex-col md:flex-row gap-4">
+    <!-- Block -->
+    <div class="card flex-1 min-w-0">
+      <div class="card-hd">
+        <h3 class="text-sm font-semibold text-slate-900">Effluent by Block</h3>
+        <p class="text-[11px] text-slate-500">Plan vs Actual (kg), MTD</p>
+      </div>
+      <div class="card-bd table-container">
+        <table class="summary-table-sm" id="effBlockTable">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="py-2 text-left th-sort" data-sort="block">
+                Block <span class="sort-ind" data-ind="block">—</span>
+              </th>
+              <th class="py-2 text-right th-sort" data-sort="plan">
+                Plan (kg) <span class="sort-ind" data-ind="plan">—</span>
+              </th>
+              <th class="py-2 text-right th-sort" data-sort="kg">
+                Actual (kg) <span class="sort-ind" data-ind="kg">—</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="effBlockBody" class="divide-y divide-slate-200/70">
+            {% if eff_block_pa_mtd %}
+              {% for row in eff_block_pa_mtd %}
+                <tr class="row-click"
+                    data-block="{{ row.label }}"
+                    data-plan="{{ row.plan|default:'0' }}"
+                    data-kg="{{ row.kg|default:'0' }}">
+                  <td class="py-2"><span class="pill">{{ row.label }}</span></td>
+                  <td class="py-2 text-right font-mono num" data-num="{{ row.plan|default:'0' }}"></td>
+                  <td class="py-2 text-right font-mono num" data-num="{{ row.kg|default:'0' }}"></td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="3" class="p-4 text-center text-slate-500">No data.</td></tr>
+            {% endif %}
+          </tbody>
+          <tfoot class="bg-slate-50 border-t">
+            <tr>
+              <th class="py-2 text-right">Total</th>
+              <th id="blkPlanTot" class="py-2 text-right font-mono">0</th>
+              <th id="blkTot" class="py-2 text-right font-mono">0</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Category -->
+    <div class="card flex-1 min-w-0">
+      <div class="card-hd">
+        <h3 class="text-sm font-semibold text-slate-900">Category</h3>
+        <p class="text-[11px] text-slate-500">Plan vs Actual (kg), MTD</p>
+      </div>
+      <div class="card-bd table-container">
+        <table class="summary-table-sm" id="effCatTable">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="py-2 text-left">Category</th>
+              <th class="py-2 text-right">Plan (kg)</th>
+              <th class="py-2 text-right">Actual (kg)</th>
+            </tr>
+          </thead>
+          <tbody id="effCatBody" class="divide-y divide-slate-200/70">
+            {% if eff_cat_pa_mtd %}
+              {% for row in eff_cat_pa_mtd %}
+                <tr class="row-click"
+                    data-cat="{{ row.label }}"
+                    data-plan="{{ row.plan|default:'0' }}"
+                    data-kg="{{ row.kg|default:'0' }}">
+                  <td class="py-2"><span class="pill">{{ row.label }}</span></td>
+                  <td class="py-2 text-right font-mono num" data-num="{{ row.plan|default:'0' }}"></td>
+                  <td class="py-2 text-right font-mono num" data-num="{{ row.kg|default:'0' }}"></td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="3" class="p-4 text-center text-slate-500">No data.</td></tr>
+            {% endif %}
+          </tbody>
+          <tfoot class="bg-slate-50 border-t">
+            <tr>
+              <th class="py-2 text-right">Total</th>
+              <th id="effCatPlanTot" class="py-2 text-right font-mono">0</th>
+              <th id="effCatTot" class="py-2 text-right font-mono">0</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Nature -->
+    <div class="card flex-1 min-w-0">
+      <div class="card-hd">
+        <h3 class="text-sm font-semibold text-slate-900">Nature</h3>
+        <p class="text-[11px] text-slate-500">Plan vs Actual (kg), MTD</p>
+      </div>
+      <div class="card-bd table-container">
+        <table class="summary-table-sm" id="effNatTable">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="py-2 text-left">Nature</th>
+              <th class="py-2 text-right">Plan (kg)</th>
+              <th class="py-2 text-right">Actual (kg)</th>
+            </tr>
+          </thead>
+          <tbody id="effNatBody" class="divide-y divide-slate-200/70">
+            {% if eff_nat_pa_mtd %}
+              {% for row in eff_nat_pa_mtd %}
+                <tr class="row-click"
+                    data-nat="{{ row.label }}"
+                    data-plan="{{ row.plan|default:'0' }}"
+                    data-kg="{{ row.kg|default:'0' }}">
+                  <!-- NOTE: col-nature added so only this column wraps -->
+                  <td class="py-2 col-nature"><span class="pill">{{ row.label }}</span></td>
+                  <td class="py-2 text-right font-mono num" data-num="{{ row.plan|default:'0' }}"></td>
+                  <td class="py-2 text-right font-mono num" data-num="{{ row.kg|default:'0' }}"></td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="3" class="p-4 text-center text-slate-500">No data.</td></tr>
+            {% endif %}
+          </tbody>
+          <tfoot class="bg-slate-50 border-t">
+            <tr>
+              <th class="py-2 text-right">Total</th>
+              <th id="effNatPlanTot" class="py-2 text-right font-mono">0</th>
+              <th id="effNatTot" class="py-2 text-right font-mono">0</th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details + filters -->
+  <div class="card" id="effDetailCard">
+    <div class="card-hd">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-900">
+            Details: <span id="effDetailTitle" class="text-slate-600">All</span>
+          </h3>
+          <p class="text-xs text-slate-500">
+            Showing <span id="effDetailCount">0</span> rows
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btnCsvAllDetailsRange2" class="pill">Download All Details</button>
+        </div>
+      </div>
+
+      <div class="filters-row">
+        <span class="text-[11px] text-slate-500">Filters:</span>
+        <div id="effFilterChips" class="flex items-center gap-2"></div>
+        <button id="effClearFilters" class="pill" title="Clear all filters">Clear</button>
+      </div>
+    </div>
+
+    <div class="card-bd table-container">
+      <table class="w-full" id="effDetailTable" style="table-layout:auto;">
+        <colgroup>
+          <col class="w-date">
+          <col class="w-block">
+          <col class="w-prod">
+          <col class="w-stage">
+          <col class="w-batch">
+          <col class="w-voucher">
+          <col class="w-cat">
+          <col class="w-nat">
+          <col class="w-num">
+          <col class="w-num">
+          <col class="w-num">
+        </colgroup>
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="px-3 py-2 text-left">Date</th>
+            <th class="px-3 py-2 text-left">Block</th>
+            <th class="px-3 py-2 text-left">FG (alpha)</th>
+            <th class="px-3 py-2 text-left">Stage</th>
+            <th class="px-3 py-2 text-left">Batch</th>
+            <th class="px-3 py-2 text-left">Voucher</th>
+            <th class="px-3 py-2 text-left">Category</th>
+            <th class="px-3 py-2 text-left">Nature</th>
+            <th class="px-3 py-2 text-right">Plan (kg)</th>
+            <th class="px-3 py-2 text-right">Actual (kg)</th>
+            <th class="px-3 py-2 text-right">Qty (kg)</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200/70" id="effDetailBody">
+          <tr><td colspan="11" class="p-4 text-center text-slate-500">No selection.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <script id="effRangeRows" type="application/json">
+      {{ eff_range_rows_json|default:"[]"|safe }}
+    </script>
+  </div>
+</div>
+
+<script>
+  /* JS is unchanged from previous version */
+  (function(){
+    const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+    const esc=v=>(v??'').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const fmtIN=n=> (Number(n)||0).toLocaleString('en-IN');
+    const norm=s=>(s||'').toString().trim().toUpperCase();
+    const asISO=d=>{const z=new Date(d.getFullYear(),d.getMonth(),d.getDate()); z.setMinutes(z.getMinutes()-z.getTimezoneOffset()); return z.toISOString().slice(0,10);};
+    const fyStartFor=d=>new Date(d.getMonth()>=3?d.getFullYear():d.getFullYear()-1,3,1);
+    const fmtDate=iso=>{const s=(iso||'').toString().slice(0,10); const [y,m,d]=s.split('-'); return (y&&m&&d)?`${d}-${m}-${y.slice(2)}`:s;};
+
+    const root=$('#effRoot'), from=$('#effFrom'), to=$('#effTo');
+    const fromTxt=$('#effRangeFromTxt'), toTxt=$('#effRangeToTxt');
+
+    function setInputs(f,t){
+      from.value=f; to.value=t;
+      const [fy,fm,fd]=f.split('-'), [ty,tm,td]=t.split('-');
+      fromTxt.textContent=`${fd}-${fm}-${fy.slice(2)}`;
+      toTxt.textContent=`${td}-${tm}-${ty.slice(2)}`;
+    }
+
+    (function initRange(){
+      const df=root.getAttribute('data-default-from')||'', dt=root.getAttribute('data-default-to')||'';
+      if(df&&dt) setInputs(df,dt);
+      const f=new Date(from.value), t=new Date(to.value);
+      const isMTD = f.getDate()===1 && f.getMonth()===t.getMonth() && f.getFullYear()===t.getFullYear();
+      $('#effPresetMTD').setAttribute('data-active', String(isMTD));
+      $('#effPresetFY').setAttribute('data-active', String(!isMTD));
+    })();
+
+    $('#effPresetMTD').addEventListener('click',()=>{
+      const t=new Date(root.getAttribute('data-default-to')||new Date());
+      const f=new Date(t.getFullYear(),t.getMonth(),1);
+      setInputs(asISO(f), asISO(t));
+      $('#effPresetMTD').setAttribute('data-active','true');
+      $('#effPresetFY').setAttribute('data-active','false');
+    });
+
+    $('#effPresetFY').addEventListener('click',()=>{
+      const t=new Date(root.getAttribute('data-default-to')||new Date());
+      const f=fyStartFor(t);
+      setInputs(asISO(f), asISO(t));
+      $('#effPresetMTD').setAttribute('data-active','false');
+      $('#effPresetFY').setAttribute('data-active','true');
+    });
+
+    $('#effApply').addEventListener('click',()=>{
+      if(!from.value||!to.value) return;
+      const qp=new URLSearchParams(location.search);
+      qp.set('from',from.value);
+      qp.set('to',to.value);
+      location.assign(location.pathname+'?'+qp.toString());
+    });
+
+    const STAGE_MAP = new Map();
+    document.querySelectorAll('.summary-table .stage-row').forEach(tr=>{
+      const key = tr.getAttribute('data-parent-key') || '';
+      if(!key) return;
+      if(!STAGE_MAP.has(key)) STAGE_MAP.set(key, []);
+      STAGE_MAP.get(key).push(tr);
+    });
+
+    function rowsForKey(key){ return STAGE_MAP.get(key) || []; }
+
+    function setExpanded(btn, expanded){
+      if(!btn || btn.disabled) return;
+      const key = (btn.dataset && btn.dataset.key) ? btn.dataset.key : '';
+      if(!key) return;
+      btn.setAttribute('aria-expanded', String(expanded));
+      const rows = rowsForKey(key);
+      rows.forEach(r => { r.style.display = expanded ? 'table-row' : 'none'; });
+    }
+
+    $('#btnExpandAll')?.addEventListener('click',()=>{
+      document.querySelectorAll('.eff-expand-toggle[aria-expanded="false"]').forEach(b=> setExpanded(b,true));
+    });
+    $('#btnCollapseAll')?.addEventListener('click',()=>{
+      document.querySelectorAll('.eff-expand-toggle[aria-expanded="true"]').forEach(b=> setExpanded(b,false));
+    });
+
+    document.addEventListener('click',e=>{
+      const btn=e.target.closest('button.eff-expand-toggle');
+      if(!btn || btn.disabled) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if(!btn.dataset || !btn.dataset.key) return;
+      const open=btn.getAttribute('aria-expanded')==='true';
+      setExpanded(btn,!open);
+    });
+
+    function paintNumbers(scope=document){
+      scope.querySelectorAll('.num[data-num]').forEach(el=>{
+        const v = el.getAttribute('data-num'); el.textContent = fmtIN(v);
+      });
+      scope.querySelectorAll('.num:not([data-num])').forEach(el=>{
+        const n = Number((el.textContent||'').replace(/,/g,'')); 
+        if(!Number.isNaN(n)) el.textContent = fmtIN(n);
+      });
+    }
+    paintNumbers(document);
+
+    function refreshSummaryTotals(){
+      let p = 0, a = 0;
+      document.querySelectorAll('.summary-table tbody > tr:not(.stage-row)').forEach(tr=>{
+        const planEl = tr.querySelector('td:nth-child(2) .num[data-num]');
+        const actEl  = tr.querySelector('td:nth-child(3) .num[data-num]');
+        p += Number(planEl?.getAttribute('data-num') || 0);
+        a += Number(actEl?.getAttribute('data-num')  || 0);
+      });
+      $('#effSumPlanTot').textContent   = fmtIN(p);
+      $('#effSumActualTot').textContent = fmtIN(a);
+    }
+    refreshSummaryTotals();
+
+    const tbody=$('#effBlockBody');
+    const rowsAll=()=>Array.from(document.querySelectorAll('#effBlockBody tr[data-block]'));
+    const sortInd={
+      block:document.querySelector('[data-ind="block"]'),
+      plan:document.querySelector('[data-ind="plan"]'),
+      kg:document.querySelector('[data-ind="kg"]')
+    };
+    let sortState={key:'block',dir:'asc'};
+
+    function applySort(){
+      const trs=rowsAll(); const {key,dir}=sortState;
+      trs.sort((a,b)=>{
+        let av,bv;
+        if(key==='block'){ av=norm(a.dataset.block); bv=norm(b.dataset.block); }
+        else if(key==='plan'){ av=Number(a.dataset.plan||0); bv=Number(b.dataset.plan||0); }
+        else{ av=Number(a.dataset.kg||0); bv=Number(b.dataset.kg||0); }
+        if(av<bv) return dir==='asc'?-1:1;
+        if(av>bv) return dir==='asc'? 1:-1; 
+        return 0;
+      });
+      trs.forEach(tr=>tbody.appendChild(tr));
+      Object.values(sortInd).forEach(e=>e.textContent='—');
+      sortInd[key].textContent=(sortState.dir==='asc'?'▲':'▼');
+    }
+    function refreshTotalsBlock(){
+      let sPlan=0, sKg=0;
+      rowsAll().forEach(tr=>{
+        sPlan+=Number(tr.dataset.plan||0);
+        sKg+=Number(tr.dataset.kg||0);
+      });
+      document.querySelector('#blkPlanTot').textContent=fmtIN(sPlan);
+      document.querySelector('#blkTot').textContent=fmtIN(sKg);
+    }
+    document.querySelectorAll('#effBlockTable th.th-sort').forEach(th=>
+      th.addEventListener('click',()=>{
+        const key=th.dataset.sort;
+        sortState = (sortState.key===key)
+          ? {key,dir:(sortState.dir==='asc'?'desc':'asc')}
+          : {key,dir:'asc'};
+        applySort();
+      })
+    );
+    (function initBlock(){ applySort(); refreshTotalsBlock(); })();
+
+    function sumColRows(scopeSel, totPlanSel, totKgSel){
+      let p=0,k=0;
+      document.querySelectorAll(scopeSel+' tr[data-plan]').forEach(tr=>{
+        p += Number(tr.getAttribute('data-plan')||0);
+        k += Number(tr.getAttribute('data-kg')||0);
+      });
+      document.querySelector(totPlanSel).textContent = fmtIN(p);
+      document.querySelector(totKgSel).textContent   = fmtIN(k);
+    }
+    sumColRows('#effCatBody', '#effCatPlanTot', '#effCatTot');
+    sumColRows('#effNatBody', '#effNatPlanTot', '#effNatTot');
+
+    const DATA_RG = (()=>{ 
+      try{
+        return JSON.parse(document.querySelector('#effRangeRows')?.textContent||'[]')||[]
+      }catch(e){return[]} 
+    })();
+
+    const detailBody=document.querySelector('#effDetailBody'),
+          detailTitle=document.querySelector('#effDetailTitle'),
+          detailCount=document.querySelector('#effDetailCount');
+    const chipsWrap=document.querySelector('#effFilterChips');
+    const state={ block:null, category:null, nature:null };
+
+    function labelSummary(){
+      const bits=[];
+      if(state.block)    bits.push(`Block: ${state.block}`);
+      if(state.category) bits.push(`Category: ${state.category}`);
+      if(state.nature)   bits.push(`Nature: ${state.nature}`);
+      return bits.length? bits.join(' • ') : 'All';
+    }
+    function applyFilters(rows){
+      const normv=v=>(v||'').toString().trim().toUpperCase();
+      return rows.filter(r =>
+        (!state.block    || normv(r.block)===normv(state.block)) &&
+        (!state.category || normv(r.category)===normv(state.category)) &&
+        (!state.nature   || normv(r.effluent_nature)===normv(state.nature))
+      );
+    }
+    function renderChips(){
+      const parts=[];
+      const mkChip=(k,label)=>`<span class="chip" data-key="${k}">${label}<span class="x" title="Remove">×</span></span>`;
+      if(state.block)    parts.push(mkChip('block',    `Block: ${esc(state.block)}`));
+      if(state.category) parts.push(mkChip('category', `Category: ${esc(state.category)}`));
+      if(state.nature)   parts.push(mkChip('nature',   `Nature: ${esc(state.nature)}`));
+      chipsWrap.innerHTML = parts.join('') || '<span class="text-[11px] text-slate-400">None</span>';
+    }
+    function renderDetail(){
+      const rows = applyFilters(DATA_RG);
+      detailTitle.textContent = labelSummary();
+      detailCount.textContent = String(rows.length);
+      if(!rows.length){
+        detailBody.innerHTML='<tr><td colspan="11" class="p-4 text-center text-slate-500">No records.</td></tr>';
+        return;
+      }
+      detailBody.innerHTML=rows.map(r=>`
+        <tr>
+          <td class="px-3 py-2">${fmtDate(r.record_date)}</td>
+          <td class="px-3 py-2">${esc(r.block)}</td>
+          <td class="px-3 py-2">${esc(r.product_name)}</td>
+          <td class="px-3 py-2">${esc(r.stage_name)}</td>
+          <td class="px-3 py-2">${esc(r.batch_no)}</td>
+          <td class="px-3 py-2">${esc(r.voucher_no)}</td>
+          <td class="px-3 py-2">${esc(r.category)}</td>
+          <td class="px-3 py-2">${esc(r.effluent_nature)}</td>
+          <td class="px-3 py-2 text-right font-mono">${fmtIN(r.plan_quantity)}</td>
+          <td class="px-3 py-2 text-right font-mono">${fmtIN(r.actual_quantity)}</td>
+          <td class="px-3 py-2 text-right font-mono font-semibold">${fmtIN(r.quantity_kg)}</td>
+        </tr>`).join('');
+    }
+    renderChips(); renderDetail();
+
+    document.querySelector('#effBlockBody')?.addEventListener('click',e=>{
+      const tr=e.target.closest('tr[data-block]'); if(!tr) return;
+      document.querySelectorAll('#effBlockBody tr').forEach(r=>r.classList.remove('bg-slate-50'));
+      tr.classList.add('bg-slate-50');
+      const v=tr.getAttribute('data-block')||'—';
+      state.block = (state.block && norm(state.block)===norm(v))? null : v;
+      renderChips(); renderDetail();
+    });
+    document.querySelector('#effCatBody')?.addEventListener('click',e=>{
+      const tr=e.target.closest('tr[data-kg]')||e.target.closest('tr[data-cat]'); if(!tr) return;
+      document.querySelectorAll('#effCatBody tr').forEach(r=>r.classList.remove('bg-slate-50'));
+      tr.classList.add('bg-slate-50');
+      const v=tr.getAttribute('data-cat')||'—';
+      state.category = (state.category && norm(state.category)===norm(v))? null : v;
+      renderChips(); renderDetail();
+    });
+    document.querySelector('#effNatBody')?.addEventListener('click',e=>{
+      const tr=e.target.closest('tr[data-kg]')||e.target.closest('tr[data-nat]'); if(!tr) return;
+      document.querySelectorAll('#effNatBody tr').forEach(r=>r.classList.remove('bg-slate-50'));
+      tr.classList.add('bg-slate-50');
+      const v=tr.getAttribute('data-nat')||'—';
+      state.nature = (state.nature && norm(state.nature)===norm(v))? null : v;
+      renderChips(); renderDetail();
+    });
+
+    document.querySelector('#effFilterChips').addEventListener('click', e=>{
+      const chip=e.target.closest('.chip'); if(!chip) return;
+      if(!e.target.classList.contains('x')) return;
+      const key=chip.getAttribute('data-key');
+      if(key in state) state[key]=null;
+      if(key==='block')    document.querySelectorAll('#effBlockBody tr').forEach(r=>r.classList.remove('bg-slate-50'));
+      if(key==='category') document.querySelectorAll('#effCatBody tr').forEach(r=>r.classList.remove('bg-slate-50'));
+      if(key==='nature')   document.querySelectorAll('#effNatBody tr').forEach(r=>r.classList.remove('bg-slate-50'));
+      renderChips(); renderDetail();
+    });
+
+    document.querySelector('#effClearFilters')?.addEventListener('click', ()=>{
+      state.block=state.category=state.nature=null;
+      document.querySelectorAll('#effBlockBody tr, #effCatBody tr, #effNatBody tr').forEach(r=>r.classList.remove('bg-slate-50'));
+      renderChips(); renderDetail();
+    });
+
+    function exportCSV(filtered=false){
+      const DATA = (()=>{ 
+        try{
+          return JSON.parse(document.querySelector('#effRangeRows')?.textContent||'[]')||[]
+        }catch(e){return[]} 
+      })();
+      if(!DATA.length) return;
+      const headers=[
+        'record_date','block','product_name','stage_name','batch_no',
+        'voucher_no','category','effluent_nature','plan_quantity',
+        'actual_quantity','quantity_kg'
+      ];
+      const escv=v=>`"${(v??'').toString().replace(/"/g,'""')}"`;
+      const rows = filtered ? applyFilters(DATA) : DATA;
+      const csv=[headers.join(',')].concat(
+        rows.map(r=>headers.map(h=>escv(r[h])).join(','))
+      ).join('\r\n');
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;
+      a.download= filtered ? 'effluent_filtered.csv' : 'effluent_all.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+    document.querySelector('#btnCsvAllDetailsRange')?.addEventListener('click', ()=>exportCSV(false));
+    document.querySelector('#btnCsvAllDetailsRange2')?.addEventListener('click', ()=>exportCSV(true));
+
+    paintNumbers(document);
+  })();
+</script>

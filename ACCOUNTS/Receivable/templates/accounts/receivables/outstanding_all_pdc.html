@@ -1,0 +1,283 @@
+{% extends "main/index.html" %}
+{% load inr_format %}
+
+{% block title %}Outstanding Bills (All) + PDC Status{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between gap-4">
+      <div class="space-y-1">
+        <h1 class="text-2xl font-bold text-slate-900">Outstanding Bills (All) + PDC Status</h1>
+        <p class="text-sm text-slate-600">
+          As-on: <span class="font-semibold">{{ as_on|date:"d-M-Y" }}</span>
+          {% if snapshot_date %}
+            · Snapshot used: <span class="font-semibold">{{ snapshot_date|date:"d-M-Y" }}</span>
+          {% endif %}
+        </p>
+        <p class="text-xs text-slate-500">
+          Shows all outstanding bills from ERP snapshot; if PDC exists in application, shows PDC details and status (Cleared/Pending).
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <a href="{% url 'accounts:receivable_dashboard' %}"
+           class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50">
+          Back to Dashboard
+        </a>
+      </div>
+    </div>
+
+    <!-- Filters (GET) -->
+    <form method="get" class="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
+      <div class="grid grid-cols-1 md:grid-cols-8 gap-3">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">As-on Date</label>
+          <input type="date" name="as_on" value="{{ filters.as_on }}"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Company Group</label>
+          <select name="company_group"
+                  class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+            {% for g in company_group_options %}
+              <option value="{{ g }}" {% if filters.company_group == g %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Party Code</label>
+          <input type="text" name="party_code" value="{{ filters.party_code }}"
+                 placeholder="e.g. C000123"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Party Name</label>
+          <input type="text" name="party_name" value="{{ filters.party_name }}"
+                 placeholder="contains..."
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="text-xs font-semibold text-slate-600">Search</label>
+          <input type="text" name="q" value="{{ filters.q }}"
+                 placeholder="party / invoice no..."
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Outstanding ≥</label>
+          <input type="number" step="0.01" name="os_min" value="{{ filters.os_min }}"
+                 placeholder="min"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Outstanding ≤</label>
+          <input type="number" step="0.01" name="os_max" value="{{ filters.os_max }}"
+                 placeholder="max"
+                 class="mt-1 w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between">
+        <div class="text-sm text-slate-600">
+          Rows: <span class="font-semibold">{{ summary.count }}</span>
+          · Total Outstanding: <span class="font-semibold">₹ {{ summary.total_outstanding|inr }}</span>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="{% url 'accounts:receivable_outstanding_all_pdc' %}"
+             class="px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50">
+            Reset
+          </a>
+          <button type="submit"
+                  class="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
+            Apply
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Table + Remarks Save (POST) -->
+    <form method="post" class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_remarks">
+      <input type="hidden" name="snapshot_date" value="{{ snapshot_date|date:'Y-m-d' }}">
+      <input type="hidden" name="return_qs"
+             value="as_on={{ filters.as_on }}&company_group={{ filters.company_group }}&party_code={{ filters.party_code }}&party_name={{ filters.party_name }}&q={{ filters.q }}&os_min={{ filters.os_min }}&os_max={{ filters.os_max }}&page={{ page_obj.number|default:1 }}">
+
+      <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <div class="text-sm text-slate-700">
+          You can add remarks per invoice row and click <span class="font-semibold">Save Remarks</span>.
+        </div>
+        <button type="submit"
+                class="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
+          Save Remarks
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-700">
+            <tr class="border-b border-slate-200">
+              <th class="px-3 py-2 text-left font-semibold">Company</th>
+              <th class="px-3 py-2 text-left font-semibold">Party</th>
+              <th class="px-3 py-2 text-left font-semibold">Invoice No</th>
+              <th class="px-3 py-2 text-left font-semibold">Inv Date</th>
+              <th class="px-3 py-2 text-left font-semibold">Due Date</th>
+              <th class="px-3 py-2 text-right font-semibold">Overdue Days</th>
+              <th class="px-3 py-2 text-right font-semibold">Bill Amt</th>
+              <th class="px-3 py-2 text-right font-semibold">Outstanding</th>
+
+              <th class="px-3 py-2 text-left font-semibold">PDC Details (App)</th>
+              <th class="px-3 py-2 text-left font-semibold">PDC Status</th>
+              <th class="px-3 py-2 text-left font-semibold">ERP Receipt</th>
+
+              <!-- ✅ Renamed as requested -->
+              <th class="px-3 py-2 text-left font-semibold">Remark by the User on Customer</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+            {% for r in rows %}
+              <tr class="hover:bg-slate-50">
+                {# Hidden keys for POST save #}
+                <input type="hidden" name="party_code_{{ forloop.counter0 }}" value="{{ r.party_code }}">
+                <input type="hidden" name="invoice_no_{{ forloop.counter0 }}" value="{{ r.invoice_no }}">
+                <input type="hidden" name="company_name_{{ forloop.counter0 }}" value="{{ r.company_name|default:'' }}">
+                <input type="hidden" name="party_name_{{ forloop.counter0 }}" value="{{ r.party_name|default:'' }}">
+
+                <td class="px-3 py-2 whitespace-nowrap">{{ r.company_name|default:"" }}</td>
+
+                <td class="px-3 py-2">
+                  <div class="font-semibold text-slate-900">{{ r.party_name|default:"" }}</div>
+                  <div class="text-xs text-slate-500">{{ r.party_code|default:"" }}</div>
+                </td>
+
+                <td class="px-3 py-2 whitespace-nowrap font-semibold text-slate-900">{{ r.invoice_no }}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{% if r.invoice_date %}{{ r.invoice_date|date:"d-M-Y" }}{% endif %}</td>
+                <td class="px-3 py-2 whitespace-nowrap">{% if r.due_date %}{{ r.due_date|date:"d-M-Y" }}{% endif %}</td>
+
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                  {% if r.overdue_days|add:"0" > 0 %}
+                    <span class="font-semibold text-rose-700">{{ r.overdue_days }}</span>
+                  {% else %}
+                    <span class="text-slate-500">0</span>
+                  {% endif %}
+                </td>
+
+                <td class="px-3 py-2 text-right whitespace-nowrap">₹ {{ r.bill_amount|inr }}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap font-semibold">₹ {{ r.outstanding_amount|inr }}</td>
+
+                <!-- PDC Details -->
+                <td class="px-3 py-2">
+                  {% if r.pdc_ref %}
+                    <div class="font-semibold text-slate-900">
+                      {{ r.pdc_ref }}
+                      {% if r.pdc_count and r.pdc_count|add:"0" > 1 %}
+                        <span class="ml-1 text-xs text-slate-500">(+{{ r.pdc_count|add:"-1" }})</span>
+                      {% endif %}
+                    </div>
+                    <div class="text-xs text-slate-600">
+                      {% if r.pdc_date %}Date: {{ r.pdc_date|date:"d-M-Y" }} · {% endif %}
+                      Amt: ₹ {{ r.pdc_amount|inr }}
+                    </div>
+                    {% if r.pdc_entry_date %}
+                      <div class="text-xs text-slate-500">Entry: {{ r.pdc_entry_date|date:"d-M-Y" }}</div>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-slate-400">—</span>
+                  {% endif %}
+                </td>
+
+                <!-- PDC Status -->
+                <td class="px-3 py-2">
+                  {% if r.pdc_ref %}
+                    {% if r.pdc_status == "CLEARED" %}
+                      <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                        Cleared
+                      </span>
+                    {% else %}
+                      <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                        Pending
+                      </span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-slate-400">—</span>
+                  {% endif %}
+                </td>
+
+                <!-- ERP Receipt -->
+                <td class="px-3 py-2">
+                  {% if r.pdc_status == "CLEARED" %}
+                    <div class="text-xs text-slate-700">
+                      <div><span class="font-semibold">Receipt:</span> {{ r.pdc_erp_receipt_no|default:"" }}</div>
+                      <div><span class="font-semibold">Date:</span> {{ r.pdc_erp_receipt_date|default:"" }}</div>
+                      <div><span class="font-semibold">Inst:</span> {{ r.pdc_erp_inst_no|default:"" }}</div>
+                    </div>
+                  {% else %}
+                    <span class="text-slate-400">—</span>
+                  {% endif %}
+                </td>
+
+                <!-- ✅ Remark (label changed + better placeholder sentence) -->
+                <td class="px-3 py-2 min-w-[320px]">
+                  <input type="text"
+                         name="remark_{{ forloop.counter0 }}"
+                         value="{{ r.user_remark|default:'' }}"
+                         placeholder="Remark by the user for the customer..."
+                         class="w-full rounded-lg border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                  {% if r.remark_updated_at %}
+                    <div class="mt-1 text-[11px] text-slate-500">
+                      Last updated: {{ r.remark_updated_at|date:"d-M-Y H:i" }}
+                      {% if r.remark_updated_by %} · {{ r.remark_updated_by }}{% endif %}
+                    </div>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="12" class="px-4 py-10 text-center text-slate-500">
+                  No outstanding bills found for the selected filters.
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <input type="hidden" name="row_count" value="{{ rows|length }}">
+
+      <!-- Pagination -->
+      {% if page_obj %}
+        <div class="px-4 py-3 border-t border-slate-200 flex items-center justify-between text-sm">
+          <div class="text-slate-600">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+          </div>
+          <div class="flex items-center gap-2">
+            {% if page_obj.has_previous %}
+              <a class="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50"
+                 href="?as_on={{ filters.as_on }}&company_group={{ filters.company_group }}&party_code={{ filters.party_code }}&party_name={{ filters.party_name }}&q={{ filters.q }}&os_min={{ filters.os_min }}&os_max={{ filters.os_max }}&page={{ page_obj.previous_page_number }}">
+                Prev
+              </a>
+            {% endif %}
+            {% if page_obj.has_next %}
+              <a class="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50"
+                 href="?as_on={{ filters.as_on }}&company_group={{ filters.company_group }}&party_code={{ filters.party_code }}&party_name={{ filters.party_name }}&q={{ filters.q }}&os_min={{ filters.os_min }}&os_max={{ filters.os_max }}&page={{ page_obj.next_page_number }}">
+                Next
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </form>
+
+  </div>
+</div>
+{% endblock %}

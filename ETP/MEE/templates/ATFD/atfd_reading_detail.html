@@ -1,0 +1,187 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto bg-white shadow-xl rounded-3xl p-6 sm:p-8 mt-6">
+
+  <!-- Header -->
+  <div class="flex items-center gap-2 mb-4">
+    <a href="{% url 'mee:atfd_reading_list' %}"
+       class="inline-flex items-center px-3 py-1.5 rounded-lg bg-slate-500 text-white text-xs font-semibold hover:bg-slate-600">
+      ← Back to List
+    </a>
+
+    <div class="flex-1 text-center">
+      <h1 class="text-xl sm:text-2xl font-semibold text-gray-800">
+        ATFD Reading Detail – {{ date|date:"d-m-Y" }}
+      </h1>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <a href="{% url 'mee:atfd_reading_edit' date|date:'Y-m-d' %}"
+         class="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600">
+        Edit
+      </a>
+
+      <form method="post"
+            action="{% url 'mee:atfd_reading_delete' date|date:'Y-m-d' %}"
+            class="inline"
+            onsubmit="return confirm('Delete ATFD reading for {{ date|date:"d-m-Y" }}?');">
+        {% csrf_token %}
+        <button type="submit"
+                class="inline-flex items-center px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600">
+          Delete
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- Reading Values (same grouped layout as list) -->
+  <div class="overflow-x-auto mb-6">
+    <table class="min-w-full text-xs sm:text-sm border border-gray-500">
+      <thead>
+        <tr>
+          <th rowspan="2" class="sticky left-0 z-30 border-b border-r border-gray-500 px-3 py-2 text-left font-semibold bg-white whitespace-nowrap">
+            Date
+          </th>
+
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Effluent Feed<br>(KL)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Steam<br>Consume (MT)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Steam Economy<br>(F/S ratio)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Blower Draft<br>(mmWC)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Steam Inlet Pressure<br>(kg/cm2)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            ATFD<br>RPM
+          </th>
+          <th rowspan="2" class="border-b border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            ATFD Salt<br>(MT)
+          </th>
+
+          <th colspan="4" class="border-b border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-sky-200 whitespace-nowrap">
+            Feed Effluent
+          </th>
+
+          <th colspan="4" class="border-b border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-orange-200 whitespace-nowrap">
+            ATFD Vapor Condensate
+          </th>
+        </tr>
+
+        <tr>
+          <th class="border-b border-r border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">pH</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">TDS (%)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">COD (%)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">SpGr.</th>
+
+          <th class="border-b border-r border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">Quantity (KL)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">pH</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">TDS (%)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">COD (%)</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr class="bg-white">
+          <td class="sticky left-0 z-20 border-t border-r border-gray-300 px-3 py-2 font-medium whitespace-nowrap bg-white">
+            {{ date|date:"d-m-Y" }}
+          </td>
+
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.effluent_feed|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.steam_consume|default:"-" }}</td>
+
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right bg-yellow-100 font-semibold">
+            {{ obj.steam_economy|default:"-" }}
+          </td>
+
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.blower_draft|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.steam_inlet_pressure|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.atfd_rpm|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.atfd_salt|default:"-" }}</td>
+
+          <td class="border-t border-r border-l-2 border-gray-400 px-2 py-1 text-right">{{ obj.effluent_feed_ph|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.effluent_feed_TDS|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.effluent_feed_cod|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.effluent_feed_spgr|default:"-" }}</td>
+
+          <td class="border-t border-r border-l-2 border-gray-400 px-2 py-1 text-right bg-yellow-100 font-semibold">
+            {{ obj.atfd_qty|default:"-" }}
+          </td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.vapor_contensate_ph|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.vapor_contensate_tds|default:"-" }}</td>
+          <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ obj.vapor_contensate_cod|default:"-" }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Downtime header + total -->
+  <div class="flex items-center justify-between mb-2 mt-4">
+    <h2 class="text-base sm:text-lg font-semibold text-gray-800">
+      Downtime Entries
+    </h2>
+
+    <div class="px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-sm sm:text-base font-semibold text-rose-700">
+      Total Downtime:
+      {% if total_downtime %}
+        {{ total_downtime }} hrs
+      {% else %}
+        0.00 hrs
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="border border-gray-200 rounded-xl overflow-hidden">
+    <table class="min-w-full text-xs sm:text-sm">
+      <thead class="bg-gray-50 text-gray-700">
+        <tr>
+          <th class="px-3 py-2 text-left">#</th>
+          <th class="px-3 py-2 text-left whitespace-nowrap">Start</th>
+          <th class="px-3 py-2 text-left whitespace-nowrap">End</th>
+          <th class="px-3 py-2 text-right whitespace-nowrap">Hours</th>
+          <th class="px-3 py-2 text-left">Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if downtimes %}
+          {% for dt in downtimes %}
+          <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+            <td class="px-3 py-1 border-t border-gray-200 text-center">
+              {{ forloop.counter }}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200 whitespace-nowrap">
+              {% if dt.downtime_start %}{{ dt.downtime_start|date:"d-m-Y H:i" }}{% else %}-{% endif %}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200 whitespace-nowrap">
+              {% if dt.downtime_end %}{{ dt.downtime_end|date:"d-m-Y H:i" }}{% else %}-{% endif %}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200 text-right whitespace-nowrap">
+              {% if dt.downtime_hours %}{{ dt.downtime_hours }}{% else %}-{% endif %}
+            </td>
+            <td class="px-3 py-1 border-t border-gray-200">
+              {% if dt.reason %}{{ dt.reason }}{% else %}-{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="5" class="px-3 py-3 text-center text-gray-500">
+              No downtime entries for this date.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}
+  {% if is_edit %}Edit FG Product QC Status{% else %}New FG Product QC Status{% endif %}
+{% endblock %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-100 py-8">
+  <div class="max-w-5xl mx-auto px-4">
+
+    <!-- Top bar -->
+    <div class="flex items-center justify-between mb-6">
+      <a href="{% url 'indexpage' %}"
+         class="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700">
+        Back to Main Page
+      </a>
+
+      <h1 class="text-2xl font-semibold text-slate-800 text-center flex-1">
+        FG Product QC Status Entry
+      </h1>
+
+      <a href="{% url 'qc:fg_qc_status_list' %}"
+         class="inline-flex items-center justify-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-600">
+        View Records
+      </a>
+    </div>
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-md border border-slate-200 px-6 py-6">
+      <div class="border-b border-slate-200 pb-4 mb-4">
+        <p class="text-sm text-slate-500">
+          Maintain Approved / Off Spec / Under Analysis quantities for finished goods.
+        </p>
+      </div>
+
+      {% if messages %}
+        <div class="space-y-2 mb-4">
+          {% for message in messages %}
+            <div class="px-4 py-2 rounded-md text-sm border
+              {% if message.tags == 'success' %}
+                bg-emerald-50 text-emerald-800 border-emerald-200
+              {% elif message.tags == 'error' %}
+                bg-rose-50 text-rose-800 border-rose-200
+              {% elif message.tags == 'warning' %}
+                bg-amber-50 text-amber-800 border-amber-200
+              {% else %}
+                bg-sky-50 text-sky-800 border-sky-200
+              {% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+
+        <!-- First row: Record Date + Product (like Vehicle Entry) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div>
+            <label for="{{ form.record_date.id_for_label }}"
+                   class="block text-sm font-medium text-slate-700 mb-1">
+              Date
+            </label>
+            {{ form.date }}
+            {% for err in form.date.errors %}
+              <p class="mt-1 text-xs text-rose-600">{{ err }}</p>
+            {% endfor %}
+          </div>
+
+          <div>
+            <label for="{{ form.product.id_for_label }}"
+                   class="block text-sm font-medium text-slate-700 mb-1">
+              Product
+            </label>
+            {{ form.product }}
+            {% for err in form.product.errors %}
+              <p class="mt-1 text-xs text-rose-600">{{ err }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Qty rows -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
+          <div>
+            <label for="{{ form.approved_qty.id_for_label }}"
+                   class="block text-sm font-medium text-slate-700 mb-1">
+              Approved Qty
+            </label>
+            {{ form.approved_qty }}
+            {% for err in form.approved_qty.errors %}
+              <p class="mt-1 text-xs text-rose-600">{{ err }}</p>
+            {% endfor %}
+          </div>
+
+          <div>
+            <label for="{{ form.off_spec_qty.id_for_label }}"
+                   class="block text-sm font-medium text-slate-700 mb-1">
+              Off Spec Qty
+            </label>
+            {{ form.off_spec_qty }}
+            {% for err in form.off_spec_qty.errors %}
+              <p class="mt-1 text-xs text-rose-600">{{ err }}</p>
+            {% endfor %}
+          </div>
+
+          <div>
+            <label for="{{ form.under_analysis.id_for_label }}"
+                   class="block text-sm font-medium text-slate-700 mb-1">
+              Under Analysis Qty
+            </label>
+            {{ form.under_analysis }}
+            {% for err in form.under_analysis.errors %}
+              <p class="mt-1 text-xs text-rose-600">{{ err }}</p>
+            {% endfor %}
+          </div>
+
+          <div>
+            <label for="{{ form.total_qty.id_for_label }}"
+                   class="block text-sm font-medium text-slate-700 mb-1">
+              Total Qty
+            </label>
+            {{ form.total_qty }}
+            {% for err in form.total_qty.errors %}
+              <p class="mt-1 text-xs text-rose-600">{{ err }}</p>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Remark -->
+        <div class="mt-2">
+          <label for="{{ form.remark.id_for_label }}"
+                 class="block text-sm font-medium text-slate-700 mb-1">
+            Remark
+          </label>
+          {{ form.remark }}
+          {% for err in form.remark.errors %}
+            <p class="mt-1 text-xs text-rose-600">{{ err }}</p>
+          {% endfor %}
+        </div>
+
+        <!-- Actions -->
+        <div class="pt-4 border-t border-slate-200 mt-4 flex items-center justify-end gap-3">
+          <a href="{% url 'qc:fg_qc_status_list' %}"
+             class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            Cancel
+          </a>
+          <button type="submit"
+                  class="inline-flex items-center justify-center rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700">
+            {% if is_edit %}Update{% else %}Save{% endif %}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="mt-6 text-center text-xs text-slate-400">
+      © 2026 OC Specialities Pvt Ltd · Chemistry can be REDEFINED
+    </div>
+  </div>
+</div>
+{% endblock maincontent %}

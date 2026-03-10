@@ -1,0 +1,136 @@
+{% extends 'hr/HRone_base.html' %}
+
+{% block HRone_title %}
+<title>Detail of Late and Early Entries: {{ late_early }}</title>
+{% endblock HRone_title %}
+
+{% block HRone_report_header %}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold text-gray-600">Late and Early Detail</h2>
+    <h2 class="text-xl font-bold text-gray-600">Status: {{ late_early }}</h2>
+</div>
+{% endblock HRone_report_header %}
+
+{% block HRone_report_content %}
+<div class="container mx-auto py-6 px-4">
+    <!-- Filter Form -->
+    <form method="get" class="flex flex-wrap justify-center gap-4 items-end mb-6 bg-white shadow-md p-4 rounded-lg">
+        <!-- From Date -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">From Date</label>
+            <input type="date" name="from_date" class="text-xs border border-gray-300 rounded px-3 py-2" value="{{ from_date }}">
+        </div>
+
+        <!-- To Date -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">To Date</label>
+            <input type="date" name="to_date" class="text-xs border border-gray-300 rounded px-3 py-2" value="{{ to_date }}">
+        </div>
+
+        <!-- Company -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Company</label>
+            <select name="company" class="text-xs border border-gray-300 rounded pr-5 py-2">
+                <option value="">All</option>
+                {% for company in company_list %}
+                <option value="{{ company }}" {% if company == selected_company %}selected{% endif %}>{{ company }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Department -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Department</label>
+            <select name="department" class="text-xs border border-gray-300 rounded pr-4  py-2">
+                <option value="">All</option>
+                {% for department in department_list %}
+                <option value="{{ department }}" {% if department == selected_department %}selected{% endif %}>{{ department }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Branch -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Branch</label>
+            <select name="branch" class="text-xs border border-gray-300 rounded pr-5 py-2">
+                <option value="">All</option>
+                {% for branch in branch_list %}
+                <option value="{{ branch }}" {% if branch == selected_branch %}selected{% endif %}>{{ branch }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Shift Code -->
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Shift Code</label>
+            <select name="shift_code" class="text-xs border border-gray-300 rounded pr-5 py-2">
+                <option value="">All</option>
+                {% for shift in shift_list %}
+                <option value="{{ shift }}" {% if shift == selected_shift_code %}selected{% endif %}>{{ shift }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-2 pt-1">
+            <button type="submit" class="text-xs bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">
+                Filter
+            </button>
+            <a href="{% url 'late_early_go_detail' late_early=late_early %}" class="bg-gray-400 text-white px-4 py-1 rounded hover:bg-gray-500">
+                Clear
+            </a>
+            <a href="{% url 'late_early_go_download_excel' late_early=late_early %}?from_date={{ from_date }}&to_date={{ to_date }}&company={{ selected_company }}&department={{ selected_department }}&branch={{ selected_branch }}&shift_code={{ selected_shift_code }}">
+                <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+            </a>
+        </div>
+    </form>
+
+    <!-- Detail Table -->
+    <div class="overflow-x-auto bg-white shadow rounded">
+        <table class="min-w-full text-sm border">
+            <thead class="bg-gray-50">
+                <tr>   
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Attendance Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Employee Code</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Full Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Shift Timings</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Late/Early Minutes</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Employment Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Company</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Business Unit</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Department</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Designation</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Branch</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Sub Branch</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Shift Code</th>
+                    
+                    
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for record in records %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.attendance_date|date:"d-m-Y" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.employee_code }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.full_name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.shift_timings }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.late_early_by_min }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.employment_status }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.company }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.business_unit }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.department }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.designation }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.branch }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.sub_branch }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.shift_code }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="13" class="px-6 py-4 text-center text-sm text-gray-500">No entries found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock HRone_report_content %}

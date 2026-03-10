@@ -1,0 +1,414 @@
+{% extends "main/index.html" %}
+{% load static inr_format %}
+
+{% block title %}Budget{% endblock %}
+
+{% block maincontent %}
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+  
+  * {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #f8fafc; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb { 
+    background: linear-gradient(180deg, #cbd5e1, #94a3b8); 
+    border-radius: 4px; 
+    border: 2px solid #f8fafc; 
+  }
+  ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #94a3b8, #64748b); }
+
+  /* Card animations */
+  .budget-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .budget-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s;
+  }
+  
+  .budget-card:hover::before {
+    left: 100%;
+  }
+  
+  .budget-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  }
+
+  /* Icon animation */
+  .icon-container {
+    transition: all 0.3s ease;
+  }
+  
+  .budget-card:hover .icon-container {
+    transform: rotate(10deg) scale(1.1);
+  }
+
+  /* Status badge pulse */
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+    50% { opacity: 0.9; box-shadow: 0 0 0 4px currentColor; }
+  }
+
+  .status-pulse {
+    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Button ripple effect */
+  .btn-ripple {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .btn-ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+  
+  .btn-ripple:hover::after {
+    width: 300px;
+    height: 300px;
+  }
+
+  /* Select dropdown styling */
+  select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  /* Message animation */
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .message-slide {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  /* Number counter animation */
+  .counter {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+</style>
+
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
+  <div class="max-w-[98rem] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- Hero Header -->
+    <div class="glass rounded-2xl shadow-xl border border-white/50 overflow-hidden">
+      <!-- Gradient top bar -->
+      <div class="h-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+      
+      <div class="p-8">
+        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+          
+          <!-- Left: Title & Description -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-4">
+              <div class="h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                <i class="fa-solid fa-chart-pie text-3xl"></i>
+              </div>
+              <div>
+                <h1 class="text-4xl font-black text-slate-900">Budget Overview</h1>
+                <p class="text-sm text-slate-600 mt-1">Department-wise monthly inputs with auto-generated summaries</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Controls -->
+          <div class="flex flex-col sm:flex-row gap-3">
+            <form method="get" class="flex items-center gap-3">
+              <label class="text-sm text-slate-700 font-semibold">Fiscal Plan:</label>
+              <select name="plan"
+                      class="h-11 rounded-xl border-2 border-slate-300 bg-white px-4 text-sm font-semibold shadow-sm hover:border-indigo-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all"
+                      onchange="this.form.submit()">
+                {% for p in plans %}
+                  <option value="{{ p.id }}" {% if p.id == plan.id %}selected{% endif %}>
+                    FY {{ p.fy }}{% if p.company_group %} ({{ p.company_group }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+              <noscript>
+                <button class="h-11 px-5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-md hover:bg-slate-800">
+                  Go
+                </button>
+              </noscript>
+            </form>
+
+            <a href="{% url 'accounts_budget:budget_plan_create' %}"
+               class="btn-ripple h-11 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 px-6 text-sm font-bold text-white hover:from-indigo-700 hover:to-purple-800 shadow-lg hover:shadow-xl transition-all">
+              <i class="fa-solid fa-plus"></i>
+              Create New Plan
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+      <div class="space-y-3">
+        {% for message in messages %}
+          <div class="message-slide rounded-xl border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 px-5 py-4 shadow-md">
+            <div class="flex items-start gap-3">
+              <div class="h-10 w-10 rounded-lg bg-blue-200 flex items-center justify-center text-blue-700 flex-shrink-0">
+                <i class="fa-solid fa-info-circle"></i>
+              </div>
+              <div class="flex-1 text-sm text-blue-900 font-medium leading-relaxed">
+                {{ message }}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Section Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-black text-slate-900">Budget Categories</h2>
+        <p class="text-sm text-slate-600 mt-1">Click on any category to manage monthly budgets</p>
+      </div>
+      <div class="text-sm text-slate-500 font-semibold">
+        {{ cards|length }} Categories
+      </div>
+    </div>
+
+    <!-- Budget Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {% for c in cards %}
+        {# Scope convention for Budget categories #}
+        {% with scope="BUDGET:"|add:c.cat %}
+          <div class="budget-card rounded-2xl border-2 border-slate-200 bg-white p-6 shadow-lg">
+            
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <!-- Category Info -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-2">
+                  <h3 class="text-base font-bold text-slate-900 truncate">{{ c.label }}</h3>
+
+                  {# Status Badge #}
+                  {% if c.mc %}
+                    {% with st=c.mc.status|default:"DRAFT" %}
+                      {% if st == "APPROVED" %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700 ring-2 ring-emerald-200 shadow-sm">
+                          <i class="fa-solid fa-check-circle"></i>
+                          Approved
+                        </span>
+                      {% elif st == "SUBMITTED" %}
+                        <span class="status-pulse inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-700 ring-2 ring-amber-200 shadow-sm">
+                          <i class="fa-solid fa-clock"></i>
+                          Submitted
+                        </span>
+                      {% elif st == "REJECTED" %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-rose-100 px-3 py-1 text-xs font-black text-rose-700 ring-2 ring-rose-200 shadow-sm">
+                          <i class="fa-solid fa-times-circle"></i>
+                          Rejected
+                        </span>
+                      {% else %}
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700 ring-2 ring-slate-200 shadow-sm">
+                          <i class="fa-solid fa-file"></i>
+                          Draft
+                        </span>
+                      {% endif %}
+                    {% endwith %}
+                  {% else %}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700 ring-2 ring-slate-200 shadow-sm">
+                      <i class="fa-solid fa-file"></i>
+                      Draft
+                    </span>
+                  {% endif %}
+                </div>
+
+                <!-- Total Amount -->
+                <div class="counter text-3xl font-black gradient-text mb-2">
+                  {{ c.total|default_if_none:"0.00"|inr }}
+                </div>
+
+                <!-- Description -->
+                <div class="text-xs text-slate-600 leading-relaxed">
+                  Click to enter month-wise budget
+                  {% if c.mc and c.mc.remarks %}
+                    <div class="mt-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                      <span class="font-semibold text-slate-700">Remarks:</span> {{ c.mc.remarks }}
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Icon -->
+              <div class="icon-container h-14 w-14 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center shadow-md">
+                <i class="fa-solid {{ c.icon }} text-2xl text-indigo-600"></i>
+              </div>
+            </div>
+
+            {# Approval Actions (Approver-only) #}
+            {% if perms.accounts_budget.can_approve_budgets and c.mc %}
+              {% with st=c.mc.status|default:"" %}
+                {% if st == "SUBMITTED" or st == "APPROVED" %}
+                  <div class="flex items-center gap-2 mb-4">
+                    {% if st == "SUBMITTED" %}
+                      <a href="{% url 'accounts_budget:mc_approve_view' 'accounts_budget.BudgetPlan' plan.id scope %}?next={{ request.get_full_path|urlencode }}"
+                         class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 shadow-md hover:shadow-lg transition-all">
+                        <i class="fa-solid fa-check"></i>
+                        Approve
+                      </a>
+
+                      <a href="{% url 'accounts_budget:mc_reject_view' 'accounts_budget.BudgetPlan' plan.id scope %}?next={{ request.get_full_path|urlencode }}"
+                         class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-700 shadow-md hover:shadow-lg transition-all">
+                        <i class="fa-solid fa-times"></i>
+                        Disapprove
+                      </a>
+
+                    {% elif st == "APPROVED" %}
+                      <a href="{% url 'accounts_budget:mc_reject_view' 'accounts_budget.BudgetPlan' plan.id scope %}?next={{ request.get_full_path|urlencode }}"
+                         class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-xs font-bold text-white hover:bg-rose-700 shadow-md hover:shadow-lg transition-all">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        Disapprove
+                      </a>
+                    {% endif %}
+                  </div>
+                {% endif %}
+              {% endwith %}
+            {% endif %}
+
+            {# Main Action Button #}
+            <a href="{% url 'accounts_budget:budget_category_edit' plan_id=plan.id category=c.cat %}"
+               class="btn-ripple group inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100 px-4 py-3 text-sm font-bold text-slate-800 hover:from-indigo-50 hover:to-purple-50 hover:border-indigo-300 transition-all shadow-sm hover:shadow-md">
+              <i class="fa-solid fa-folder-open group-hover:text-indigo-600 transition-colors"></i>
+              <span class="group-hover:text-indigo-600 transition-colors">Open Budget</span>
+              <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+            </a>
+          </div>
+        {% endwith %}
+      {% endfor %}
+    </div>
+
+    <!-- Empty State (if no cards) -->
+    {% if not cards %}
+      <div class="rounded-2xl border-2 border-dashed border-slate-300 bg-white p-16 text-center">
+        <div class="mx-auto h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+          <i class="fa-solid fa-inbox text-slate-400 text-3xl"></i>
+        </div>
+        <h3 class="text-xl font-bold text-slate-900 mb-2">No Budget Categories</h3>
+        <p class="text-sm text-slate-600 mb-6">Create a plan to get started with budget management.</p>
+        <a href="{% url 'accounts_budget:budget_plan_create' %}"
+           class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 px-6 py-3 text-sm font-bold text-white hover:from-indigo-700 hover:to-purple-800 shadow-lg">
+          <i class="fa-solid fa-plus"></i>
+          Create Your First Plan
+        </a>
+      </div>
+    {% endif %}
+
+    <!-- Footer Stats (Optional) -->
+    {% if cards %}
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass rounded-xl border border-white/50 p-5 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+              <i class="fa-solid fa-list text-blue-600 text-xl"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">Total Categories</div>
+              <div class="text-2xl font-black text-slate-900">{{ cards|length }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-xl border border-white/50 p-5 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="h-12 w-12 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <i class="fa-solid fa-check-circle text-emerald-600 text-xl"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">Approved</div>
+              <div class="text-2xl font-black text-slate-900">
+                {% with approved=cards|length %}0{% endwith %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-xl border border-white/50 p-5 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="h-12 w-12 rounded-lg bg-amber-100 flex items-center justify-center">
+              <i class="fa-solid fa-clock text-amber-600 text-xl"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">Pending</div>
+              <div class="text-2xl font-black text-slate-900">
+                {% with pending=cards|length %}0{% endwith %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-xl border border-white/50 p-5 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="h-12 w-12 rounded-lg bg-slate-100 flex items-center justify-center">
+              <i class="fa-solid fa-file text-slate-600 text-xl"></i>
+            </div>
+            <div>
+              <div class="text-xs text-slate-600 font-semibold uppercase tracking-wider">Draft</div>
+              <div class="text-2xl font-black text-slate-900">
+                {% with draft=cards|length %}{{ cards|length }}{% endwith %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

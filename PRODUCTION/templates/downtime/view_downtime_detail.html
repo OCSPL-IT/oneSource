@@ -1,0 +1,238 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<style>
+  /* Print-friendly: hide controls, add subtle borders */
+  @media print {
+    .no-print { display: none !important; }
+    .card    { box-shadow: none !important; }
+    body { background: white !important; }
+  }
+</style>
+
+<div class="flex justify-center items-start mt-4">
+  <div class="w-full max-w-5xl bg-white shadow card rounded-2xl p-6">
+
+    <!-- Header -->
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-semibold text-gray-800">Downtime Details</h2>
+        <p class="text-sm text-gray-500 mt-1">Record ID: <span class="font-mono">{{ downtime.id }}</span></p>
+      </div>
+
+      <!-- Status pills -->
+      <div class="flex flex-wrap items-center gap-2">
+        {% if downtime.idle == 'Yes' %}
+          <span class="inline-flex items-center rounded-full bg-red-100 text-red-700 text-xs font-medium px-3 py-1">Idle: Yes</span>
+        {% else %}
+          <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium px-3 py-1">Idle: No</span>
+        {% endif %}
+        {% if downtime.block %}
+          <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-700 text-xs font-medium px-3 py-1">{{ downtime.block }}</span>
+        {% endif %}
+        {% if downtime.downtime_dept %}
+          <span class="inline-flex items-center rounded-full bg-purple-100 text-purple-700 text-xs font-medium px-3 py-1">{{ downtime.downtime_dept }}</span>
+        {% endif %}
+        {% if downtime.downtime_category %}
+          <span class="inline-flex items-center rounded-full bg-amber-100 text-amber-700 text-xs font-medium px-3 py-1">{{ downtime.downtime_category }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <hr class="my-5">
+
+    <!-- Top summary cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="rounded-xl border border-gray-200 p-4">
+        <p class="text-xs text-gray-500">Date</p>
+        <p class="text-sm font-medium text-gray-800">{{ downtime.date|date:"d/m/Y" }}</p>
+      </div>
+      <div class="rounded-xl border border-gray-200 p-4">
+        <p class="text-xs text-gray-500">Total Duration (hrs)</p>
+        <p class="text-sm font-medium text-gray-800">{{ downtime.total_duration|default:"-" }}</p>
+      </div>
+      <div class="rounded-xl border border-gray-200 p-4">
+        <p class="text-xs text-gray-500">Loss (Kg)</p>
+        <p class="text-sm font-medium text-gray-800">
+          {{ downtime.loss|default:"-" }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Main details -->
+    <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Left column -->
+      <section class="rounded-xl border border-gray-200 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Equipment</h3>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <dt class="text-xs text-gray-500">Equipment ID</dt>
+            <dd class="text-sm font-medium text-gray-800 break-all">{{ downtime.eqpt_id|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Equipment Name</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.eqpt_name|default:"-" }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs text-gray-500">Block</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.block|default:"-" }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Right column -->
+      <section class="rounded-xl border border-gray-200 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Product</h3>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <dt class="text-xs text-gray-500">Product Name (FG)</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.product_name|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Stage Name</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.stage_name|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Product Code</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.product_code|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Batch No</dt>
+            <dd class="text-sm font-medium text-gray-800 break-all">{{ downtime.batch_no|default:"-" }}</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Timing -->
+      <section class="rounded-xl border border-gray-200 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">Timing</h3>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <dt class="text-xs text-gray-500">Start Date</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.start_date|date:"d/m/Y"|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">End Date</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.end_date|date:"d/m/Y"|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">Start Time</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.start_time|time:"H:i"|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">End Time</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.end_time|time:"H:i"|default:"-" }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs text-gray-500">Computed Loss / hr</dt>
+            <dd class="text-sm font-medium text-gray-800">
+              {% if downtime.bom_qty and downtime.bct %}
+                {% widthratio downtime.bom_qty downtime.bct 1 %} Kg/hr
+              {% else %}
+                -
+              {% endif %}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- BOM / Loss -->
+      <section class="rounded-xl border border-gray-200 p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">BOM & Loss</h3>
+        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+          <div>
+            <dt class="text-xs text-gray-500">BOM Qty</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.bom_qty|default:"-" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs text-gray-500">BCT</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.bct|default:"-" }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs text-gray-500">Total Loss (Kg)</dt>
+            <dd class="text-sm font-medium text-gray-800">{{ downtime.loss|default:"-" }}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <!-- Reason -->
+    <section class="mt-6 rounded-xl border border-gray-200 p-5">
+      <h3 class="text-sm font-semibold text-gray-700 mb-2">Reason</h3>
+      <p class="text-sm text-gray-800 whitespace-pre-line">{{ downtime.reason|default:"—" }}</p>
+    </section>
+
+    <!-- Actions -->
+    <div class="no-print flex flex-wrap justify-between items-center gap-3 mt-8">
+      <div class="flex gap-3">
+        <a href="{% url 'view_downtime' %}"
+           class="inline-flex items-center px-4 py-2 rounded-lg bg-gray-500 text-white hover:bg-gray-600">
+          Back
+        </a>
+
+        {% if perms.PRODUCTION.change_downtime %}
+        <a href="{% url 'edit_downtime' downtime.id %}"
+           class="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+          Edit
+        </a>
+        {% endif %}
+
+        {% if perms.PRODUCTION.delete_downtime %}
+        <form action="{% url 'delete_downtime' downtime.id %}" method="post"
+              onsubmit="return confirm('Delete this record permanently?');">
+          {% csrf_token %}
+          <button type="submit"
+                  class="inline-flex items-center px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
+            Delete
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+      <div class="flex gap-3">
+        <button type="button" onclick="window.print()"
+                class="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">
+          Print
+        </button>
+        <button type="button" id="copySummaryBtn"
+                class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+          Copy Summary
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Copy a compact text summary (handy for tickets or emails)
+  document.getElementById('copySummaryBtn')?.addEventListener('click', async () => {
+    const txt = `
+Downtime #{{ downtime.id }}
+Date: {{ downtime.date|date:"d/m/Y" }}
+Idle: {{ downtime.idle|default:"-" }}
+Block: {{ downtime.block|default:"-" }}
+
+Equipment: {{ downtime.eqpt_id|default:"-" }} — {{ downtime.eqpt_name|default:"-" }}
+Product / Stage: {{ downtime.product_name|default:"-" }} / {{ downtime.stage_name|default:"-" }}
+Batch: {{ downtime.batch_no|default:"-" }}
+
+Start: {{ downtime.start_date|date:"d/m/Y" }} {{ downtime.start_time|time:"H:i" }}
+End:   {{ downtime.end_date|date:"d/m/Y" }} {{ downtime.end_time|time:"H:i" }}
+Duration (hrs): {{ downtime.total_duration|default:"-" }}
+
+BOM Qty: {{ downtime.bom_qty|default:"-" }} | BCT: {{ downtime.bct|default:"-" }} | Loss (Kg): {{ downtime.loss|default:"-" }}
+Dept/Category: {{ downtime.downtime_dept|default:"-" }} / {{ downtime.downtime_category|default:"-" }}
+
+Reason:
+{{ downtime.reason|default:"(none)" }}
+`.trim();
+    try {
+      await navigator.clipboard.writeText(txt);
+      alert('Summary copied to clipboard');
+    } catch (e) {
+      alert('Could not copy. Your browser may block clipboard access.');
+    }
+  });
+</script>
+{% endblock maincontent %}

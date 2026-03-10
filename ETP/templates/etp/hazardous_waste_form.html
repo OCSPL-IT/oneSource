@@ -1,0 +1,326 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-4xl mx-auto my-5 bg-white p-8 rounded-xl shadow-lg">
+        {% if messages %}
+        <div class="mb-4 space-y-2">
+            {% for message in messages %}
+            <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+                {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% else %}bg-slate-600{% endif %}">
+                <span class="flex-1">{{ message }}</span>
+                <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                        onclick="this.parentElement.remove()">✖</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">
+            {% if obj %}Edit{% else %}Add{% endif %} Hazardous Waste
+        </h1>
+        {% if perms.ETP.view_hazardouswaste %}
+        <a href="{% url 'hazardous_waste_list' %}"
+           class="inline-flex items-center gap-2 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold px-3 py-2 rounded-lg shadow">
+            <i class="fa-solid fa-list"></i> View List
+        </a>
+        {% endif %}
+    </div>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 1) Date -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Date</label>
+                {{ form.date }}
+            </div>
+            <!-- 2) Challan no -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">DC Challan No</label>
+                {{ form.challan_no }}
+                {% if form.challan_no.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.challan_no.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <!-- 3) Manifest No -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Manifest No</label>
+                {{ form.manifest_no }}
+            </div>
+            <!-- 4) Transporter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Transporter</label>
+                {{ form.transporter_name }}
+
+                <!-- 🔹 manual transporter name (visible only for "Other") -->
+                <div id="transporter_manual_wrap" class="mt-2 hidden">
+                    {% if form.transporter_name_manual %}
+                        {{ form.transporter_name_manual }}
+                    {% else %}
+                        <input type="text"
+                            name="transporter_name_manual"
+                            id="id_transporter_name_manual"
+                            placeholder="Enter transporter name"
+                            class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm
+                                    focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                    {% endif %}
+                    <p class="text-xs text-gray-500 mt-1">
+                        Use when transporter is not in the list.
+                    </p>
+                </div>
+
+                {% if form.transporter_name.errors %}
+                    <p class="text-red-600 text-xs mt-1">
+                        {{ form.transporter_name.errors.0 }}
+                    </p>
+                {% endif %}
+                {% if form.transporter_name_manual and form.transporter_name_manual.errors %}
+                    <p class="text-red-600 text-xs mt-1">
+                        {{ form.transporter_name_manual.errors.0 }}
+                    </p>
+                {% endif %}
+            </div>
+            <!-- 5) Vehicle Registration No(s) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Vehicle Registration No(s)</label>
+                {{ form.vehicle_registration_numbers }}
+
+                {# NEW: manual entry shows only when "Other" is selected #}
+                <div id="vrn_manual_wrap" class="mt-2 hidden">
+                    {% if form.vehicle_registration_manual %}
+                        {{ form.vehicle_registration_manual }}
+                    {% else %}
+                        <input type="text"
+                               name="vehicle_registration_manual"
+                               id="id_vehicle_registration_manual"
+                               placeholder="Enter vehicle number (e.g., MH04LQ2879)"
+                               class="mt-1 py-2 px-3 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 sm:text-sm">
+                    {% endif %}
+                    <p class="text-xs text-gray-500 mt-1">Example: MH04LQ2879</p>
+                </div>
+
+                {# show any field errors #}
+                {% if form.vehicle_registration_numbers.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.vehicle_registration_numbers.errors.0 }}</p>
+                {% endif %}
+                {% if form.vehicle_registration_manual and form.vehicle_registration_manual.errors %}
+                    <p class="text-red-600 text-xs mt-1">{{ form.vehicle_registration_manual.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <!-- 6) Disposal Facility -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Disposal Facility</label>
+                {{ form.disposal_facility }}
+            </div>
+            <!-- 7) Type of Waste -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Type of Waste</label>
+                {{ form.type_of_waste }}
+            </div>
+            
+            {# --- Hidden Waste category fields (no labels) --- #}
+            <div class="hidden">
+            {{ form.waste_category }}
+            </div>
+
+            <!-- 8) Quantity (MT) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Quantity (MT)</label>
+                {{ form.quantity_mt }}
+            </div>
+            {# --- Hidden accounting fields (no labels) --- #}
+            <div class="hidden">
+                {{ form.disposal_rate_rs_per_mt }}
+                {{ form.transportation_cost }}
+                {{ form.total_cost }}
+                
+            </div>
+            <!-- 12) Disposal Method -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Disposal Method</label>
+                {{ form.disposal_method }}
+            </div>
+            <!-- 13) License Valid Upto -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">License Valid Upto</label>
+                {{ form.license_valid_upto }}
+            </div>
+        </div>
+
+        <button type="submit"
+            class="mt-8 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            {% if obj %}Update{% else %}Save{% endif %} Record
+        </button>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // ---------- Elements ----------
+    const transporterEl = document.getElementById("id_transporter_name");
+    const vehicleEl     = document.getElementById("id_vehicle_registration_numbers");
+
+    const facilityEl    = document.getElementById("id_disposal_facility");
+    const wasteEl       = document.getElementById("id_type_of_waste");
+
+    const qtyEl         = document.getElementById("id_quantity_mt");
+    const rateEl        = document.getElementById("id_disposal_rate");
+    const transEl       = document.getElementById("id_transport_cost");
+    const totalEl       = document.getElementById("id_total_cost");
+
+    // NEW: waste category (auto-filled)
+    const catEl         = document.getElementById("id_waste_category");
+
+    // NEW: manual VRN wrapper & constants
+    const manualWrap    = document.getElementById("vrn_manual_wrap");
+    const OTHER_VALUE   = "Other";
+
+    // NEW: manual transporter wrapper
+    const transporterManualWrap = document.getElementById("transporter_manual_wrap");
+
+    // ---------- Helpers ----------
+    function num(el){ const n = Number(el?.value || 0); return isNaN(n) ? 0 : n; }
+    function recomputeTotal(){
+        if (!totalEl) return;
+        totalEl.value = (num(qtyEl) * num(rateEl) + num(transEl)).toFixed(2);
+    }
+
+    // NEW: map type → category and updater
+    const mapTypeToCat = {
+      "Distillation Residues": "20.3",
+      "Process Residue and wastes": "28.1",
+      "Chemical sludge from waste water treatment": "35.3",
+    };
+    function updateCategory(){
+        if (!wasteEl || !catEl) return;
+        const v = wasteEl.value || "";
+        catEl.value = mapTypeToCat[v] || "";
+    }
+
+    // NEW: show/hide manual vehicle input depending on selection
+    function toggleManual() {
+        if (!vehicleEl || !manualWrap) return;
+        const show = vehicleEl.value === OTHER_VALUE;
+        manualWrap.classList.toggle("hidden", !show);
+    }
+
+    // NEW: show/hide manual transporter input depending on selection
+    function toggleTransporterManual() {
+        if (!transporterEl || !transporterManualWrap) return;
+        const show = transporterEl.value === OTHER_VALUE;
+        transporterManualWrap.classList.toggle("hidden", !show);
+    }
+
+    // ---------- Transporter → Vehicle options ----------
+    async function loadVehicles(name, keepSelected = false) {
+        if (!vehicleEl) return;
+        const prevSelected = new Set(
+            Array.from(vehicleEl.options).filter(o => o.selected).map(o => o.value)
+        );
+        vehicleEl.innerHTML = "";
+        if (!name) return;
+
+        try {
+            const url = "{% url 'api_transporter_vehicles' %}?name=" + encodeURIComponent(name);
+            const res = await fetch(url, { headers: { "Accept": "application/json" } });
+            if (!res.ok) throw new Error("Network error");
+            const data = await res.json();
+
+            const placeholder = document.createElement("option");
+            placeholder.value = "";
+            placeholder.textContent = "— Select Vehicle —";
+            vehicleEl.appendChild(placeholder);
+
+            // Ensure "Other" is always present
+            let list = Array.isArray(data.vehicles) ? data.vehicles.slice() : [];
+            if (!list.includes(OTHER_VALUE)) list.push(OTHER_VALUE);
+
+            list.forEach(v => {
+                const opt = document.createElement("option");
+                opt.value = v; opt.textContent = v;
+                if (keepSelected && prevSelected.has(v)) opt.selected = true;
+                vehicleEl.appendChild(opt);
+            });
+
+            // after (re)building options, re-evaluate manual toggle
+            toggleManual();
+        } catch (e) {
+            console.error("Failed to load vehicles:", e);
+        }
+    }
+
+    if (transporterEl) {
+        transporterEl.addEventListener("change", (e) => {
+            loadVehicles(e.target.value, false);
+            toggleTransporterManual();
+        });
+        if (transporterEl.value) {
+            loadVehicles(transporterEl.value, true); // edit page init
+        }
+        // initial transporter manual visibility
+        toggleTransporterManual();
+    }
+
+    // Also toggle manual vehicle input when user changes vehicle dropdown
+    vehicleEl?.addEventListener("change", toggleManual);
+    // Initial state (handles prefilled "Other" on edit)
+    toggleManual();
+
+    // ---------- Autofill Rate & Transport from (Facility, Waste) ----------
+    async function tryPopulateRateTransport() {
+        const fac   = facilityEl?.value || "";
+        const waste = wasteEl?.value || "";
+        const qty   = qtyEl?.value || "";
+        if (!fac || !waste) return;
+
+        try {
+            const url =
+            "{% url 'api_disposal_rates' %}"
+            + "?facility=" + encodeURIComponent(fac)
+            + "&waste=" + encodeURIComponent(waste)
+            + "&qty=" + encodeURIComponent(qty);
+
+            const res = await fetch(url, { headers: { "Accept": "application/json" } });
+            if (!res.ok) throw new Error("Network error");
+            const data = await res.json();
+
+            if (data.rate != null && rateEl) rateEl.value = Number(data.rate).toFixed(2);
+            if (data.transport != null && transEl) transEl.value = Number(data.transport).toFixed(2);
+
+            recomputeTotal();
+        } catch (err) {
+            console.error("Rate fetch failed:", err);
+        }
+    }
+    facilityEl?.addEventListener("change", tryPopulateRateTransport);
+    wasteEl?.addEventListener("change", () => {
+        tryPopulateRateTransport();
+        updateCategory(); // NEW: keep category in sync
+    });
+
+    qtyEl?.addEventListener("input", () => {
+        tryPopulateRateTransport();   // ✅ updates transport based on qty for MEPL
+    });
+    qtyEl?.addEventListener("change", () => {
+        tryPopulateRateTransport();
+    });
+
+    // ---------- Live total calc (q * r + t) ----------
+    [qtyEl, rateEl, transEl].forEach(el => {
+        if (el){
+            el.addEventListener("input",  recomputeTotal);
+            el.addEventListener("change", recomputeTotal);
+        }
+    });
+
+    // Init on load for both edit/new
+    tryPopulateRateTransport();
+    updateCategory(); // NEW: set initial category
+    recomputeTotal();
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "main/index.html" %}
+{% block title %}Packing Budget | Summary{% endblock %}
+{% block maincontent %}
+<div class="p-6 space-y-6">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-extrabold text-slate-900">Packing Budget Summary</h1>
+      <p class="text-slate-600 mt-1">Step 3: Material-wise requirement & value totals.</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'accounts_budget:packing_inputs' %}"
+         class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold">
+        ← Back to Inputs
+      </a>
+      <a href="{% url 'accounts_budget:packing_products' %}"
+         class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold">
+        Products
+      </a>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+    <div class="px-4 py-3 border-b border-slate-100 font-bold text-slate-800">
+      Totals by Packing Material
+    </div>
+
+    <div class="overflow-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 text-slate-700">
+          <tr>
+            <th class="px-4 py-2 text-left">Packing Material</th>
+            <th class="px-4 py-2 text-left">Code</th>
+            <th class="px-4 py-2 text-right">Pack Size</th>
+            <th class="px-4 py-2 text-left">Unit</th>
+            <th class="px-4 py-2 text-right">Rate (₹/Unit)</th>
+            <th class="px-4 py-2 text-right">Total Requirement</th>
+            <th class="px-4 py-2 text-right">Total Value (₹)</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for r in summary_rows %}
+          <tr class="border-t border-slate-100">
+            <td class="px-4 py-2 font-semibold text-slate-900">{{ r.packing_name }}</td>
+            <td class="px-4 py-2">{{ r.packing_code }}</td>
+            <td class="px-4 py-2 text-right">{{ r.packing_size }}</td>
+            <td class="px-4 py-2">{{ r.unit }}</td>
+            <td class="px-4 py-2 text-right">{{ r.rate }}</td>
+            <td class="px-4 py-2 text-right">{{ r.total }}</td>
+            <td class="px-4 py-2 text-right">{{ r.val_total }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td class="px-4 py-6 text-slate-500" colspan="7">
+              No packing lines saved yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+
+        {% if summary_rows %}
+        <tfoot class="bg-slate-50 border-t border-slate-200">
+          <tr>
+            <td class="px-4 py-3 font-extrabold text-slate-900" colspan="5">Grand Total</td>
+            <td class="px-4 py-3 text-right font-extrabold text-slate-900">{{ grand_qty }}</td>
+            <td class="px-4 py-3 text-right font-extrabold text-slate-900">{{ grand_val }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

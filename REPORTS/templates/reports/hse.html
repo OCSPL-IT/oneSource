@@ -1,0 +1,713 @@
+{# Topic: HSE (Lagging + Leading) #}
+{% load static %}
+{% load indnum %}
+<style>
+  .subtabs { padding-left: 1.25rem; padding-right: 1.25rem; padding-top: .75rem; }
+  .subtabs .sub-btn{
+    display:inline-flex; align-items:center; gap:.4rem;
+    border:1px solid transparent; padding:.35rem .75rem; border-radius:.5rem;
+    font-size:.85rem; font-weight:600; color:#475569; background:transparent; transition:.15s;
+  }
+  .subtabs .sub-btn[data-active="true"]{ background:#ffffff; color:#0f172a; border-color:#e2e8f0; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+  .subtabs .sub-btn[data-active="false"]:hover{ background:#ffffff; border-color:#e2e8f0; }
+  .pill{padding:.25rem .6rem; border-radius:999px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569; cursor:pointer}
+  .pill[data-active="true"]{border-color:#0ea5e9; color:#0c4a6e; background:#f0f9ff}
+  .subpane.hidden{ display:none; }
+  .badge-open{background:#fef3c7; color:#92400e; border:1px solid #fde68a}
+  .badge-closed{background:#dcfce7; color:#065f46; border:1px solid #86efac}
+  .hse-table-container { max-height: calc(100vh - 20rem); overflow-y:auto; overflow-x:hidden; }
+  .hse-table-container thead th { position:sticky; top:0; background:#fff; z-index:30; }
+  .row-click { cursor:pointer; }
+  .row-click:hover { background: #f8fafc; }
+  .row-active { background:#ecfeff !important; }
+  .filter-bar { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap }
+  .chip { display:inline-flex; align-items:center; gap:.4rem; padding:.2rem .55rem; border-radius:999px; border:1px solid #e2e8f0; background:#f8fafc; font-size:.75rem }
+  .chip b{font-weight:700}
+  .chip .x { cursor:pointer; padding:.05rem .25rem; border-radius:4px; }
+  .chip .x:hover{ background:#e2e8f0 }
+
+  .hse-table-container{ scrollbar-gutter: stable both-edges; padding-right: 8px; }
+
+  .compact { table-layout: fixed; font-size: 12px; }
+  .compact th, .compact td { padding: 6px 8px; line-height: 1.15; white-space: nowrap; }
+  .compact thead th { font-size: 11px; letter-spacing: .02em; }
+  .compact td:nth-child(n+2), .compact th:nth-child(n+2) {
+    text-align: right; font-variant-numeric: tabular-nums; padding-right: 6px;
+  }
+  .compact th:first-child, .compact td:first-child { overflow: hidden; text-overflow: ellipsis; }
+
+  .kpi-card{
+    border-radius: .75rem; border: 1px solid #e2e8f0; background: #ffffff;
+    padding: .75rem .9rem; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    cursor: pointer; transition: box-shadow .15s, border-color .15s, background .15s; outline: none;
+  }
+  .kpi-card:hover{ box-shadow: 0 2px 5px rgba(0,0,0,.06); }
+  .kpi-card[data-active="true"]{ border-color:#0ea5e9; background:#f0f9ff; }
+  .kpi-title{ font-size:11px; letter-spacing:.02em; text-transform:uppercase; }
+  .kpi-value{ font-size:22px; font-weight:800; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+  .kpi-obs{ background: rgba(16,185,129,.06); border-color: rgba(16,185,129,.25); }
+  .kpi-open{ background: rgba(245,158,11,.06); border-color: rgba(245,158,11,.25); }
+  .kpi-closed{ background:#fff; }
+</style>
+
+<!-- Root carries backend KPI counts -->
+<div id="hseRoot"
+     data-lag-total="{{ hse_kpis.lag_total|default:0 }}"
+     data-lag-open="{{ hse_kpis.lag_open|default:0 }}"
+     data-lag-closed="{{ hse_kpis.lag_closed|default:0 }}"
+     data-lead-total="{{ hse_kpis.lead_total|default:0 }}"
+     data-lead-open="{{ hse_kpis.lead_open|default:0 }}"
+     data-lead-closed="{{ hse_kpis.lead_closed|default:0 }}">
+
+  <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-emerald-100">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold text-slate-900">HSE – Health, Safety & Environment</h3>
+          <p class="text-xs text-slate-500">Fiscal period: {{ hse_kpis.fy_label }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="subtabs">
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="sub-btn" data-hse-sub="lagging" data-active="true">Lagging</button>
+        <button type="button" class="sub-btn" data-hse-sub="leading" data-active="false">Leading</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ Lagging ═══════════════════ -->
+    <div id="hse-pane-lagging" class="subpane px-5 pb-5">
+      <!-- Date Slicer + Chips -->
+      <div class="mt-4 flex flex-wrap items-end gap-2">
+        <div>
+          <label for="lagFrom" class="block text-[11px] text-slate-600 mb-1">From</label>
+          <input type="date" id="lagFrom" class="border rounded px-2 py-1 text-sm">
+        </div>
+        <div>
+          <label for="lagTo" class="block text-[11px] text-slate-600 mb-1">To</label>
+          <input type="date" id="lagTo" class="border rounded px-2 py-1 text-sm">
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="pill" data-lag-preset="MTD" data-active="true">MTD</button>
+          <button class="pill" data-lag-preset="YTD">Y-TD (to yesterday)</button>
+          <button id="lagApply" class="pill">Apply</button>
+          <span id="lagRangeInfo" class="text-xs text-slate-500 ml-2"></span>
+        </div>
+      </div>
+
+      <div id="lagFilterBarRange" class="filter-bar mt-3 hidden">
+        <span class="text-xs text-slate-500">Active filters:</span>
+        <span id="lagDeptChipRange" class="chip hidden"><b>Department:</b> <span class="val"></span><span class="x" data-clear="dept">✕</span></span>
+        <span id="lagLocChipRange"  class="chip hidden"><b>Location:</b>   <span class="val"></span><span class="x" data-clear="loc">✕</span></span>
+        <span id="lagStatChipRange" class="chip hidden"><b>Status:</b>     <span class="val"></span><span class="x" data-clear="status">✕</span></span>
+        <span id="lagRiskChipRange" class="chip hidden"><b>Risk:</b>       <span class="val"></span><span class="x" data-clear="risk">✕</span></span>
+        <button id="lagClearAllRange" class="pill">Clear</button>
+      </div>
+
+      <!-- KPI cards (clickable) -->
+      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button type="button" class="kpi-card kpi-obs" id="kpiLagObsCard" data-kpi="All" aria-label="Show All">
+          <div class="kpi-title text-emerald-700">Total Incidents</div>
+          <div id="kpiLagTotalRange" class="kpi-value text-emerald-900">0</div>
+        </button>
+        <button type="button" class="kpi-card kpi-open" id="kpiLagOpenCard" data-kpi="Open" aria-label="Filter Open">
+          <div class="kpi-title text-amber-700">Open</div>
+          <div id="kpiLagOpenRange" class="kpi-value text-amber-900">0</div>
+        </button>
+        <button type="button" class="kpi-card kpi-closed" id="kpiLagClosedCard" data-kpi="Closed" aria-label="Filter Closed">
+          <div class="kpi-title text-slate-600">Closed</div>
+          <div id="kpiLagClosedRange" class="kpi-value text-slate-900">0</div>
+        </button>
+      </div>
+
+      <!-- Matrices -->
+      <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <!-- Department-wise -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Department-wise</h4></div>
+          <div class="hse-table-container">
+            <table class="w-full compact">
+              <colgroup>
+                <col style="width:50%"><col style="width:16%"><col style="width:16%"><col style="width:18%">
+              </colgroup>
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-3 py-2 text-left">Department</th><th class="px-3 py-2">Open</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Total</th></tr>
+              </thead>
+              <tbody id="lagDeptRangeBody" class="divide-y divide-slate-200/70">
+                <tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Location-wise -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Location-wise</h4></div>
+          <div class="hse-table-container">
+            <table class="w-full compact">
+              <colgroup>
+                <col style="width:55%"><col style="width:15%"><col style="width:15%"><col style="width:15%">
+              </colgroup>
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-3 py-2 text-left">Location</th><th class="px-3 py-2">Open</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Total</th></tr>
+              </thead>
+              <tbody id="lagLocRangeBody" class="divide-y divide-slate-200/70">
+                <tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Risk-wise (bucketed) -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Risk-wise</h4></div>
+          <div class="hse-table-container">
+            <table class="w-full compact">
+              <colgroup>
+                <col style="width:55%"><col style="width:15%"><col style="width:15%"><col style="width:15%">
+              </colgroup>
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-3 py-2 text-left">Risk</th><th class="px-3 py-2">Open</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Total</th></tr>
+              </thead>
+              <tbody id="lagRiskRangeBody" class="divide-y divide-slate-200/70">
+                <tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- CSV + Details -->
+      <div class="mt-6 flex items-center justify-end">
+        <button id="hseLagCsv" class="pill">Download CSV</button>
+      </div>
+      <div class="hse-table-container mt-3">
+        <table class="w-full text-sm" id="hseLagTable">
+          <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+            <tr>
+              <th class="px-3 py-2 text-left w-[110px]">Incident Date</th>
+              <th class="px-3 py-2 text-left">Department</th>
+              <th class="px-3 py-2 text-left">Location</th>
+              <th class="px-3 py-2 text-left">Lag Indicator</th>
+              <th class="px-3 py-2 text-left">Injury Type</th>
+              <th class="px-3 py-2 text-left">Body Part</th>
+              <th class="px-3 py-2 text-left">Injured Person</th>
+              <th class="px-3 py-2 text-left">Risk</th>
+              <th class="px-3 py-2 text-left">Man-days</th>
+              <th class="px-3 py-2 text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200/70" id="hseLagBody">
+            <tr><td colspan="10" class="p-4 text-center text-slate-500">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══════════════════ Leading ═══════════════════ -->
+    <div id="hse-pane-leading" class="subpane px-5 pb-5 hidden">
+      <!-- Date Slicer + Chips -->
+      <div class="mt-4 flex flex-wrap items-end gap-2">
+        <div>
+          <label for="leadFrom" class="block text-[11px] text-slate-600 mb-1">From</label>
+          <input type="date" id="leadFrom" class="border rounded px-2 py-1 text-sm">
+        </div>
+        <div>
+          <label for="leadTo" class="block text-[11px] text-slate-600 mb-1">To</label>
+          <input type="date" id="leadTo" class="border rounded px-2 py-1 text-sm">
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="pill" data-lead-preset="MTD" data-active="true">MTD</button>
+          <button class="pill" data-lead-preset="YTD">Y-TD (to yesterday)</button>
+          <button id="leadApply" class="pill">Apply</button>
+          <span id="leadRangeInfo" class="text-xs text-slate-500 ml-2"></span>
+        </div>
+      </div>
+
+      <div id="leadFilterBar" class="filter-bar mt-3 hidden">
+        <span class="text-xs text-slate-500">Active filters:</span>
+        <span id="leadDeptChip" class="chip hidden"><b>Department:</b> <span class="val"></span><span class="x" data-clear="dept">✕</span></span>
+        <span id="leadLocChip"  class="chip hidden"><b>Location:</b>   <span class="val"></span><span class="x" data-clear="loc">✕</span></span>
+        <span id="leadStatChip" class="chip hidden"><b>Status:</b>     <span class="val"></span><span class="x" data-clear="status">✕</span></span>
+        <span id="leadRiskChip" class="chip hidden"><b>Risk:</b>       <span class="val"></span><span class="x" data-clear="risk">✕</span></span>
+        <span id="leadPslChip"  class="chip hidden"><b>PSL Member:</b> <span class="val"></span><span class="x" data-clear="psl">✕</span></span>
+        <button id="leadClearAll" class="pill">Clear</button>
+      </div>
+
+      <!-- KPI cards (clickable) -->
+      <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <button type="button" class="kpi-card kpi-obs" id="kpiObsCard" data-kpi="All">
+          <div class="kpi-title text-emerald-700">Total Observations</div>
+          <div id="kpiLeadTotalRange" class="kpi-value text-emerald-900">0</div>
+        </button>
+        <button type="button" class="kpi-card kpi-open" id="kpiOpenCard" data-kpi="Open">
+          <div class="kpi-title text-amber-700">Open</div>
+          <div id="kpiLeadOpenRange" class="kpi-value text-amber-900">0</div>
+        </button>
+        <button type="button" class="kpi-card kpi-closed" id="kpiClosedCard" data-kpi="Closed">
+          <div class="kpi-title text-slate-600">Closed</div>
+          <div id="kpiLeadClosedRange" class="kpi-value text-slate-900">0</div>
+        </button>
+      </div>
+
+      <!-- Matrices (includes PSL Member-wise) -->
+      <div class="mt-5 grid grid-cols-1 lg:grid-cols-4 gap-5">
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Department-wise</h4></div>
+          <div class="hse-table-container">
+            <table class="w-full compact">
+              <colgroup><col style="width:50%"><col style="width:16%"><col style="width:16%"><col style="width:18%"></colgroup>
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-3 py-2 text-left">Department</th><th class="px-3 py-2">Open</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Total</th></tr>
+              </thead>
+              <tbody id="leadDeptBody" class="divide-y divide-slate-200/70"><tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Location-wise</h4></div>
+          <div class="hse-table-container">
+            <table class="w-full compact">
+              <colgroup><col style="width:55%"><col style="width:15%"><col style="width:15%"><col style="width:15%"></colgroup>
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-3 py-2 text-left">Location</th><th class="px-3 py-2">Open</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Total</th></tr>
+              </thead>
+              <tbody id="leadLocBody" class="divide-y divide-slate-200/70"><tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Risk-wise</h4></div>
+          <div class="hse-table-container">
+            <table class="w-full compact">
+              <colgroup><col style="width:55%"><col style="width:15%"><col style="width:15%"><col style="width:15%"></colgroup>
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-3 py-2 text-left">Risk</th><th class="px-3 py-2">Open</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Total</th></tr>
+              </thead>
+              <tbody id="leadRiskBody" class="divide-y divide-slate-200/70"><tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PSL Member-wise (NEW) -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">PSL Member-wise</h4></div>
+          <div class="hse-table-container">
+            <table class="w-full compact">
+              <colgroup><col style="width:55%"><col style="width:15%"><col style="width:15%"><col style="width:15%"></colgroup>
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-3 py-2 text-left">PSL Member</th><th class="px-3 py-2">Open</th><th class="px-3 py-2">Closed</th><th class="px-3 py-2">Total</th></tr>
+              </thead>
+              <tbody id="leadPslBody" class="divide-y divide-slate-200/70"><tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end"><button id="hseLeadCsv" class="pill">Download CSV</button></div>
+      <div class="hse-table-container mt-3">
+        <table class="w-full text-sm" id="hseLeadTable">
+          <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+            <tr>
+              <th class="px-3 py-2 text-left w-[130px]">Observation Date</th>
+              <th class="px-3 py-2 text-left">Department</th>
+              <th class="px-3 py-2 text-left">Location</th>
+              <th class="px-3 py-2 text-left">Abnormality</th>
+              <th class="px-3 py-2 text-left">Initiated By</th>
+              <th class="px-3 py-2 text-left">PSL Member</th>
+              <th class="px-3 py-2 text-left">Risk</th>
+              <th class="px-3 py-2 text-left">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200/70" id="hseLeadBody"><tr><td colspan="8" class="p-4 text-center text-slate-500">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    {# JSON payloads for JS rendering #}
+    <script id="hseLagAll"    type="application/json">{{ hse_lag_all_json|safe }}</script>
+    <script id="hseLagOpen"   type="application/json">{{ hse_lag_open_json|safe }}</script>
+    <script id="hseLagClosed" type="application/json">{{ hse_lag_closed_json|safe }}</script>
+    <script id="hseLead"      type="application/json">{{ hse_leading_json|safe }}</script>
+  </div>
+</div>
+
+<script>
+/* HSE logic — exposed as hook for main tab switcher */
+window.initHSEPane = (function(){
+  let booted=false;
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+  function fmtDate(d){ const s=(d||'').toString().slice(0,10); const [y,m,day]=s.split('-'); if(!y||!m||!day) return s; return `${day}-${m}-${y.slice(2)}`; }
+  const esc = v => (v ?? '').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const jsonOf = (id) => { try{ return JSON.parse(document.getElementById(id)?.textContent||'[]')||[] }catch{ return [] } };
+
+  function riskBucket(v){
+    const s=(v??'').toString().trim();
+    const m = s.match(/(High|Medium|Low)\s*$/i);
+    return m ? (m[1].charAt(0).toUpperCase()+m[1].slice(1).toLowerCase()) : (s||'—');
+  }
+
+  const RISK_ORDER = { High: 0, Medium: 1, Low: 2 };
+  function sortRiskRows(rows){
+    return rows.slice().sort((a,b)=>{
+      const ra = (RISK_ORDER[a[0]] ?? 999);
+      const rb = (RISK_ORDER[b[0]] ?? 999);
+      if (ra !== rb) return ra - rb;
+      return b[1].total - a[1].total;
+    });
+  }
+
+  function jsonToCsv(rows, headers){
+    const escv=v=>`"${(v??'').toString().replace(/"/g,'""')}"`;
+    const head=headers.map(h=>h[1]).join(',');
+    const lines=rows.map(r=>headers.map(h=>escv(r[h[0]])).join(','));
+    return [head].concat(lines).join('\r\n');
+  }
+  function aggMatrix(list, keyFn, statusField){
+    const out={}; for(const r of list){
+      const k=(keyFn(r)||'—').toString();
+      const st=(r[statusField]||'').toLowerCase().trim();
+      const isClosed = st === 'closed';
+      const b=out[k]=out[k]||{open:0,closed:0,total:0};
+      if(isClosed) b.closed++; else b.open++; b.total++;
+    }
+    return Object.entries(out).sort((a,b)=>b[1].total - a[1].total);
+  }
+  function renderMatrix(tbody, rows){
+    if(!rows.length){ tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr>`; return; }
+    tbody.innerHTML = rows.map(([label,v])=>`
+      <tr class="row-click" data-label="${esc(label)}">
+        <td class="px-3 py-2">${label}</td>
+        <td class="px-3 py-2 text-right font-mono">${v.open}</td>
+        <td class="px-3 py-2 text-right font-mono">${v.closed}</td>
+        <td class="px-3 py-2 text-right font-mono font-semibold">${v.total}</td>
+      </tr>`).join('');
+  }
+  function setActiveRow(tbody, label){
+    Array.from(tbody.querySelectorAll('tr')).forEach(tr=>tr.classList.toggle('row-active', tr.dataset.label===label));
+  }
+  function showChips(barEl, chips){
+    const has = Object.values(chips).some(Boolean);
+    barEl.classList.toggle('hidden', !has);
+  }
+  function bindChip(chipEl, value, onClear){
+    chipEl.classList.toggle('hidden', !value);
+    chipEl.querySelector('.val').textContent = value || '';
+    chipEl.querySelector('.x').onclick = onClear;
+  }
+
+  const asISO = (d) => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const fmtDMY = (s) => { if(!s) return ''; const [y,m,d] = s.split('-'); return `${d}-${m}-${y.slice(2)}`; };
+  const yesterdayLocal = () => { const t = new Date(); t.setHours(12,0,0,0); t.setDate(t.getDate()-1); return t; };
+  const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1, 12);
+  const fyStartFor = (d) => { const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear()-1; return new Date(y, 3, 1, 12); };
+
+  // NEW: prime card values from backend counts on first paint
+  function primeBackendKPIs(){
+    const root = document.getElementById('hseRoot');
+    if(!root) return;
+    const get = (k, fallback=0) => {
+      const v = root.dataset[k];
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    const lagT = get('lagTotal'), lagO = get('lagOpen'), lagC = get('lagClosed');
+    const leadT = get('leadTotal'), leadO = get('leadOpen'), leadC = get('leadClosed');
+
+    const setText = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = String(val); };
+    setText('kpiLagTotalRange', lagT);
+    setText('kpiLagOpenRange',  lagO);
+    setText('kpiLagClosedRange',lagC);
+    setText('kpiLeadTotalRange', leadT);
+    setText('kpiLeadOpenRange',  leadO);
+    setText('kpiLeadClosedRange',leadC);
+  }
+
+  return function(){
+    if (booted) return; booted=true;
+
+    // Prime from backend immediately
+    primeBackendKPIs();
+
+    const subBtns = Array.from(document.querySelectorAll('#tab-hse [data-hse-sub], [data-hse-sub]'));
+    const panes   = { lagging: document.getElementById('hse-pane-lagging'), leading: document.getElementById('hse-pane-leading') };
+    function show(which){ Object.keys(panes).forEach(k => panes[k]?.classList.toggle('hidden', k !== which)); subBtns.forEach(b => b.setAttribute('data-active', String(b.dataset.hseSub === which))); }
+    subBtns.forEach(b => b.addEventListener('click', () => show(b.dataset.hseSub)));
+    show('lagging');
+
+    // Data
+    const LAG_ALL    = jsonOf('hseLagAll');
+    const LAG_OPEN   = jsonOf('hseLagOpen');
+    const LAG_CLOSED = jsonOf('hseLagClosed');
+    const LEAD_ALL   = jsonOf('hseLead');
+
+    /* ───────────── LAGGING ───────────── */
+    const lagFrom      = document.getElementById('lagFrom');
+    const lagTo        = document.getElementById('lagTo');
+    const lagApply     = document.getElementById('lagApply');
+    const lagRangeInfo = document.getElementById('lagRangeInfo');
+    const lagPresetBtns= Array.from(document.querySelectorAll('[data-lag-preset]'));
+
+    const lagBody      = document.getElementById('hseLagBody');
+    const lagDeptBody  = document.getElementById('lagDeptRangeBody');
+    const lagLocBody   = document.getElementById('lagLocRangeBody');
+    const lagRiskBody  = document.getElementById('lagRiskRangeBody');
+
+    const kpiLagTotal  = document.getElementById('kpiLagTotalRange');
+    const kpiLagOpen   = document.getElementById('kpiLagOpenRange');
+    const kpiLagClosed = document.getElementById('kpiLagClosedRange');
+
+    const kpiLagObsCard   = document.getElementById('kpiLagObsCard');
+    const kpiLagOpenCard  = document.getElementById('kpiLagOpenCard');
+    const kpiLagClosedCard= document.getElementById('kpiLagClosedCard');
+
+    const lagFilterBarR = document.getElementById('lagFilterBarRange');
+    const lagDeptChipR  = document.getElementById('lagDeptChipRange');
+    const lagLocChipR   = document.getElementById('lagLocChipRange');
+    const lagStatChipR  = document.getElementById('lagStatChipRange');
+    const lagRiskChipR  = document.getElementById('lagRiskChipRange');
+    const lagClearAllR  = document.getElementById('lagClearAllRange');
+
+    const lagCsvBtn     = document.getElementById('hseLagCsv');
+
+    let lagRange = { from:null, to:null };
+    let lagDrill = { dept:null, loc:null, status:null, risk:null };
+    let lagCurrentRows = [];
+
+    function setLagInputs(fISO, tISO){
+      if (fISO) lagFrom.value = fISO;
+      if (tISO) lagTo.value   = tISO;
+      lagRangeInfo.textContent = `Range: ${fmtDMY(fISO)} → ${fmtDMY(tISO)}`;
+    }
+    function setLagPreset(preset){
+      const yday = yesterdayLocal();
+      if (preset==='MTD'){ lagRange.from = asISO(startOfMonth(yday)); lagRange.to = asISO(yday); }
+      else { lagRange.from = asISO(fyStartFor(yday)); lagRange.to = asISO(yday); }
+      setLagInputs(lagRange.from, lagRange.to);
+      lagPresetBtns.forEach(b => b.setAttribute('data-active', String(b.dataset.lagPreset===preset)));
+      applyLagRange();
+    }
+    lagPresetBtns.forEach(b => b.addEventListener('click', () => setLagPreset(b.dataset.lagPreset)));
+    lagApply.addEventListener('click', ()=>{ if(lagFrom.value && lagTo.value){ lagRange.from=lagFrom.value; lagRange.to=lagTo.value; lagPresetBtns.forEach(b=>b.setAttribute('data-active','false')); setLagInputs(lagRange.from, lagRange.to); applyLagRange(); }});
+
+    function setLagKpiActive(which){
+      kpiLagObsCard.setAttribute('data-active', String(which==='All'));
+      kpiLagOpenCard.setAttribute('data-active', String(which==='Open'));
+      kpiLagClosedCard.setAttribute('data-active', String(which==='Closed'));
+    }
+    kpiLagObsCard.addEventListener('click', ()=>{ lagDrill.status=null; setLagKpiActive('All'); applyLagRange(); });
+    kpiLagOpenCard.addEventListener('click', ()=>{ lagDrill.status='Open'; setLagKpiActive('Open'); applyLagRange(); });
+    kpiLagClosedCard.addEventListener('click', ()=>{ lagDrill.status='Closed'; setLagKpiActive('Closed'); applyLagRange(); });
+
+    function applyLagRange(){
+      let base = LAG_ALL.concat(LAG_OPEN, LAG_CLOSED);
+      const uniq = new Map();
+      for(const r of base){ const k = (r.id || `${r.incident_date}|${r.department}|${r.name_of_injured_person}|${r.hse_lag_indicator}`); if(!uniq.has(k)) uniq.set(k, r); }
+      base = Array.from(uniq.values());
+
+      let rows = base.filter(r => {
+        const d = (r.incident_date||'').slice(0,10);
+        return d && d >= lagRange.from && d <= lagRange.to;
+      });
+
+      if (lagDrill.dept)   rows = rows.filter(r => (r.department||'') === lagDrill.dept);
+      if (lagDrill.loc)    rows = rows.filter(r => (r.physical_location__name||'') === lagDrill.loc);
+      if (lagDrill.status) rows = rows.filter(r => {
+        const st=(r.complience_status||'').toLowerCase().trim();
+        return lagDrill.status==='Closed' ? st==='closed' : st!=='closed';
+      });
+      if (lagDrill.risk)   rows = rows.filter(r => riskBucket(r.risk_factor) === lagDrill.risk);
+
+      lagCurrentRows = rows;
+
+      const openCount   = rows.filter(r => (r.complience_status||'').toLowerCase().trim() !== 'closed').length;
+      const closedCount = rows.length - openCount;
+      kpiLagTotal.textContent  = String(rows.length);
+      kpiLagOpen.textContent   = String(openCount);
+      kpiLagClosed.textContent = String(closedCount);
+      setLagKpiActive(lagDrill.status || 'All');
+
+      if (!rows.length){
+        lagBody.innerHTML = '<tr><td colspan="10" class="p-4 text-center text-slate-500">No records in selected range.</td></tr>';
+      } else {
+        lagBody.innerHTML = rows.map(r=>{
+          const status=(r.complience_status||'').toString().trim();
+          const badge = status.toLowerCase()==='closed' ? 'badge-closed' : 'badge-open';
+          return `
+            <tr>
+              <td class="px-3 py-2">${esc(fmtDate(r.incident_date))}</td>
+              <td class="px-3 py-2">${esc(r.department)}</td>
+              <td class="px-3 py-2">${esc(r.physical_location__name)}</td>
+              <td class="px-3 py-2">${esc(r.hse_lag_indicator)}</td>
+              <td class="px-3 py-2">${esc(r.type_of_injury)}</td>
+              <td class="px-3 py-2">${esc(r.injured_body_part)}</td>
+              <td class="px-3 py-2">${esc(r.name_of_injured_person)}</td>
+              <td class="px-3 py-2 font-mono">${esc(r.risk_factor)}</td>
+              <td class="px-3 py-2 text-center">${r.mandays_lost ?? ''}</td>
+              <td class="px-3 py-2"><span class="pill ${badge}">${esc(status||'Open')}</span></td>
+            </tr>`;
+        }).join('');
+      }
+
+      renderMatrix(lagDeptBody, aggMatrix(rows, r => r.department, 'complience_status'));
+      renderMatrix(lagLocBody,  aggMatrix(rows, r => r.physical_location__name, 'complience_status'));
+      const lagRiskRows = sortRiskRows( aggMatrix(rows, r => riskBucket(r.risk_factor), 'complience_status') );
+      renderMatrix(lagRiskBody, lagRiskRows);
+
+      setActiveRow(lagDeptBody, lagDrill.dept||'');
+      setActiveRow(lagLocBody,  lagDrill.loc||'');
+      setActiveRow(lagRiskBody, lagDrill.risk||'');
+
+      bindChip(lagDeptChipR, lagDrill.dept,   ()=>{ lagDrill.dept=null;   applyLagRange(); });
+      bindChip(lagLocChipR,  lagDrill.loc,    ()=>{ lagDrill.loc=null;    applyLagRange(); });
+      bindChip(lagStatChipR, lagDrill.status, ()=>{ lagDrill.status=null; setLagKpiActive('All'); applyLagRange(); });
+      bindChip(lagRiskChipR, lagDrill.risk,   ()=>{ lagDrill.risk=null;   applyLagRange(); });
+      showChips(lagFilterBarR, lagDrill);
+    }
+
+    lagDeptBody.addEventListener('click', (e)=>{ const tr=e.target.closest('tr[data-label]'); if(!tr) return; const L=tr.dataset.label; lagDrill.dept=(lagDrill.dept===L)?null:L; applyLagRange(); });
+    lagLocBody .addEventListener('click',  (e)=>{ const tr=e.target.closest('tr[data-label]'); if(!tr) return; const L=tr.dataset.label; lagDrill.loc =(lagDrill.loc ===L)?null:L; applyLagRange(); });
+    lagRiskBody.addEventListener('click', (e)=>{ const tr=e.target.closest('tr[data-label]'); if(!tr) return; const L=tr.dataset.label; lagDrill.risk=(lagDrill.risk===L)?null:L; applyLagRange(); });
+    lagClearAllR.onclick = ()=>{ lagDrill = {dept:null, loc:null, status:null, risk:null}; setLagKpiActive('All'); applyLagRange(); };
+
+    lagCsvBtn.onclick = () => {
+      const headers = [
+        ['record_date','Record Date'],['incident_date','Incident Date'],['incident_time','Incident Time'],
+        ['employee_type','Employee Type'],['department','Department'],['physical_location__name','Location'],
+        ['hse_lag_indicator','Lag Indicator'],['type_of_injury','Injury Type'],['injured_body_part','Body Part'],
+        ['name_of_injured_person','Injured Person'],['severity','Severity'],['likelihood','Likelihood'],
+        ['risk_factor','Risk Factor'],['incident','Incident'],['immediate_action','Immediate Action'],
+        ['investigation_method','Investigation Method'],['mandays_lost','Man-days Lost'],
+        ['complience_status','Compliance Status'],['complience_status_date','Compliance Date'],
+        ['Contractor_name','Contractor']
+      ];
+      const csv = jsonToCsv(lagCurrentRows, headers);
+      const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'}); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download=`hse_lagging_${(lagFrom.value||'from')}_${(lagTo.value||'to')}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    setLagPreset('MTD');
+
+    /* ───────────── LEADING ───────────── */
+    const leadBody        = document.getElementById('hseLeadBody');
+    const leadCsvBtn      = document.getElementById('hseLeadCsv');
+    const kpiLeadTotal    = document.getElementById('kpiLeadTotalRange');
+    const kpiLeadOpen     = document.getElementById('kpiLeadOpenRange');
+    const kpiLeadClosed   = document.getElementById('kpiLeadClosedRange');
+    const kpiObsCard      = document.getElementById('kpiObsCard');
+    const kpiOpenCard     = document.getElementById('kpiOpenCard');
+    const kpiClosedCard   = document.getElementById('kpiClosedCard');
+    const leadDeptBody    = document.getElementById('leadDeptBody');
+    const leadLocBody     = document.getElementById('leadLocBody');
+    const leadRiskBody    = document.getElementById('leadRiskBody');
+    const leadPslBody     = document.getElementById('leadPslBody');
+    const leadFilterBar   = document.getElementById('leadFilterBar');
+    const leadDeptChip    = document.getElementById('leadDeptChip');
+    const leadLocChip     = document.getElementById('leadLocChip');
+    const leadStatChip    = document.getElementById('leadStatChip');
+    const leadRiskChip    = document.getElementById('leadRiskChip');
+    const leadPslChip     = document.getElementById('leadPslChip');
+    const leadClearAll    = document.getElementById('leadClearAll');
+    const leadFrom        = document.getElementById('leadFrom');
+    const leadTo          = document.getElementById('leadTo');
+    const leadApply       = document.getElementById('leadApply');
+    const leadRangeInfo   = document.getElementById('leadRangeInfo');
+    const leadPresetBtns  = Array.from(document.querySelectorAll('[data-lead-preset]'));
+
+    let leadDrill = { dept:null, loc:null, status:null, risk:null, psl:null };
+    let leadRange = { from:null, to:null };
+    let leadCurrentRows = [];
+
+    function setLeadInputs(fISO,tISO){ if(fISO) leadFrom.value=fISO; if(tISO) leadTo.value=tISO; leadRangeInfo.textContent = `Range: ${fmtDMY(fISO)} → ${fmtDMY(tISO)}`; }
+    function setLeadPreset(preset){ const y=yesterdayLocal(); if(preset==='MTD'){ leadRange.from=asISO(startOfMonth(y)); leadRange.to=asISO(y);} else { leadRange.from=asISO(fyStartFor(y)); leadRange.to=asISO(y);} setLeadInputs(leadRange.from, leadRange.to); leadPresetBtns.forEach(b=>b.setAttribute('data-active', String(b.dataset.leadPreset===preset))); applyLead(); }
+    leadPresetBtns.forEach(b=>b.addEventListener('click',()=>setLeadPreset(b.dataset.leadPreset)));
+    leadApply.addEventListener('click',()=>{ if(leadFrom.value&&leadTo.value){ leadRange.from=leadFrom.value; leadRange.to=leadTo.value; leadPresetBtns.forEach(b=>b.setAttribute('data-active','false')); setLeadInputs(leadRange.from, leadRange.to); applyLead(); }});
+    function setKpiActive(which){ kpiObsCard.setAttribute('data-active', String(which==='All')); kpiOpenCard.setAttribute('data-active', String(which==='Open')); kpiClosedCard.setAttribute('data-active', String(which==='Closed')); }
+    kpiObsCard.addEventListener('click', ()=>{ leadDrill.status=null; setKpiActive('All'); applyLead(); });
+    kpiOpenCard.addEventListener('click', ()=>{ leadDrill.status='Open'; setKpiActive('Open'); applyLead(); });
+    kpiClosedCard.addEventListener('click', ()=>{ leadDrill.status='Closed'; setKpiActive('Closed'); applyLead(); });
+
+    function applyLead(){
+      let rows = (LEAD_ALL||[]).filter(r => { const d=(r.observation_date||'').slice(0,10); return d && d>=leadRange.from && d<=leadRange.to; });
+      if (leadDrill.dept)   rows = rows.filter(r => (r.department||'') === leadDrill.dept);
+      if (leadDrill.loc)    rows = rows.filter(r => (r.physical_location__name||'') === leadDrill.loc);
+      if (leadDrill.status) rows = rows.filter(r => ((r.status||'').toLowerCase().trim() === 'closed') === (leadDrill.status==='Closed'));
+      if (leadDrill.risk)   rows = rows.filter(r => riskBucket(r.risk_factor) === leadDrill.risk);
+      if (leadDrill.psl)    rows = rows.filter(r => (r.psl_member_name || '') === leadDrill.psl);
+
+      leadCurrentRows = rows;
+      const openCount   = rows.filter(r => (r.status||'').toLowerCase().trim() !== 'closed').length;
+      const closedCount = rows.length - openCount;
+      kpiLeadTotal.textContent  = String(rows.length);
+      kpiLeadOpen.textContent   = String(openCount);
+      kpiLeadClosed.textContent = String(closedCount);
+      setKpiActive(leadDrill.status || 'All');
+
+      if(!rows.length){ leadBody.innerHTML='<tr><td colspan="8" class="p-4 text-center text-slate-500">No records in selected range.</td></tr>'; }
+      else { leadBody.innerHTML = rows.map(r=>`
+        <tr>
+          <td class="px-3 py-2">${fmtDate(r.observation_date)}</td>
+          <td class="px-3 py-2">${esc(r.department)}</td>
+          <td class="px-3 py-2">${esc(r.physical_location__name)}</td>
+          <td class="px-3 py-2">${esc(r.leading_abnormality)}</td>
+          <td class="px-3 py-2">${esc(r.initiated_by)}</td>
+          <td class="px-3 py-2">${esc(r.psl_member_name)}</td>
+          <td class="px-3 py-2 font-mono">${esc(r.risk_factor)}</td>
+          <td class="px-3 py-2">${esc(r.status)}</td>
+        </tr>`).join(''); }
+
+      renderMatrix(leadDeptBody, aggMatrix(rows, r=>r.department, 'status'));
+      renderMatrix(leadLocBody,  aggMatrix(rows, r=>r.physical_location__name, 'status'));
+      const leadRiskRows = sortRiskRows( aggMatrix(rows, r=>riskBucket(r.risk_factor), 'status') );
+      renderMatrix(leadRiskBody, leadRiskRows);
+      renderMatrix(leadPslBody,  aggMatrix(rows, r=>r.psl_member_name, 'status'));
+
+      setActiveRow(leadDeptBody, leadDrill.dept||''); 
+      setActiveRow(leadLocBody,  leadDrill.loc||'');  
+      setActiveRow(leadRiskBody, leadDrill.risk||'');
+      setActiveRow(leadPslBody,  leadDrill.psl||'');
+
+      bindChip(leadDeptChip,  leadDrill.dept,  ()=>{ leadDrill.dept=null;  applyLead(); });
+      bindChip(leadLocChip,   leadDrill.loc,   ()=>{ leadDrill.loc=null;   applyLead(); });
+      bindChip(leadStatChip,  leadDrill.status,()=>{ leadDrill.status=null; setKpiActive('All'); applyLead(); });
+      bindChip(leadRiskChip,  leadDrill.risk,  ()=>{ leadDrill.risk=null;  applyLead(); });
+      bindChip(leadPslChip,   leadDrill.psl,   ()=>{ leadDrill.psl=null;   applyLead(); });
+      showChips(leadFilterBar, leadDrill);
+    }
+    leadDeptBody.addEventListener('click',(e)=>{ const tr=e.target.closest('tr[data-label]'); if(!tr) return; const L=tr.dataset.label; leadDrill.dept=(leadDrill.dept===L)?null:L; applyLead(); });
+    leadLocBody.addEventListener('click',(e)=>{ const tr=e.target.closest('tr[data-label]'); if(!tr) return; const L=tr.dataset.label; leadDrill.loc=(leadDrill.loc===L)?null:L; applyLead(); });
+    leadRiskBody.addEventListener('click',(e)=>{ const tr=e.target.closest('tr[data-label]'); if(!tr) return; const L=tr.dataset.label; leadDrill.risk=(leadDrill.risk===L)?null:L; applyLead(); });
+    leadPslBody .addEventListener('click',(e)=>{ const tr=e.target.closest('tr[data-label]'); if(!tr) return; const L=tr.dataset.label; leadDrill.psl =(leadDrill.psl ===L)?null:L; applyLead(); });
+
+    leadClearAll.onclick = ()=>{
+      leadDrill = { dept:null, loc:null, status:null, risk:null, psl:null };
+      setKpiActive('All');
+      applyLead();
+    };
+
+    leadCsvBtn.onclick = ()=>{
+      const headers=[
+        ['observation_date','Observation Date'],['department','Department'],['physical_location__name','Location'],
+        ['leading_abnormality','Abnormality'],['initiated_by','Initiated By'],['severity','Severity'],
+        ['likelihood','Likelihood'],['risk_factor','Risk Factor'],['corrective_action','Corrective Action'],
+        ['psl_member_name','PSL Member'],['responsible_person','Responsible'],['root_cause','Root Cause'],
+        ['preventive_action','Preventive Action'],['target_date','Target Date'],['status','Status'],['remark','Remark']
+      ];
+      const csv=jsonToCsv(leadCurrentRows, headers);
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download=`hse_leading_${(leadFrom.value||'from')}_${(leadTo.value||'to')}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    };
+
+    setLeadPreset('MTD');
+  }
+})();
+</script>

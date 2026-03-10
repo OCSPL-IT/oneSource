@@ -1,0 +1,161 @@
+{% extends 'main/index.html' %}
+{% load static %}
+{% load mp_filters %}
+
+{% block maincontent %}
+<div class="container mx-auto py-1 px-4">
+    {% if messages %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+        <div
+            class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+            <span class="flex-1">{{ message }}</span>
+            <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">✖</button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="container mx-auto px-6 mt-6">
+        <div class="flex items-center justify-between mb-4">
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                Back to Main Page
+            </a>
+            <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Melting Point Records</h2>
+            {% if perms.R_and_D.add_meltingpointrecord %}
+            <a href="{% url 'add_melting_point_record' %}"
+               class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                <i class="fa-solid fa-square-plus"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="get" class="mb-2 bg-white shadow-md rounded-lg p-3 flex flex-wrap gap-3 justify-center">
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Entry Date (From)</label>
+            <input type="date" name="entry_date_from" value="{{ filters.entry_date_from }}" class="text-xs w-full p-2 border border-gray-300 rounded-lg" />
+        </div>
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Entry Date (To)</label>
+            <input type="date" name="entry_date_to" value="{{ filters.entry_date_to }}" class="text-xs w-full p-2 border border-gray-300 rounded-lg" />
+        </div>
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Product Name</label>
+            <input type="text" name="product_name" value="{{ filters.product_name }}" placeholder="Product Name (contains)" class="text-xs w-full p-2 border border-gray-300 rounded-lg" />
+        </div>
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Batch No</label>
+            <input type="text" name="batch_no" value="{{ filters.batch_no }}" placeholder="Batch No (contains)" class="text-xs w-full p-2 border border-gray-300 rounded-lg" />
+        </div>
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Unit</label>
+            <input type="text" name="unit" value="{{ filters.unit }}" placeholder="Unit (contains)" class="text-xs w-full p-2 border border-gray-300 rounded-lg" />
+        </div>
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Instrument</label>
+            <input type="text" name="instrument" value="{{ filters.instrument }}" placeholder="Instrument (contains)" class="text-xs w-full p-2 border border-gray-300 rounded-lg" />
+        </div>
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Analysed By</label>
+            <input type="text" name="analysed_by" value="{{ filters.analysed_by }}" placeholder="Analysed By (contains)" class="text-xs w-full p-2 border border-gray-300 rounded-lg" />
+        </div>
+        <div class="flex space-x-2 mt-4">
+            <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-1 px-4 rounded-lg shadow"><i class="fa-solid fa-filter"></i></button>
+            <a href="{% url 'melting_point_record_list' %}" class="bg-gray-400 hover:bg-gray-600 text-white font-bold py-1 px-4 rounded-lg shadow"><i class="fa-solid fa-eraser"></i></a>
+        </div>
+        <a href="{% url 'melting_point_record_download_excel' %}?entry_date_from={{ filters.entry_date_from }}&entry_date_to={{ filters.entry_date_to }}&product_name={{ filters.product_name }}&batch_no={{ filters.batch_no }}&unit={{ filters.unit }}&instrument={{ filters.instrument }}&analysed_by={{ filters.analysed_by }}"
+            class="py-1 mt-4 rounded flex items-center"
+            title="Download as Excel">
+            <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+            </a>  
+    </form>
+    <div class="flex justify-end mb-1">
+        <div class="flex items-center space-x-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}"
+               class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Previous</a>
+            {% endif %}
+            <span class="px-4 py-1 bg-blue-100 rounded text-xs">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}"
+               class="text-xs px-3 py-1 bg-gray-200 rounded hover:bg-gray-300">Next</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table class="min-w-full border border-gray-300 rounded-lg text-sm">
+            <thead class="bg-gray-200 border-b text-gray-700">
+                <tr>
+                    <th class="py-2 px-4 border-b border">Sr. No</th>
+                    <th class="py-2 px-4 border-b border">Entry Date</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap border">Entry Time</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap border">ELN ID</th>
+                    <th class="py-2 px-4 border-b border">Product</th>
+                    <th class="py-2 px-4 border-b border">Batch No</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap border">Sample Description</th>
+                    <th class="py-2 px-4 border-b border">Unit</th>
+                    <th class="py-2 px-4 border-b border">Instrument</th>
+                    <th class="py-2 px-4 border-b border">Melting Point</th>
+                    <th class="py-2 px-4 border-b border">Analysed By</th>
+                    <th class="py-2 px-4 border-b border">Completed Date</th>
+                    <th class="py-2 px-4 border-b border">Completed Time</th>
+                    {% if perms.R_and_D.change_meltingpointrecord or perms.R_and_D.delete_meltingpointrecord %}
+                    <th class="py-2 px-4 border-b text-center border">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for obj in page_obj %}
+                <tr class="border-b hover:bg-blue-50 transition duration-200">
+                    <td class="px-4 py-2 border-b border text-center">
+                        {{ forloop.counter0|add:page_obj.start_index }}
+                    </td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.entry_date|date:"d-m-Y" }}</td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.entry_time|time:"H:i:A"|default:"-" }}</td>
+                    <td class="px-4 py-2 border-b border">{{ obj.eln_id|default_if_none:"" }}</td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.product_name }}</td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.batch_no }}</td>
+                    <td class="px-4 py-2 border-b border">{{ obj.sample_description }}</td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.unit }}</td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.instrument }}</td>
+                    <td class="px-4 py-2 border-b text-right border whitespace-nowrap border">{{ obj.melting_point|mp_celsius }}</td>
+                    <td class="px-4 py-2 border-b border whitespace-nowrap">{{ obj.analysed_by|default_if_none:"" }}</td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.completed_date|date:"d-m-Y"|default_if_none:"" }}</td>
+                    <td class="px-4 py-2 border-b whitespace-nowrap border">{{ obj.completed_time|time:"H:i:A"|default:"-" }}</td>
+                    {% if perms.R_and_D.change_meltingpointrecord or perms.R_and_D.delete_meltingpointrecord %}
+                    <td class="px-4 py-2 border-b text-center whitespace-nowrap border">
+                        {% if perms.R_and_D.change_meltingpointrecord %}
+                        <a href="{% url 'edit_melting_point_record' obj.id %}"
+                           class="inline-block px-2 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded mr-1 text-xs" title="Edit">
+                            <i class="fa fa-edit"></i>
+                        </a>
+                        {% endif %}
+                        {% if perms.R_and_D.delete_meltingpointrecord %}
+                        <form method="post" action="{% url 'delete_melting_point_record' obj.id %}" style="display:inline;"
+                              onsubmit="return confirm('Are you sure you want to delete this record?');">
+                            {% csrf_token %}
+                            <button type="submit" class="inline-block px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs" title="Delete">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="14" class="py-6 text-center text-gray-400">No records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

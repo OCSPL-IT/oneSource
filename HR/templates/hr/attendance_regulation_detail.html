@@ -1,0 +1,143 @@
+{% extends 'hr/HRone_base.html' %}
+
+{% block HRone_title %}
+<title>Attendance regulation detail</title>
+{% endblock HRone_title %}
+
+{% block HRone_report_header %}
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold text-gray-600">Attendance Regulation Detail</h2>
+    <h2 class="text-xl font-bold text-gray-600">Status: {{ status }}</h2>
+</div>
+{% endblock HRone_report_header %}
+
+{% block HRone_report_content %}
+<div class="container mx-auto py-6 px-4">
+    <!-- Filter Form -->
+    <form method="get" class="flex flex-wrap justify-center gap-3 items-end mb-6 bg-white shadow-md p-4 rounded-lg">
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Month</label>
+            <select name="month" class="text-xs border border-gray-300 rounded pr-3 py-2">
+                {% for num, name in months %}
+                <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Year</label>
+            <select name="year" class="text-xs border border-gray-300 rounded pr-7 py-2">
+                {% for y in years %}
+                <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Attendance Date</label>
+            <input type="date" name="date" value="{{ selected_date }}" class=" text-xs border border-gray-300 rounded pr-3 py-2">
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Department</label>
+            <select name="department" class="text-xs border border-gray-300 rounded pr-3 py-2">
+                <option value="">All</option>
+                {% for department in department_list %}
+                <option value="{{ department }}" {% if department == selected_department %}selected{% endif %}>{{ department }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Branch</label>
+            <select name="branch" class="text-xs border border-gray-300 rounded pr-2 py-2">
+                <option value="">All</option>
+                {% for branch in branch_list %}
+                <option value="{{ branch }}" {% if branch == selected_branch %}selected{% endif %}>{{ branch }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Full Name</label>
+            <input type="text" name="full_name" value="{{ full_name_query }}" placeholder="Search by name"
+                   class="text-xs border border-gray-300 rounded pr-3 py-2">
+        </div>
+
+        <button type="submit" class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700 transition">
+            Filter </button>
+        <a href="{% url 'attendance_regulation_summary' %}" class="text-xs bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Clear</a>
+        <a href="{% url 'download_attendance_regulation_excel' status %}?month={{ selected_month }}&year={{ selected_year }}&date={{ selected_date }}&company={{ selected_company }}&branch={{ selected_branch }}&department={{ selected_department }}&full_name={{ full_name_query }}"
+        title="Download Excel"
+        class="text-green-700 hover:text-green-900">
+        <i class="fa-solid fa-file-excel fa-2xl"></i>
+        </a>
+    </form>
+
+    <div class="overflow-x-auto bg-white shadow rounded">
+        <table class="min-w-full text-sm border">
+            <thead class="bg-gray-100 border-b">
+                <tr class="text-center text-xs font-semibold text-gray-700">
+                    <th class="p-2">Employee Code</th>
+                    <th class="p-2">Full Name</th>
+                    <th class="p-2">Department</th>
+                    <th class="p-2">Designation</th>
+                    <th class="p-2">Branch</th>
+                    <th class="p-2">Sub Branch</th>
+                    <th class="p-2">Attendance Date</th>
+                    <th class="p-2">Attendance Day</th>
+                    <th class="p-2">Reason</th>
+                    <th class="p-2">Shift Code</th>
+                    <th class="p-2">Shift Timings</th>
+                    <th class="p-2">Actual Punch In | Out</th>
+                    <th class="p-2">Punch In Date</th>
+                    <th class="p-2">Punch In Time</th>
+                    <th class="p-2">Punch Out Date</th>
+                    <th class="p-2">Punch Out Time</th>
+                    <th class="p-2">Remarks</th>
+                    <th class="p-2">Requested By</th>
+                    <th class="p-2">Requested On</th>
+                    <th class="p-2">Approved By</th>
+                    <th class="p-2">Approved On</th>
+                    <th class="p-2">Request Status</th>
+                    <th class="p-2">Approver Remark</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr class="border-b hover:bg-gray-50 text-center">
+                    <td class="p-2">{{ record.employee_code }}</td>
+                    <td class="p-2">{{ record.full_name }}</td>
+                    <td class="p-2">{{ record.department }}</td>
+                    <td class="p-2">{{ record.designation }}</td>
+                    <td class="p-2">{{ record.branch }}</td>
+                    <td class="p-2">{{ record.sub_branch }}</td>
+                    <td class="p-2">{{ record.attendance_date|date:"d/m/Y" }}</td>
+                    <td class="p-2">{{ record.attendance_day }}</td>
+                    <td class="p-2">{{ record.reason }}</td>
+                    <td class="p-2 whitespace-nowrap">{{ record.shift_code }}</td>
+                    <td class="p-2 whitespace-nowrap">{{ record.shift_timings }}</td>
+                    <td class="p-2 whitespace-nowrap">{{ record.actual_punch_in_out }}</td>
+                    <td class="p-2">{{ record.punch_in_date|date:"d/m/Y" }}</td>
+                    <td class="p-2">{{ record.punch_in_time }}</td>
+                    <td class="p-2">{{ record.punch_out_date|date:"d/m/Y" }}</td>
+                    <td class="p-2">{{ record.punch_out_time }}</td>
+                    <td class="p-2">{{ record.remarks }}</td>
+                    <td class="p-2">{{ record.requested_by }}</td>
+                    <td class="p-2">{{ record.requested_on|date:"d/m/Y" }}</td>
+                    <td class="p-2">{{ record.approved_by }}</td>
+                    <td class="p-2">{{ record.approved_on|date:"d/m/Y" }}</td>
+                    <td class="p-2">{{ record.request_status }}</td>
+                    <td class="p-2">{{ record.approver_remark }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="22" class="p-4 text-center text-gray-500">No records found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+{% endblock HRone_report_content %}

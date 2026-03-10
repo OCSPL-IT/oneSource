@@ -1,0 +1,533 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-50/50">
+  <div class="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+
+    <style>
+      .card{
+        background:#fff;
+        border-radius:12px;
+        border:1px solid #e2e8f0;
+        box-shadow:0 1px 2px 0 rgb(0 0 0 / .05)
+      }
+      .card:hover{
+        box-shadow:0 4px 6px -1px rgb(0 0 0 /.1),0 2px 4px -2px rgb(0 0 0 /.1)
+      }
+      .data-wrap{overflow:auto}
+      .data-table{
+        width:100%;
+        border-collapse:separate;
+        border-spacing:0;
+        font-size:.875rem
+      }
+      .data-table thead th{
+        position:sticky;
+        top:0;
+        background:#f8fafc;
+        color:#475569;
+        border-bottom:1px solid #e2e8f0;
+        padding:.5rem .75rem;
+        white-space:nowrap;
+        font-weight:600;
+        font-size:.75rem
+      }
+      .data-table tbody td{
+        padding:.5rem .75rem;
+        border-bottom:1px solid #f1f5f9
+      }
+      .num{
+        text-align:right;
+        font-variant-numeric:tabular-nums
+      }
+    </style>
+
+    <!-- ================= HEADER + TOGGLE ================= -->
+    <header class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-800">
+          {% if dashboard_type == "pssr" %}
+            HSE — PSSR Dashboard
+          {% else %}
+            HSE — Lagging Dashboard
+          {% endif %}
+        </h1>
+        <p class="mt-1 text-slate-500">
+          {% if dashboard_type == "pssr" %}
+            PSSR Job Records & Observation Analytics
+          {% else %}
+            Incident-date based view with CAPA FRP overdue highlight
+          {% endif %}
+        </p>
+      </div>
+
+      <div class="flex gap-3">
+        <a href="{% url 'hse_dashboard_page' %}?type=lagging"
+           class="px-4 py-2 rounded-lg text-sm font-semibold shadow
+           {% if dashboard_type != 'pssr' %} bg-indigo-600 text-white {% else %} bg-white border border-slate-300 text-slate-700 {% endif %}">
+          Lagging
+        </a>
+
+        <a href="{% url 'hse_dashboard_page' %}?type=pssr"
+           class="px-4 py-2 rounded-lg text-sm font-semibold shadow
+           {% if dashboard_type == 'pssr' %} bg-indigo-600 text-white {% else %} bg-white border border-slate-300 text-slate-700 {% endif %}">
+          PSSR
+        </a>
+      </div>
+    </header>
+
+    <!-- ================= FILTER (COMMON) ================= -->
+    <div class="card p-4 mb-6">
+      <form id="filterForm" class="flex flex-wrap gap-4 items-end">
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1">From Date</label>
+          <input type="date" id="fromDate" value="{{ default_from }}"
+                 class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-600 mb-1">To Date</label>
+          <input type="date" id="toDate" value="{{ default_to }}"
+                 class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+
+        {% if dashboard_type != "pssr" %}
+        <div class="flex-1 min-w-[250px]">
+          <label class="block text-sm font-medium text-slate-600 mb-1">Search</label>
+          <input id="searchQ" placeholder="Indicator, dept, location, injury, FRP…"
+                 class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+        </div>
+        {% endif %}
+
+        <button type="submit"
+          class="inline-flex items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+          Apply Filter
+        </button>
+
+        <button type="button" onclick="resetFilters()"
+          class="inline-flex items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+          Reset
+        </button>
+      </form>
+    </div>
+
+    {% if dashboard_type == "pssr" %}
+    <!-- ======================= PSSR (UNCHANGED) ======================= -->
+
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+      <div class="card p-4 border-l-4 border-indigo-500 cursor-pointer"
+           onclick="filterPSSR('all')">
+        <h3 class="text-sm text-slate-500">Total Jobs</h3>
+        <p id="pssr_totalJobs" class="text-2xl font-bold text-indigo-600">0</p>
+      </div>
+
+      <div class="card p-4 border-l-4 border-blue-500 cursor-pointer"
+           onclick="filterPSSR('all')">
+        <h3 class="text-sm text-slate-500">Observations</h3>
+        <p id="pssr_totalObs" class="text-2xl font-bold text-blue-600">0</p>
+      </div>
+
+      <div class="card p-4 border-l-4 border-yellow-500 cursor-pointer"
+           onclick="filterPSSR('Pending')">
+        <h3 class="text-sm text-slate-500">Pending</h3>
+        <p id="pssr_pendingCount" class="text-2xl font-bold text-yellow-600">0</p>
+      </div>
+
+      <div class="card p-4 border-l-4 border-green-500 cursor-pointer"
+           onclick="filterPSSR('Completed')">
+        <h3 class="text-sm text-slate-500">Completed</h3>
+        <p id="pssr_completedCount" class="text-2xl font-bold text-green-600">0</p>
+      </div>
+
+      <div class="card p-4 border-l-4 border-red-500 cursor-pointer"
+           onclick="filterPSSR('A')">
+        <h3 class="text-sm text-slate-500">RPN A Pending</h3>
+        <p id="pssr_rpnAPending" class="text-2xl font-bold text-red-600">0</p>
+      </div>
+
+      <div class="card p-4 border-l-4 border-orange-500 cursor-pointer"
+           onclick="filterPSSR('B')">
+        <h3 class="text-sm text-slate-500">RPN B Pending</h3>
+        <p id="pssr_rpnBPending" class="text-2xl font-bold text-orange-600">0</p>
+      </div>
+    </div>
+
+    <div class="card overflow-hidden">
+      <div class="p-4 border-b flex justify-between">
+        <h2 class="text-lg font-semibold">PSSR Detailed Records</h2>
+        <span id="pssr_rowCount" class="text-sm text-slate-500">0 records</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100">
+            <tr>
+              <th class="px-4 py-3">Date</th>
+              <th class="px-4 py-3">MOC No</th>
+              <th class="px-4 py-3">Job Description</th>
+              <th class="px-4 py-3">Observer</th>
+              <th class="px-4 py-3">Observation</th>
+              <th class="px-4 py-3">RPN</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3">FPR</th>
+            </tr>
+          </thead>
+          <tbody id="pssr_table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- ======================= LAGGING ======================= -->
+
+    <!-- KPI CARDS (UNCHANGED) -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <div class="card p-5 border-l-4 border-indigo-500 cursor-pointer"
+           onclick="clearSelection(); setLagFilter('all','')">
+        <div class="text-sm text-slate-500">Total Incidents</div>
+        <div id="kpiInc" class="text-2xl font-bold text-slate-800">0</div>
+      </div>
+      <div class="card p-5 border-l-4 border-amber-500 cursor-pointer"
+           onclick="clearSelection(); setLagFilter('open','')">
+        <div class="text-sm text-slate-500">Open CAPA</div>
+        <div id="kpiOpen" class="text-2xl font-bold text-amber-700">0</div>
+      </div>
+      <div class="card p-5 border-l-4 border-emerald-500 cursor-pointer"
+           onclick="clearSelection(); setLagFilter('closed','')">
+        <div class="text-sm text-slate-500">Closed CAPA</div>
+        <div id="kpiClosed" class="text-2xl font-bold text-emerald-700">0</div>
+      </div>
+    </div>
+
+    <!-- SUMMARY TABLES (MATCHED STYLE) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Indicator-wise</h3>
+        </header>
+        <div class="data-wrap max-h-96">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Indicator</th>
+                <th class="num">Count</th>
+              </tr>
+            </thead>
+            <tbody id="tblIndicator"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Department-wise</h3>
+        </header>
+        <div class="data-wrap max-h-96">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Department</th>
+                <th class="num">Count</th>
+              </tr>
+            </thead>
+            <tbody id="tblDepartment"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">Risk-wise</h3>
+        </header>
+        <div class="data-wrap max-h-48">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">Risk</th>
+                <th class="num">Count</th>
+              </tr>
+            </thead>
+            <tbody id="tblRisk"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <header class="p-4 border-b border-slate-200">
+          <h3 class="font-semibold text-slate-800">FRP-wise</h3>
+        </header>
+        <div class="data-wrap max-h-48">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="text-left">FRP</th>
+                <th class="text-left">Department</th>
+                <th class="num">Count</th>
+              </tr>
+            </thead>
+            <tbody id="tblFrp"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= FRP OVERDUE (UPDATED AS REQUESTED) ================= -->
+    <div class="card border-red-300 mb-4">
+      <header class="p-4 border-b border-slate-200 flex items-center justify-between">
+        <h3 class="font-semibold text-slate-800">
+          FRP Overdue (Open / blank &amp; past target date)
+        </h3>
+        <!-- LEFT SIDE TOTAL BADGE (LIKE YOUR FIRST TEMPLATE) -->
+        <span id="overdueTotal"
+              class="text-sm px-2 py-1 rounded bg-rose-100 text-rose-700 font-semibold">
+          0
+        </span>
+      </header>
+
+      <div class="data-wrap max-h-80">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="text-left">FRP</th>
+              <th class="text-left">Target Date</th>
+              <th class="text-left">Department</th>
+              <th class="num">Overdue</th>
+            </tr>
+          </thead>
+          <tbody id="tblOverdue"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DETAIL TABLE (UNCHANGED) -->
+    <div class="card overflow-hidden">
+      <div class="p-4 border-b flex justify-between">
+        <h2 class="text-lg font-semibold">Detailed View (latest 500)</h2>
+        <span id="rowCount" class="text-sm text-slate-500">0 records</span>
+      </div>
+      <div class="overflow-x-auto max-h-[32rem]">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-100">
+            <tr>
+              <th class="px-4 py-3">Incident Date</th>
+              <th class="px-4 py-3">Time</th>
+              <th class="px-4 py-3">Indicator</th>
+              <th class="px-4 py-3">Department</th>
+              <th class="px-4 py-3">Employee Type</th>
+              <th class="px-4 py-3">Injury</th>
+              <th class="px-4 py-3">Body Part</th>
+              <th class="px-4 py-3">Injured</th>
+              <th class="px-4 py-3">Location</th>
+              <th class="px-4 py-3">Risk Bucket</th>
+              <th class="px-4 py-3">Risk Factor</th>
+            </tr>
+          </thead>
+          <tbody id="tblDetail"></tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+const DASH_TYPE = "{{ dashboard_type }}";
+const API = DASH_TYPE === "pssr"
+  ? "{% url 'pssr_dashboard_data' %}"
+  : "{% url 'hse_dashboard_data' %}";
+
+let lagFilters = {indicator:"",department:"",risk_bucket:"",frp:""};
+let selectedRow = null;
+let pssrStatusFilter = "";
+let pssrRpnFilter = "";
+
+function highlightRow(el){
+  if(selectedRow){
+    explainResetStyle(selectedRow);
+  }
+  selectedRow = el;
+  el.classList.add("bg-blue-100","font-semibold");
+}
+
+function explainResetStyle(el){
+  el.classList.remove("bg-blue-100","font-semibold");
+}
+
+function clearSelection(){
+  if(selectedRow){
+    explainResetStyle(selectedRow);
+    selectedRow = null;
+  }
+}
+
+function resetLaggingOnly(){
+  lagFilters = {indicator:"",department:"",risk_bucket:"",frp:""};
+  clearSelection();
+  loadData();
+}
+
+async function loadData(){
+  const from = document.getElementById("fromDate").value;
+  const to = document.getElementById("toDate").value;
+  let url = `${API}?from=${from}&to=${to}`;
+
+  if(DASH_TYPE === "pssr"){
+    if(pssrStatusFilter) url += `&status=${pssrStatusFilter}`;
+    if(pssrRpnFilter) url += `&rpn=${pssrRpnFilter}`;
+  } else {
+    Object.keys(lagFilters).forEach(k=>{
+      if(lagFilters[k]) url += `&${k}=${encodeURIComponent(lagFilters[k])}`;
+    });
+    const q = document.getElementById("searchQ")?.value;
+    if(q) url += `&q=${encodeURIComponent(q)}`;
+  }
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if(DASH_TYPE === "lagging"){
+    document.getElementById("kpiInc").innerText = data.totals.incidents || 0;
+    document.getElementById("kpiOpen").innerText = data.totals.open_capa || 0;
+    document.getElementById("kpiClosed").innerText = data.totals.closed_capa || 0;
+
+    document.getElementById("tblIndicator").innerHTML =
+      (data.by_indicator||[]).map(r=>`
+        <tr class="cursor-pointer hover:bg-indigo-50"
+            onclick="highlightRow(this); setLagFilter('indicator','${r.indicator}')"
+            ondblclick="resetLaggingOnly()">
+          <td>${r.indicator}</td>
+          <td class="num font-semibold">${r.count}</td>
+        </tr>`).join("");
+
+    document.getElementById("tblDepartment").innerHTML =
+      (data.by_department||[]).map(r=>`
+        <tr class="cursor-pointer hover:bg-indigo-50"
+            onclick="highlightRow(this); setLagFilter('department','${r.department}')"
+            ondblclick="resetLaggingOnly()">
+          <td>${r.department}</td>
+          <td class="num font-semibold">${r.count}</td>
+        </tr>`).join("");
+
+    document.getElementById("tblRisk").innerHTML =
+      (data.by_risk||[]).map(r=>`
+        <tr class="cursor-pointer hover:bg-indigo-50"
+            onclick="highlightRow(this); setLagFilter('risk_bucket','${r.risk_bucket}')"
+            ondblclick="resetLaggingOnly()">
+          <td>${r.risk_bucket}</td>
+          <td class="num font-semibold">${r.count}</td>
+        </tr>`).join("");
+
+    document.getElementById("tblFrp").innerHTML =
+      (data.by_frp||[]).map(r=>`
+        <tr class="cursor-pointer hover:bg-indigo-50"
+            onclick="highlightRow(this); setLagFilter('frp','${r.frp}')"
+            ondblclick="resetLaggingOnly()">
+          <td>${r.frp}</td>
+          <td>${r.department}</td>
+          <td class="num font-semibold">${r.count}</td>
+        </tr>`).join("");
+
+    const overdueRows = data.frp_overdue_table || [];
+    let totalOverdue = 0;
+    overdueRows.forEach(r => {
+      totalOverdue += Number(r.overdue_count || 0);
+    });
+    document.getElementById("overdueTotal").innerText = totalOverdue;
+
+    document.getElementById("tblOverdue").innerHTML =
+      overdueRows.length
+        ? overdueRows.map(r=>`
+            <tr class="hover:bg-red-50">
+              <td class="text-rose-700 font-medium">${r.frp}</td>
+              <td>${r.target_date}</td>
+              <td>${r.department}</td>
+              <td class="num font-bold text-rose-700">${r.overdue_count || 0}</td>
+            </tr>`).join("")
+        : `<tr><td colspan="4" class="text-center text-slate-500 py-6">No overdue CAPA</td></tr>`;
+
+    const rows = data.table || [];
+    document.getElementById("tblDetail").innerHTML =
+      rows.map(r=>`
+        <tr class="cursor-pointer hover:bg-slate-100"
+            onclick="highlightRow(this); setLagFilter('indicator','${r.indicator}')"
+            ondblclick="resetLaggingOnly()">
+          <td class="px-4 py-2">${r.incident_date}</td>
+          <td class="px-4 py-2">${r.incident_time}</td>
+          <td class="px-4 py-2 font-medium">${r.indicator}</td>
+          <td class="px-4 py-2">${r.department}</td>
+          <td class="px-4 py-2">${r.employee_type}</td>
+          <td class="px-4 py-2">${r.injury}</td>
+          <td class="px-4 py-2">${r.body_part}</td>
+          <td class="px-4 py-2">${r.injured_person}</td>
+          <td class="px-4 py-2">${r.location}</td>
+          <td class="px-4 py-2">${r.risk_bucket}</td>
+          <td class="px-4 py-2">${r.risk_factor}</td>
+        </tr>`).join("");
+
+    document.getElementById("rowCount").innerText = rows.length + " records";
+  }
+
+  if(DASH_TYPE === "pssr"){
+    const t = data.totals || {};
+    document.getElementById("pssr_totalJobs").innerText = t.jobs || 0;
+    document.getElementById("pssr_totalObs").innerText = t.observations || 0;
+    document.getElementById("pssr_pendingCount").innerText = t.pending || 0;
+    document.getElementById("pssr_completedCount").innerText = t.completed || 0;
+    document.getElementById("pssr_rpnAPending").innerText = t.rpn_pending_a || 0;
+    document.getElementById("pssr_rpnBPending").innerText = t.rpn_pending_b || 0;
+
+    const rows = data.table || [];
+    document.getElementById("pssr_table").innerHTML =
+      rows.map(r=>`
+        <tr class="border-b">
+          <td class="px-4 py-2">${r.date}</td>
+          <td class="px-4 py-2">${r.moc_no}</td>
+          <td class="px-4 py-2">${r.job_description}</td>
+          <td class="px-4 py-2">${r.observator}</td>
+          <td class="px-4 py-2">${r.observation}</td>
+          <td class="px-4 py-2 font-semibold">${r.rpn}</td>
+          <td class="px-4 py-2">${r.status}</td>
+          <td class="px-4 py-2">${r.fpr || "-"}</td>
+        </tr>`).join("");
+
+    document.getElementById("pssr_rowCount").innerText = rows.length + " records";
+  }
+}
+
+function setLagFilter(field,value){
+  lagFilters[field]=value;
+  loadData();
+}
+
+function filterPSSR(val){
+  if(val==='Pending'||val==='Completed'){
+    pssrStatusFilter=val; pssrRpnFilter="";
+  }
+  else if(val==='A'||val==='B'){
+    pssrStatusFilter="Pending"; pssrRpnFilter=val;
+  }
+  else{
+    pssrStatusFilter=""; pssrRpnFilter="";
+  }
+  loadData();
+}
+
+document.getElementById("filterForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  loadData();
+});
+
+function resetFilters(){
+  lagFilters={indicator:"",department:"",risk_bucket:"",frp:""};
+  pssrStatusFilter="";
+  pssrRpnFilter="";
+  clearSelection();
+  document.getElementById("filterForm").reset();
+  loadData();
+}
+
+loadData();
+</script>
+{% endblock %}

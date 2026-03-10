@@ -1,0 +1,1147 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}{% if is_new %}Create BOM{% else %}Edit BOM{% endif %}{% endblock %}
+
+{% block maincontent %}
+
+<!-- Dependencies -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+  :root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --bg-gray: #f8fafc;
+    --border-color: #e2e8f0;
+    --text-dark: #1e293b;
+    --text-light: #64748b;
+    --danger: #ef4444;
+    --surface: #ffffff;
+    --radius: 10px;
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  }
+
+  body { background-color: var(--bg-gray); color: var(--text-dark); }
+
+  .page-container { max-width: 1600px; margin: 0 auto; padding: 2rem; }
+
+  .page-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1.25rem;
+    background: var(--surface);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+  }
+
+  .page-title h1 { font-size: 1.75rem; font-weight: 700; color: var(--text-dark); margin: 0; }
+
+  .page-title .meta {
+    font-size: 0.9rem; color: var(--text-light); margin-top: 0.25rem;
+    display: flex; gap: 10px; align-items: center;
+  }
+
+  .badge-code {
+    background: #eff6ff; color: var(--primary-color);
+    padding: 2px 8px; border-radius: 4px;
+    font-family: monospace; font-weight: 600;
+    border: 1px solid #dbeafe;
+  }
+
+  .btn-group-actions { display: flex; gap: 10px; }
+
+  .btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-decoration: none;
+  }
+
+  .btn-secondary { background: white; border-color: var(--border-color); color: var(--text-dark); }
+  .btn-secondary:hover { background: #f1f5f9; border-color: #cbd5e1; }
+
+  .btn-primary { background: var(--primary-color); color: white; }
+  .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 2px 4px rgba(37,99,235,0.3); }
+
+  .btn-danger { background: white; border-color: #fca5a5; color: var(--danger); }
+  .btn-danger:hover { background: #fef2f2; border-color: var(--danger); }
+
+  .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.85rem; }
+
+  .section-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border 0.2s;
+    background: #fff;
+  }
+  .form-control:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  }
+  .form-control[readonly] { background: #f8fafc; color: #64748b; }
+
+  .checkbox-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 42px;
+    padding: 0 2px;
+  }
+  input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary-color); cursor: pointer; }
+
+  .error-box {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+  }
+  .field-error {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #b91c1c;
+  }
+
+  .tabs-wrapper { margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); }
+  .tabs-nav { display: flex; gap: 2rem; }
+  .tab-btn {
+    background: none; border: none;
+    padding: 1rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+  }
+  .tab-btn:hover { color: var(--primary-color); }
+  .tab-btn.active { color: var(--primary-color); }
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px; left: 0; right: 0;
+    height: 2px;
+    background: var(--primary-color);
+  }
+
+  .tab-content { display: none; animation: fadeIn 0.3s ease; }
+  .tab-content.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+  .table-responsive {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow-x: auto;
+    background: white;
+    min-height: 400px;
+  }
+
+  table { width: 100%; border-collapse: collapse; min-width: 1000px; }
+
+  th {
+    background: #f1f5f9;
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-light);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+  }
+
+  tr:hover td { background: #f8fafc; }
+
+  .remove-btn {
+    width: 28px; height: 28px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: white;
+    color: var(--text-light);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .remove-btn:hover { background: #fef2f2; border-color: #fecaca; color: var(--danger); }
+
+  .ts-dropdown {
+    z-index: 100000 !important;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .ts-control {
+    border-radius: 6px !important;
+    border-color: var(--border-color) !important;
+    padding: 8px 12px !important;
+    box-shadow: none !important;
+  }
+  .ts-control.focus {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
+  }
+
+  .hidden { display: none !important; }
+  .text-center { text-align: center; }
+
+  .toolbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 1rem;
+    background: #f8fafc;
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+  }
+
+  .row-meta {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+  .row-num {
+    display: inline-block;
+    min-width: 20px;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: 700;
+  }
+</style>
+
+<div class="page-container">
+  <form method="post" id="bom-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" id="actionField" value="save">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-title">
+        <h1>{% if is_new %}Create New BOM{% else %}Edit BOM{% endif %}</h1>
+        <div class="meta">
+          <span>BOM Code:</span>
+          {% if bom and bom.bom_code %}
+            <span class="badge-code">{{ bom.bom_code }}</span>
+          {% else %}
+            <span class="badge-code">AUTO-GENERATED</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="btn-group-actions">
+        <a class="btn btn-secondary" href="{% url 'accounts_budget:production_bom_list' %}">Cancel</a>
+
+        <button type="submit" class="btn btn-secondary" {% if is_locked %}disabled{% endif %}
+                onclick="document.getElementById('actionField').value='save'">
+          <span>&#128190;</span> Save Draft
+        </button>
+
+        <button type="submit" class="btn btn-primary" {% if is_locked %}disabled{% endif %}
+                onclick="document.getElementById('actionField').value='submit'">
+          <span>&#10004;</span> Submit BOM
+        </button>
+      </div>
+    </div>
+
+    <!-- FG Selection Card -->
+    <div class="section-card">
+      <div class="form-grid-3">
+
+        <div class="form-group">
+          <label>Finished Good (FG)</label>
+
+          <input type="hidden" name="fg_name" id="id_fg_name" value="{{ form.fg_name.value|default_if_none:'' }}">
+
+          <select id="fg_picker" class="form-control" placeholder="Search FG..." {% if is_locked %}disabled{% endif %}>
+            {% if form.fg_name.value %}
+              <option value="{{ form.fg_name.value }}" selected>
+                {{ form.fg_name.value }}{% if form.fg_alpha_name.value %} ({{ form.fg_alpha_name.value }}){% endif %}
+              </option>
+            {% endif %}
+          </select>
+
+          {% if form.fg_name.errors %}<div class="field-error">{{ form.fg_name.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Short Name / Alpha</label>
+          {{ form.fg_alpha_name }}
+          {% if form.fg_alpha_name.errors %}<div class="field-error">{{ form.fg_alpha_name.errors }}</div>{% endif %}
+        </div>
+
+        <div class="form-group">
+          <label>Current Status</label>
+          <input type="text" class="form-control"
+                 value="{% if is_locked %}Locked / Submitted{% else %}Draft / Editable{% endif %}"
+                 readonly
+                 style="color: {% if is_locked %}var(--primary-color){% else %}var(--text-light){% endif %}; font-weight: 600;">
+        </div>
+
+        <div class="form-group">
+          <label>Active</label>
+          <div class="checkbox-wrap">
+            {{ form.is_active }}
+            <span style="color:var(--text-light); font-size:.9rem;">Enable this BOM</span>
+          </div>
+          {% if form.is_active.errors %}<div class="field-error">{{ form.is_active.errors }}</div>{% endif %}
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs-wrapper">
+      <div class="tabs-nav">
+        <button type="button" class="tab-btn active" onclick="switchTab(event, 'inputTab')">Input Materials</button>
+        <button type="button" class="tab-btn" onclick="switchTab(event, 'effTab')">Waste &amp; Effluent</button>
+      </div>
+    </div>
+
+    <!-- 1. Input Materials Tab -->
+    <div id="inputTab" class="tab-content active">
+      <div class="section-card" style="padding: 0;">
+        <div class="toolbar" style="margin: 1rem; margin-bottom: 0;">
+          <div style="font-size: 0.85rem; color: var(--text-light);">
+            <span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Note</span>
+            Use <strong>Sync Inputs</strong> to load standard ERP items for this FG.
+          </div>
+          <div class="btn-group-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="inputSyncBtn" {% if is_locked %}disabled{% endif %}>&#8635; Sync Inputs</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="inputAddBtn" {% if is_locked %}disabled{% endif %}>&#43; Add Row</button>
+            <button type="button" class="btn btn-danger btn-sm" id="inputDelSelBtn" {% if is_locked %}disabled{% endif %}>Delete Selected</button>
+          </div>
+        </div>
+
+        <div style="padding: 1rem;">
+          {{ input_formset.management_form }}
+
+          {% if input_formset.non_form_errors %}
+            <div class="error-box">{{ input_formset.non_form_errors }}</div>
+          {% endif %}
+
+          <div class="table-responsive">
+            <table id="inputTable">
+              <thead>
+                <tr>
+                  <th width="90" class="text-center">#</th>
+                  <th width="220">Category</th>
+                  <th width="420">Material Name</th>
+                  <th width="160">Budget Norm</th>
+                  <th width="160">Target Norm</th>
+                  <th width="60" class="text-center">Del</th>
+                </tr>
+              </thead>
+
+              <tbody id="inputBody">
+                {% for f in input_formset.forms %}
+                  {# Keep your "show only real/changed/error" behavior #}
+                  {% if f.instance.pk or f.has_changed or f.errors %}
+                  <tr class="input-row {% if f.DELETE.value %}hidden{% endif %}">
+                    <td class="text-center" style="vertical-align: middle;">
+                      <div class="row-meta">
+                        <input type="checkbox" class="row-select" {% if is_locked %}disabled{% endif %}>
+                        <span class="row-num">-</span>
+                      </div>
+
+                      {{ f.id }}
+                      {{ f.DELETE.as_hidden }}
+
+                      {% if f.fields.sr_no %}{{ f.sr_no.as_hidden }}{% endif %}
+                      {% if f.fields.bom_item_code %}{{ f.bom_item_code.as_hidden }}{% endif %}
+                      {% if f.fields.unit %}{{ f.unit.as_hidden }}{% endif %}
+                    </td>
+
+                    <td>
+                      <input type="text" class="form-control mat-type-display"
+                             style="background: #f1f5f9; border:none;"
+                             value="{% if f.fields.material_category %}{{ f.material_category.value|default_if_none:'' }}{% endif %}"
+                             readonly>
+                      {% if f.fields.material_category %}{{ f.material_category.as_hidden }}{% endif %}
+                      {% if f.fields.material_category and f.material_category.errors %}<div class="field-error">{{ f.material_category.errors }}</div>{% endif %}
+                    </td>
+
+                    <td>
+                      <div class="cell-stack">
+                        <select class="mat-picker" placeholder="Select Material..." {% if is_locked %}disabled{% endif %}>
+                          {% if f.fields.bom_item_code and f.bom_item_code.value %}
+                            <option value="{{ f.bom_item_code.value }}" selected>{{ f.material_name.value|default_if_none:'' }}</option>
+                          {% elif f.material_name.value %}
+                            <option value="{{ f.material_name.value }}" selected>{{ f.material_name.value }}</option>
+                          {% endif %}
+                        </select>
+
+                        {{ f.material_name.as_hidden }}
+
+                        {% if f.material_name.errors %}<div class="field-error">{{ f.material_name.errors }}</div>{% endif %}
+                      </div>
+                    </td>
+
+                    <td>
+                      {% if f.fields.budget_norm %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.budget_norm.html_name }}"
+                               value="{{ f.budget_norm.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.budget_norm.errors %}<div class="field-error">{{ f.budget_norm.errors }}</div>{% endif %}
+                      {% elif f.fields.norm %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.norm.html_name }}"
+                               value="{{ f.norm.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.norm.errors %}<div class="field-error">{{ f.norm.errors }}</div>{% endif %}
+                      {% else %}
+                        <input type="number" step="0.000001" class="form-control" disabled>
+                      {% endif %}
+                    </td>
+
+                    <td>
+                      {% if f.fields.target_norm %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.target_norm.html_name }}"
+                               value="{{ f.target_norm.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.target_norm.errors %}<div class="field-error">{{ f.target_norm.errors }}</div>{% endif %}
+                      {% elif f.fields.mat_qty_mt %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.mat_qty_mt.html_name }}"
+                               value="{{ f.mat_qty_mt.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.mat_qty_mt.errors %}<div class="field-error">{{ f.mat_qty_mt.errors }}</div>{% endif %}
+                      {% else %}
+                        <input type="number" step="0.000001" class="form-control" disabled>
+                      {% endif %}
+                    </td>
+
+                    <td class="text-center" style="vertical-align: middle;">
+                      <button type="button" class="remove-btn row-remove" {% if is_locked %}disabled{% endif %}>&times;</button>
+                    </td>
+                  </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Waste & Effluent Tab -->
+    <div id="effTab" class="tab-content">
+      <div class="section-card" style="padding: 0;">
+        <div class="toolbar" style="margin: 1rem; margin-bottom: 0;">
+          <div style="font-size: 0.85rem; color: var(--text-light);">Record Process and Unprocess waste generation.</div>
+          <div class="btn-group-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="effAddBtn" {% if is_locked %}disabled{% endif %}>&#43; Add Waste</button>
+            <button type="button" class="btn btn-danger btn-sm" id="effDelSelBtn" {% if is_locked %}disabled{% endif %}>Delete Selected</button>
+          </div>
+        </div>
+
+        <div style="padding: 1rem;">
+          {{ eff_formset.management_form }}
+
+          {% if eff_formset.non_form_errors %}
+            <div class="error-box">{{ eff_formset.non_form_errors }}</div>
+          {% endif %}
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th width="90" class="text-center">#</th>
+                  <th width="220">Waste Type</th>
+                  <th width="420">Waste Name</th>
+                  <th width="180">Waste Budget Norm</th>
+                  <th width="180">Waste Target Norm</th>
+                  <th width="60" class="text-center">Del</th>
+                </tr>
+              </thead>
+
+              <tbody id="effBody">
+                {% for f in eff_formset.forms %}
+                  {% if f.instance.pk or f.has_changed or f.errors %}
+                  <tr class="eff-row {% if f.DELETE.value %}hidden{% endif %}">
+                    <td class="text-center" style="vertical-align: middle;">
+                      <div class="row-meta">
+                        <input type="checkbox" class="row-select" {% if is_locked %}disabled{% endif %}>
+                        <span class="row-num">-</span>
+                      </div>
+
+                      {{ f.id }}{{ f.DELETE.as_hidden }}
+                      {% if f.fields.sr_no %}{{ f.sr_no.as_hidden }}{% endif %}
+                    </td>
+
+                    <td>
+                      <select name="{{ f.waste_type.html_name }}" class="form-control waste-type-select" {% if is_locked %}disabled{% endif %}>
+                        <option value="" {% if not f.waste_type.value %}selected{% endif %}>-- Select Type --</option>
+
+                        <option value="Process" {% if f.waste_type.value|default_if_none:''|lower == "process" or f.waste_type.value|default_if_none:''|lower == "p" %}selected{% endif %}>Process</option>
+
+                        <option value="Unprocess" {% if f.waste_type.value|default_if_none:''|lower == "unprocess" or f.waste_type.value|default_if_none:''|lower == "unprocessed" or f.waste_type.value|default_if_none:''|lower == "u" %}selected{% endif %}>Unprocess</option>
+                      </select>
+                      {% if f.waste_type.errors %}<div class="field-error">{{ f.waste_type.errors }}</div>{% endif %}
+                    </td>
+
+                    <td>
+                      <select name="{{ f.waste_name.html_name }}" class="form-control waste-name-select" placeholder="Select Waste..." {% if is_locked %}disabled{% endif %}>
+                        {% if f.waste_name.value %}
+                          <option value="{{ f.waste_name.value }}" selected>{{ f.waste_name.value }}</option>
+                        {% endif %}
+                      </select>
+                      {% if f.waste_name.errors %}<div class="field-error">{{ f.waste_name.errors }}</div>{% endif %}
+                    </td>
+
+                    <td>
+                      {% if f.fields.waste_budget_norm %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.waste_budget_norm.html_name }}"
+                               value="{{ f.waste_budget_norm.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.waste_budget_norm.errors %}<div class="field-error">{{ f.waste_budget_norm.errors }}</div>{% endif %}
+                      {% elif f.fields.norm %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.norm.html_name }}"
+                               value="{{ f.norm.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.norm.errors %}<div class="field-error">{{ f.norm.errors }}</div>{% endif %}
+                      {% else %}
+                        <input type="number" step="0.000001" class="form-control" disabled>
+                      {% endif %}
+                    </td>
+
+                    <td>
+                      {% if f.fields.waste_target_norm %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.waste_target_norm.html_name }}"
+                               value="{{ f.waste_target_norm.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.waste_target_norm.errors %}<div class="field-error">{{ f.waste_target_norm.errors }}</div>{% endif %}
+                      {% elif f.fields.qty %}
+                        <input type="number" step="0.000001" class="form-control"
+                               name="{{ f.qty.html_name }}"
+                               value="{{ f.qty.value|default_if_none:'' }}"
+                               {% if is_locked %}disabled{% endif %}>
+                        {% if f.qty.errors %}<div class="field-error">{{ f.qty.errors }}</div>{% endif %}
+                      {% else %}
+                        <input type="number" step="0.000001" class="form-control" disabled>
+                      {% endif %}
+                    </td>
+
+                    <td class="text-center" style="vertical-align: middle;">
+                      <button type="button" class="remove-btn row-remove" {% if is_locked %}disabled{% endif %}>&times;</button>
+                    </td>
+                  </tr>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden Templates -->
+    <template id="inputEmptyTpl">
+      <tr class="input-row">
+        <td class="text-center" style="vertical-align: middle;">
+          <div class="row-meta">
+            <input type="checkbox" class="row-select">
+            <span class="row-num">-</span>
+          </div>
+
+          {{ input_formset.empty_form.id }}{{ input_formset.empty_form.DELETE.as_hidden }}
+
+          {% if input_formset.empty_form.fields.sr_no %}{{ input_formset.empty_form.sr_no.as_hidden }}{% endif %}
+          {% if input_formset.empty_form.fields.bom_item_code %}{{ input_formset.empty_form.bom_item_code.as_hidden }}{% endif %}
+          {% if input_formset.empty_form.fields.unit %}{{ input_formset.empty_form.unit.as_hidden }}{% endif %}
+        </td>
+
+        <td>
+          <input type="text" class="form-control mat-type-display" readonly style="background: #f1f5f9; border:none;">
+          {% if input_formset.empty_form.fields.material_category %}
+            {{ input_formset.empty_form.material_category.as_hidden }}
+          {% endif %}
+        </td>
+
+        <td>
+          <div class="cell-stack">
+            <select class="mat-picker" placeholder="Select Material..."></select>
+            {{ input_formset.empty_form.material_name.as_hidden }}
+          </div>
+        </td>
+
+        <td>
+          {% if input_formset.empty_form.fields.budget_norm %}
+            <input type="number" step="0.000001" class="form-control" name="{{ input_formset.empty_form.budget_norm.html_name }}">
+          {% elif input_formset.empty_form.fields.norm %}
+            <input type="number" step="0.000001" class="form-control" name="{{ input_formset.empty_form.norm.html_name }}">
+          {% else %}
+            <input type="number" step="0.000001" class="form-control" disabled>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if input_formset.empty_form.fields.target_norm %}
+            <input type="number" step="0.000001" class="form-control" name="{{ input_formset.empty_form.target_norm.html_name }}">
+          {% elif input_formset.empty_form.fields.mat_qty_mt %}
+            <input type="number" step="0.000001" class="form-control" name="{{ input_formset.empty_form.mat_qty_mt.html_name }}">
+          {% else %}
+            <input type="number" step="0.000001" class="form-control" disabled>
+          {% endif %}
+        </td>
+
+        <td class="text-center" style="vertical-align: middle;">
+          <button type="button" class="remove-btn row-remove">&times;</button>
+        </td>
+      </tr>
+    </template>
+
+    <template id="effEmptyTpl">
+      <tr class="eff-row">
+        <td class="text-center" style="vertical-align: middle;">
+          <div class="row-meta">
+            <input type="checkbox" class="row-select">
+            <span class="row-num">-</span>
+          </div>
+
+          {{ eff_formset.empty_form.id }}{{ eff_formset.empty_form.DELETE.as_hidden }}
+          {% if eff_formset.empty_form.fields.sr_no %}{{ eff_formset.empty_form.sr_no.as_hidden }}{% endif %}
+        </td>
+
+        <td>
+          <select name="{{ eff_formset.empty_form.waste_type.html_name }}" class="form-control waste-type-select">
+            <option value="" selected>-- Select Type --</option>
+            <option value="Process">Process</option>
+            <option value="Unprocess">Unprocess</option>
+          </select>
+        </td>
+
+        <td>
+          <select name="{{ eff_formset.empty_form.waste_name.html_name }}" class="form-control waste-name-select" placeholder="Select Waste..."></select>
+        </td>
+
+        <td>
+          {% if eff_formset.empty_form.fields.waste_budget_norm %}
+            <input type="number" step="0.000001" class="form-control" name="{{ eff_formset.empty_form.waste_budget_norm.html_name }}">
+          {% elif eff_formset.empty_form.fields.norm %}
+            <input type="number" step="0.000001" class="form-control" name="{{ eff_formset.empty_form.norm.html_name }}">
+          {% else %}
+            <input type="number" step="0.000001" class="form-control" disabled>
+          {% endif %}
+        </td>
+
+        <td>
+          {% if eff_formset.empty_form.fields.waste_target_norm %}
+            <input type="number" step="0.000001" class="form-control" name="{{ eff_formset.empty_form.waste_target_norm.html_name }}">
+          {% elif eff_formset.empty_form.fields.qty %}
+            <input type="number" step="0.000001" class="form-control" name="{{ eff_formset.empty_form.qty.html_name }}">
+          {% else %}
+            <input type="number" step="0.000001" class="form-control" disabled>
+          {% endif %}
+        </td>
+
+        <td class="text-center" style="vertical-align: middle;">
+          <button type="button" class="remove-btn row-remove">&times;</button>
+        </td>
+      </tr>
+    </template>
+
+  </form>
+</div>
+
+<script>
+  const LOCKED = {{ is_locked|yesno:"true,false" }};
+
+  function switchTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    evt.currentTarget.classList.add('active');
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const applyClass = (name, cls) => {
+      const el = document.querySelector(`[name="${name}"]`);
+      if (el && !el.classList.contains('form-control') && el.type !== 'checkbox') el.classList.add('form-control');
+      if (el && cls) el.classList.add(cls);
+    };
+    applyClass("fg_alpha_name", "form-control");
+
+    const formEl     = document.getElementById("bom-form");
+    const fgHidden   = document.getElementById("id_fg_name");
+    const fgPicker   = document.getElementById("fg_picker");
+    const alphaField = document.querySelector('[name="fg_alpha_name"]');
+
+    const fgLookupUrl = "{% url 'accounts_budget:production_bom_fg_lookup_json' %}";
+    const syncUrl     = "{% url 'accounts_budget:production_bom_inputs_for_fg_json' %}";
+
+    // Waste choices
+    const WASTE_BY_TYPE = {
+      "Process": [
+        "Acidic Aq. Layer", "Basic", "Nuetral", "Sodium Cyanide Effluent",
+        "3CHP effluent", "Ammonium Chloride effluent", "Sulphuric above 50% effluent",
+        "Sulphuric below 50 % effluent", "Residue", "DIPEA Aq. Layer",
+      ].map(x => ({ value: x, text: x })),
+      "Unprocess": [
+        "Scrubber HCl 30-32%", "Scrubber Basic Effluent", "Scrubber Acidic Effluent",
+        "QC effluent", "Drainage Effluent", "Dyke Effluent",
+        "PCO Cleaning / cleaning Effluent", "Ejector effluent",
+        "Blowdown effluent (cooling tower)", "Scrubber Nox effluent",
+      ].map(x => ({ value: x, text: x })),
+    };
+
+    function wasteTypeKey(typeSel) {
+      if(!typeSel) return "";
+      const val = (typeSel.value || "").toLowerCase();
+      if(val.includes('unprocess') || val === 'u') return "Unprocess";
+      if(val.includes('process') || val === 'p') return "Process";
+      return "";
+    }
+
+    const TS_BASE_CONFIG = {
+      dropdownParent: 'body',
+      maxItems: 1,
+      create: false,
+      closeAfterSelect: true,
+      allowEmptyOption: true,
+      plugins: ['clear_button'],
+      render: {
+        option: function(data, escape) {
+          return '<div>' + escape(data.text) +
+                 (data.type ? '<div style="font-size:0.7em;color:#888">' + escape(data.type) + '</div>' : '') +
+                 '</div>';
+        }
+      }
+    };
+
+    function ensureWasteTomSelect(nameSel) {
+      if (nameSel.tomselect) return nameSel.tomselect;
+      return new TomSelect(nameSel, {
+        ...TS_BASE_CONFIG,
+        valueField: "value",
+        labelField: "text",
+        searchField: ["text"],
+      });
+    }
+
+    function refreshWasteNameForRow(row, keepValue) {
+      const typeSel = row.querySelector('select.waste-type-select') || row.querySelector('select[name$="-waste_type"]');
+      const nameSel = row.querySelector('select.waste-name-select') || row.querySelector('select[name$="-waste_name"]');
+      if (!typeSel || !nameSel) return;
+
+      const key = wasteTypeKey(typeSel);
+      const list = (key && WASTE_BY_TYPE[key]) ? WASTE_BY_TYPE[key] : [];
+      const ts = ensureWasteTomSelect(nameSel);
+      const current = ts.getValue();
+
+      ts.clearOptions();
+      if(key) {
+        ts.enable();
+        ts.addOptions(list);
+      } else {
+        ts.disable();
+      }
+      ts.refreshOptions(false);
+
+      if (keepValue && current && list.some(o => o.value === current)) ts.setValue(current, true);
+      else ts.clear(true);
+    }
+
+    function wireEffRow(row) {
+      const typeSel = row.querySelector('select.waste-type-select') || row.querySelector('select[name$="-waste_type"]');
+      const nameSel = row.querySelector('select.waste-name-select') || row.querySelector('select[name$="-waste_name"]');
+      if (nameSel) ensureWasteTomSelect(nameSel);
+      if (typeSel) {
+        typeSel.addEventListener("change", () => refreshWasteNameForRow(row, false));
+        refreshWasteNameForRow(row, true);
+      }
+    }
+
+    // ---------- ERP input list ----------
+    let ERP_INPUTS = [];
+    let ERP_BY_CODE = {};
+
+    function normalizeItem(raw){
+      const code = (raw.bom_item_code || raw.code || "").toString().trim();
+      const name = (raw.material_name || raw.bom_item_name || raw.name || "").toString().trim();
+      const type = (raw.type || raw.Type || raw.material_category || raw.category || "").toString().trim();
+      const unit = (raw.unit || "").toString().trim();
+      return { code, name, type, unit };
+    }
+
+    function q(row, sel){ return row.querySelector(sel); }
+    function setIf(el, val){ if(el) el.value = (val ?? ""); }
+
+    function applyMaterialToRow(row, codeOrName){
+      const codeInput = q(row, 'input[name$="-bom_item_code"]');
+      const unitInput = q(row, 'input[name$="-unit"]');
+      const nameInput = q(row, 'input[name$="-material_name"]');
+      const catHidden = q(row, 'input[name$="-material_category"]');
+      const catDisplay = q(row, ".mat-type-display");
+
+      const key = (codeOrName || "").toString().trim();
+      const it = ERP_BY_CODE[key];
+
+      if (!key) {
+        setIf(codeInput, "");
+        setIf(unitInput, "");
+        setIf(nameInput, "");
+        setIf(catHidden, "");
+        if (catDisplay) catDisplay.value = "";
+        return;
+      }
+
+      if (!it) {
+        // fallback: treat selection as name (editing old rows without code)
+        setIf(codeInput, "");
+        setIf(unitInput, "");
+        setIf(nameInput, key);
+        setIf(catHidden, "");
+        if (catDisplay) catDisplay.value = "";
+        return;
+      }
+
+      setIf(codeInput, it.code);
+      setIf(unitInput, it.unit || "");
+      setIf(nameInput, it.name || "");
+      setIf(catHidden, it.type || "");
+      if (catDisplay) catDisplay.value = (it.type || "");
+    }
+
+    function buildMaterialOptions(existingValue){
+      const opts = ERP_INPUTS.map(it => ({ value: it.code || it.name, text: it.name || it.code, type: it.type || "" }));
+      if (existingValue && !opts.some(o => o.value === existingValue)) {
+        opts.unshift({ value: existingValue, text: existingValue, type: "" });
+      }
+      return opts;
+    }
+
+    function wireInputRow(row){
+      const sel = q(row, ".mat-picker");
+      if (!sel || sel.tomselect) return;
+
+      const existingCode = q(row, 'input[name$="-bom_item_code"]')?.value?.trim() || "";
+      const existingName = q(row, 'input[name$="-material_name"]')?.value?.trim() || "";
+      const existingVal  = existingCode || existingName;
+
+      const ts = new TomSelect(sel, {
+        ...TS_BASE_CONFIG,
+        options: buildMaterialOptions(existingVal),
+        valueField: "value",
+        labelField: "text",
+        searchField: ["text", "value", "type"],
+        onChange: function(value){
+          applyMaterialToRow(row, value || "");
+        }
+      });
+
+      if (existingVal) ts.setValue(existingVal, true);
+    }
+
+    function addRow(prefix, bodyId, tplId){
+      if (LOCKED) return null;
+      const t = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+      const idx = parseInt(t.value || "0", 10);
+      const tpl = document.getElementById(tplId).innerHTML.replaceAll("__prefix__", idx);
+
+      const temp = document.createElement("tbody");
+      temp.innerHTML = tpl;
+      const row = temp.firstElementChild;
+
+      document.getElementById(bodyId).appendChild(row);
+      t.value = idx + 1;
+
+      if (prefix === "input") wireInputRow(row);
+      if (prefix === "eff") wireEffRow(row);
+
+      return row;
+    }
+
+    function softDeleteRow(row, prefix){
+      const del = row.querySelector(`input[name^="${prefix}-"][name$="-DELETE"]`);
+      if (del) del.checked = true;
+      row.classList.add("hidden");
+    }
+
+    function isZeroish(v){
+      const s = (v ?? "").toString().trim();
+      return s === "" || s === "0" || s === "0.0" || s === "0.00" || s === "0.000" || s === "0.000000";
+    }
+
+    function isBlankInputRow(row){
+      const code = q(row, 'input[name$="-bom_item_code"]')?.value?.trim() || "";
+      const name = q(row, 'input[name$="-material_name"]')?.value?.trim() || "";
+      const norm = q(row, 'input[name$="-budget_norm"]')?.value ?? q(row, 'input[name$="-norm"]')?.value ?? "";
+      const targ = q(row, 'input[name$="-target_norm"]')?.value ?? q(row, 'input[name$="-mat_qty_mt"]')?.value ?? "";
+      return (!code && !name && isZeroish(norm) && isZeroish(targ));
+    }
+
+    function isBlankEffRow(row){
+      const wt = q(row, 'select[name$="-waste_type"]')?.value?.trim() || "";
+      const wn = q(row, 'select[name$="-waste_name"]')?.value?.trim() || "";
+      const bn = q(row, 'input[name$="-waste_budget_norm"]')?.value ?? q(row, 'input[name$="-norm"]')?.value ?? "";
+      const tn = q(row, 'input[name$="-waste_target_norm"]')?.value ?? q(row, 'input[name$="-qty"]')?.value ?? "";
+      return (!wt && !wn && isZeroish(bn) && isZeroish(tn));
+    }
+
+    // ✅ FIX: do NOT set sr_no on blank rows (this is what was causing "required" errors + blank save)
+    function renumber(bodyId, rowClass, prefix, isBlankFn){
+      let i = 1;
+      document.querySelectorAll(`#${bodyId} ${rowClass}`).forEach(row => {
+        if (row.classList.contains("hidden")) return;
+
+        const num = row.querySelector(".row-num");
+        const sr  = row.querySelector(`input[name^="${prefix}-"][name$="-sr_no"]`);
+
+        const blank = (typeof isBlankFn === "function") ? isBlankFn(row) : false;
+
+        if (blank) {
+          if (num) num.textContent = "-";
+          if (sr) sr.value = "";     // keep empty so form stays empty_permitted
+          return;
+        }
+
+        if (num) num.textContent = i;
+        if (sr) sr.value = i;
+        i++;
+      });
+    }
+
+    function renumberInputs(){ renumber("inputBody", ".input-row", "input", isBlankInputRow); }
+    function renumberEff(){ renumber("effBody", ".eff-row", "eff", isBlankEffRow); }
+
+    async function fetchERPInputs(fgValue){
+      if (!fgValue) return { list: [], map: {} };
+
+      const res = await fetch(`${syncUrl}?fg_name=${encodeURIComponent(fgValue)}`, {
+        headers: {"X-Requested-With":"XMLHttpRequest"}
+      });
+      if (!res.ok) throw new Error("Fetch failed");
+      const data = await res.json();
+
+      const list = data.rows || [];
+      const outList = [];
+      const outMap = {};
+      list.forEach(r => {
+        const it = normalizeItem(r);
+        const key = it.code || it.name;
+        if(key && !outMap[key]) {
+          outList.push(it);
+          outMap[key] = it;
+        }
+      });
+      return { list: outList, map: outMap };
+    }
+
+    async function loadERPInputsForFG(fgValue){
+      try {
+        const { list, map } = await fetchERPInputs(fgValue);
+        ERP_INPUTS = list;
+        ERP_BY_CODE = map;
+
+        // Update options for all existing mat pickers
+        document.querySelectorAll("#inputBody .mat-picker").forEach(sel => {
+          if (sel.tomselect) {
+            const row = sel.closest("tr");
+            const existingCode = row?.querySelector('input[name$="-bom_item_code"]')?.value?.trim() || "";
+            const existingName = row?.querySelector('input[name$="-material_name"]')?.value?.trim() || "";
+            const existingVal  = existingCode || existingName;
+
+            sel.tomselect.clearOptions();
+            sel.tomselect.addOptions(buildMaterialOptions(existingVal));
+            sel.tomselect.refreshOptions(false);
+
+            if (existingVal) sel.tomselect.setValue(existingVal, true);
+          }
+        });
+
+      } catch (e) {
+        // silent on initial load
+      }
+    }
+
+    async function syncInputsForFG(fgValue){
+      if (!fgValue || LOCKED) return;
+
+      try {
+        await loadERPInputsForFG(fgValue);
+
+        // Rebuild rows based on ERP_INPUTS
+        document.querySelectorAll("#inputBody .input-row").forEach(r => softDeleteRow(r, "input"));
+
+        ERP_INPUTS.forEach(it => {
+          const row = addRow("input", "inputBody", "inputEmptyTpl");
+          const sel = row.querySelector(".mat-picker");
+          if(sel && sel.tomselect) {
+             // Removed 'true' to ensure onChange event fires and populates category
+             sel.tomselect.setValue(it.code || it.name);
+          }
+        });
+
+        renumberInputs();
+      } catch(e) {
+        alert("Could not load ERP inputs. Please try again.");
+      }
+    }
+
+    // FG picker
+    if (fgPicker) {
+      new TomSelect(fgPicker, {
+        ...TS_BASE_CONFIG,
+        valueField: "value",
+        labelField: "text",
+        searchField: ["text"],
+        loadThrottle: 300,
+        shouldLoad: q => (q||"").length >= 2,
+        load: function(query, callback) {
+          fetch(fgLookupUrl + "?q=" + encodeURIComponent(query || ""), {
+            headers: {"X-Requested-With":"XMLHttpRequest"}
+          })
+          .then(r => r.json())
+          .then(data => callback(data.results || []))
+          .catch(() => callback());
+        },
+        onChange: function(value){
+          if (fgHidden) fgHidden.value = value || "";
+
+          // auto-fill alpha (if present in label like "... (ALPHA)")
+          if (alphaField) {
+            const opt = this.options[value];
+            if(opt && opt.text){
+              const m = opt.text.match(/\(([^)]+)\)\s*$/);
+              if (m) alphaField.value = m[1];
+            }
+          }
+
+          if (!LOCKED) syncInputsForFG(value || "");
+        }
+      });
+    }
+
+    // Buttons
+    document.getElementById("inputSyncBtn")?.addEventListener("click", () => {
+      if(!fgHidden?.value) return alert("Please select Finished Good first.");
+      syncInputsForFG(fgHidden.value);
+    });
+
+    document.getElementById("inputAddBtn")?.addEventListener("click", () => {
+      if(!fgHidden?.value) return alert("Please select Finished Good first.");
+      if(ERP_INPUTS.length === 0) return alert("Please Sync Inputs first (to load material list).");
+      addRow("input", "inputBody", "inputEmptyTpl");
+      renumberInputs();
+    });
+
+    document.getElementById("effAddBtn")?.addEventListener("click", () => {
+      addRow("eff", "effBody", "effEmptyTpl");
+      renumberEff();
+    });
+
+    function deleteSelected(prefix, bodyId) {
+      const body = document.getElementById(bodyId);
+      const chks = Array.from(body.querySelectorAll(".row-select:checked"));
+      if(!chks.length) return;
+      if(confirm(`Delete ${chks.length} rows?`)) {
+        chks.forEach(chk => softDeleteRow(chk.closest('tr'), prefix));
+        body.querySelectorAll(".row-select").forEach(c => c.checked=false);
+      }
+      if (prefix === "input") renumberInputs();
+      else renumberEff();
+    }
+
+    document.getElementById("inputDelSelBtn")?.addEventListener("click", () => deleteSelected("input", "inputBody"));
+    document.getElementById("effDelSelBtn")?.addEventListener("click", () => deleteSelected("eff", "effBody"));
+
+    document.addEventListener("click", e => {
+      if(e.target.closest(".row-remove")) {
+        const row = e.target.closest("tr");
+        if(row.classList.contains("input-row")) softDeleteRow(row, "input");
+        if(row.classList.contains("eff-row")) softDeleteRow(row, "eff");
+        renumberInputs();
+        renumberEff();
+      }
+    });
+
+    // Wire existing rows
+    document.querySelectorAll("#inputBody .input-row").forEach(r => wireInputRow(r));
+    document.querySelectorAll("#effBody .eff-row").forEach(r => wireEffRow(r));
+
+    // Load ERP options on initial page load (important for EDIT)
+    if (!LOCKED && fgHidden?.value) {
+      loadERPInputsForFG(fgHidden.value);
+    }
+
+    // Before submit:
+    // - auto-delete truly blank rows
+    // - renumber WITHOUT assigning sr_no to blank rows
+    if (formEl && !LOCKED) {
+      formEl.addEventListener("submit", function(){
+        document.querySelectorAll("#inputBody .input-row").forEach(row => {
+          if (row.classList.contains("hidden")) return;
+          if (isBlankInputRow(row)) softDeleteRow(row, "input");
+        });
+
+        document.querySelectorAll("#effBody .eff-row").forEach(row => {
+          if (row.classList.contains("hidden")) return;
+          if (isBlankEffRow(row)) softDeleteRow(row, "eff");
+        });
+
+        renumberInputs();
+        renumberEff();
+      });
+    }
+
+    // Initial numbering
+    renumberInputs();
+    renumberEff();
+  });
+</script>
+
+{% endblock %}

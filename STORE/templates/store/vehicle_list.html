@@ -1,0 +1,201 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+
+<div class="container mx-auto py-1 px-4">
+    <!-- Messages Section -->
+    {% if messages %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+        <div
+            class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                            {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+            <span class="flex-1">{{ message }}</span>
+            <!-- Close Button -->
+            <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">
+                ✖
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+
+    <div class="container mx-auto px-6 mt-6">
+        <div class="flex items-center justify-between mb-4">
+            <!-- Back to Main Page Button -->
+            <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                Back to Main Page
+            </a>
+            <!-- Heading -->
+            <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Vehicle Records</h2>
+            <!-- Back to Create Button -->
+            <a href="{% url 'add_vehicle' %}"
+                class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+                <i class="fa-solid fa-square-plus"></i>
+            </a>
+            <a href="{% url 'vehicle_chart_report' %}"
+            class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-3 mx-1 rounded shadow-md">
+            <i class="fa-solid fa-chart-simple fa-xl "></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="GET" class="mb-6 bg-white shadow-md rounded-lg p-4 flex flex-wrap items-center justify-center gap-4">
+        <!-- Date Range -->
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">From Date</label>
+            <input type="date" name="from_date" value="{{ from_date }}"
+                class="w-full p-2 border border-gray-300 rounded-lg">
+        </div>
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">To Date</label>
+            <input type="date" name="to_date" value="{{ to_date }}"
+                class="w-full p-2 border border-gray-300 rounded-lg">
+        </div>
+
+        <!-- Supplier Name -->
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Supplier Name</label>
+            <input type="text" name="name_of_supplier" value="{{ name_of_supplier }}"
+                class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Enter Supplier Name">
+        </div>
+
+        <!-- Material -->
+        <div class="min-w-[150px]">
+            <label class="block text-sm font-medium text-gray-700">Material</label>
+            <input type="text" name="material" value="{{ material }}"
+                class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Enter Material">
+        </div>
+
+        <!-- Vehicle No -->
+        <div class="min-w-[120px]">
+            <label class="block text-sm font-medium text-gray-700">Transporter Name</label>
+            <input type="text" name="name_of_transporter" value="{{ name_of_transporter }}"
+                class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Enter Transporter Name">
+        </div>
+        <!-- Status -->
+        <div class="min-w-[120px]">
+            <label class="block text-sm font-medium text-gray-700">Status</label>
+            <select name="status" class="w-full p-2 border border-gray-300 rounded-lg">
+                <option value="">All</option>
+                <option value="Pending" {% if status == "Pending" %}selected{% endif %}>Pending</option>
+                <option value="Unloaded" {% if status == "Unloaded" %}selected{% endif %}>Unloaded</option>
+            </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex space-x-1 mt-4">
+            <button type="submit"
+                class="bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition duration-300">
+                <i class="fa-solid fa-filter"></i>
+            </button>
+            <a href="{% url 'vehicle_list' %}"
+                class="bg-gray-400 text-white px-2 py-1 rounded-lg hover:bg-gray-500 transition duration-300">
+                <i class="fa-solid fa-eraser"></i>
+            </a>
+        </div>
+        <div class="flex space-x-1 mt-4">
+        <a href="{% url 'vehicle_download_excel' %}?from_date={{ from_date }}&to_date={{ to_date }}&name_of_supplier={{ name_of_supplier }}&material={{ material }}&name_of_transporter={{ name_of_transporter }}&status={{ status }}">
+            <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+        </a>
+        </div>
+        
+        <!-- Pagination Controls -->
+        <div class="flex items-center space-x-1 mt-4">
+            {% if vehicles.has_previous %}
+            <a href="?page={{ vehicles.previous_page_number }}&reporting_date={{ reporting_date }}&name_of_supplier={{ name_of_supplier }}&material={{ material }}&name_of_transporter={{ name_of_transporter }}"
+                class="px-2 py-2 rounded bg-gray-200 hover:bg-gray-300">
+                Previous
+            </a>
+            {% endif %}
+
+            <span class="px-2 py-2 rounded bg-gray-100">
+                Page {{ vehicles.number }} of {{ vehicles.paginator.num_pages }}
+            </span>
+
+            {% if vehicles.has_next %}
+            <a href="?page={{ vehicles.next_page_number }}&reporting_date={{ reporting_date }}&name_of_supplier={{ name_of_supplier }}&material={{ material }}&name_of_transporter={{ name_of_transporter }}"
+                class="px-2 py-2 rounded bg-gray-200 hover:bg-gray-300">
+                Next
+            </a>
+            {% endif %}
+        </div>
+    </form>
+
+
+
+    <!-- Responsive Table Wrapper -->
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table class="min-w-full border border-gray-300 rounded-lg">
+            <thead class="bg-gray-100 border-b text-left">
+                <tr> 
+                    <th class="py-2 px-4 border-b hidden md:table-cell whitespace-nowrap">Reporting Date</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Invoice</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Supplier Name</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Material</th>
+                    <th class="py-2 px-4 border-b hidden md:table-cell">Quantity</th>
+                    <th class="py-2 px-4 border-b hidden md:table-cell whitespace-nowrap">Unloading Date</th>
+                    <th class="py-2 px-4 border-b hidden md:table-cell">Transporter</th>
+                    <th class="py-2 px-4 border-b hidden md:table-cell">Vehicle No.</th>
+                    <th class="py-2 px-4 border-b">Status</th>
+                    <th class="py-2 px-4 border-b whitespace-nowrap">Pending Days</th>
+                    {% if can_edit_vehicle or can_delete_vehicle or can_view_vehicle %}
+                    <th class="py-2 px-4 border-b">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for vehicle in vehicles %}
+                <tr class="border-b hover:bg-gray-100 transition duration-300">
+                    <td class="py-2 px-4 hidden md:table-cell whitespace-nowrap">{{ vehicle.reporting_date|date:"d/m/Y" }}</td>
+                    <td class="py-2 px-4 whitespace-nowrap">{{ vehicle.invoice }}</td>
+                    <td class="py-2 px-4">{{ vehicle.name_of_supplier }}</td>
+                    <td class="py-2 px-4 ">{{ vehicle.material }}</td>
+                    <td class="py-2 px-4 hidden md:table-cell">{{ vehicle.qty }}</td>
+                    <td class="py-2 px-4 hidden md:table-cell whitespace-nowrap">{{ vehicle.unloading_date|date:"d/m/Y" }}</td>
+                    <td class="py-2 px-4 hidden md:table-cell">{{ vehicle.name_of_transporter }}</td>
+                    <td class="py-2 px-4 hidden md:table-cell">{{ vehicle.vehicle_no }}</td>
+                    <td
+                        class="py-2 px-4 {% if vehicle.status == 'unloaded' %}text-green-600{% else %}text-red-600{% endif %}">
+                        {{ vehicle.status }}
+                    </td>
+                    <td class="py-2 px-4 text-center">
+                        {% if vehicle.status|lower == "pending" %}
+                            {{ vehicle.pending_days }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="py-2 px-4 flex space-x-2 whitespace-nowrap">
+                        {% if can_view_vehicle %}
+                        <a href="{% url 'view_vehicle' vehicle.id %}"
+                            class="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"><i class="fa fa-eye" aria-hidden="true"></i></a>
+                        {% endif %}
+                        {% if can_edit_vehicle %}
+                        <a href="{% url 'edit_vehicle' vehicle.id %}"
+                            class="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600"><i class="fas fa-edit"></i></a>
+                        {% endif %}
+                        {% if can_delete_vehicle %}
+                        <form action="{% url 'delete_vehicle' vehicle.id %}" method="POST" onsubmit="return confirm('Are you sure you want to delete this vehicle record?');">
+                            {% csrf_token %}
+                            <button type="submit"
+                                class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"><i class="fa fa-trash" aria-hidden="true"></i></button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="13" class="py-4 text-center text-gray-500">No records found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock maincontent %}

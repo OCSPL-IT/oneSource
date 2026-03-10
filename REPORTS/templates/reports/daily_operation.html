@@ -1,0 +1,360 @@
+{% extends "main/index.html" %}
+{% load static %}
+{% load indnum %}
+
+{% block maincontent %}
+<div class="p-4 sm:p-6 bg-slate-100 min-h-screen" id="dashRoot" data-active-tab="{{ active_tab|default:'hse' }}">
+  <div class="max-w-screen-2xl mx-auto">
+
+    <!-- Disabled tab styling -->
+    <style>
+      /* Disabled tab look (light grey, non-interactive, normal arrow cursor) */
+      .tab-btn[aria-disabled="true"],
+      .tab-btn[data-disabled="true"]{
+        background:#f8fafc; /* slate-50 */
+        color:#94a3b8;      /* slate-400 */
+        border-color:#e2e8f0; /* slate-200 */
+        cursor:default;     /* normal arrow */
+        box-shadow:none;
+        opacity:1;
+        pointer-events:auto; /* allow title tooltip */
+      }
+      .tab-btn[aria-disabled="true"]:hover,
+      .tab-btn[data-disabled="true"]:hover,
+      .tab-btn[aria-disabled="true"]:focus,
+      .tab-btn[data-disabled="true"]:focus{
+        background:#f8fafc;
+        color:#94a3b8;
+        border-color:#e2e8f0;
+        outline:none;
+      }
+
+      /* ============ Global Loading Overlay ============ */
+      #pageLoader {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.35); /* slate-900/35 */
+        display: none; /* toggled to flex */
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        backdrop-filter: blur(1px);
+      }
+      #pageLoader[data-open="true"] { display: flex; }
+      .loader-card{
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: .75rem;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,.12);
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        min-width: 220px;
+      }
+      .spinner {
+        width: 22px; height: 22px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #6366f1; /* indigo-500 */
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .loader-text{
+        font-weight: 600;
+        font-size: .9rem;
+        color: #0f172a; /* slate-900 */
+      }
+      .loader-sub{
+        font-size: .75rem;
+        color: #64748b; /* slate-500 */
+        margin-top: .125rem;
+      }
+    </style>
+
+    <!-- GLOBAL LOADING OVERLAY -->
+    <div id="pageLoader" aria-live="polite" aria-busy="true" role="status">
+      <div class="loader-card">
+        <div class="spinner" aria-hidden="true"></div>
+        <div>
+          <div id="pageLoaderText" class="loader-text">Loading…</div>
+          <div class="loader-sub">Please wait</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="mb-4 sm:mb-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Daily Operations Dashboard</h1>
+          <p class="text-sm text-slate-500 mt-1">
+            Yesterday ({{ y_label }}) · {{ mtd_label }}
+          </p>
+        </div>
+      </div>
+
+      <!-- TABS -->
+      <nav class="mt-4 flex flex-wrap gap-2">
+
+        {% if is_superuser or 'EHS' in user_groups %}
+          <button id="tabBtn-hse" data-tab="hse" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            HSE
+          </button>
+        {% endif %}
+
+        {% if is_superuser or 'ETP' in user_groups %}
+          <button id="tabBtn-eff" data-tab="eff" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            Effluent (kg)
+          </button>
+        {% endif %}
+
+        {% if is_superuser or 'QC' in user_groups %}
+          <button id="tabBtn-qc" data-tab="qc" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            QC Status
+          </button>
+        {% endif %}
+
+        {% if is_superuser or 'PRODUCTION' in user_groups %}
+          <button id="tabBtn-prod" data-tab="prod" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            Production
+          </button>
+
+          <button id="tabBtn-disp" data-tab="disp" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            Dispatch
+          </button>
+
+          <!-- Disabled Downtime (light grey + tooltip + normal arrow) -->
+          <button
+            type="button"
+            title="Disabled"
+            aria-disabled="true"
+            data-disabled="true"
+            tabindex="-1"
+            class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border">
+            Downtime
+          </button>
+        {% endif %}
+
+        {% if is_superuser or 'UTILITY' in user_groups %}
+          <button id="tabBtn-support" data-tab="support" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            Utilities KPIs
+          </button>
+        {% endif %}
+
+        {% if is_superuser or 'HR' in user_groups %}
+          <button id="tabBtn-hr" data-tab="hr" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            HR Attendance
+          </button>
+        {% endif %}
+
+        {% if is_superuser or 'MAINTENANCE' in user_groups %}
+          <button id="tabBtn-maint" data-tab="maint" type="button" class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            Maintenance
+          </button>
+        {% endif %}
+      </nav>
+
+      {% if not is_superuser and 'PRODUCTION' not in user_groups and 'UTILITY' not in user_groups and 'ETP' not in user_groups and 'QC' not in user_groups and 'HR' not in user_groups and 'EHS' not in user_groups and 'MAINTENANCE' not in user_groups %}
+        <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+          You don’t have access to any dashboard sections. Please contact an administrator.
+        </div>
+      {% endif %}
+    </header>
+
+    <!-- PANES -->
+    {% if is_superuser or 'EHS' in user_groups %}
+      <section id="tab-hse" class="tab-pane">
+        {% include "reports/hse.html" %}
+      </section>
+    {% endif %}
+
+    {% if is_superuser or 'ETP' in user_groups %}
+      <section id="tab-eff" class="tab-pane hidden">
+        {% include "reports/effluent.html" %}
+      </section>
+    {% endif %}
+
+    {% if is_superuser or 'QC' in user_groups %}
+      <section id="tab-qc" class="tab-pane hidden">
+        {% include "reports/qc.html" %}
+      </section>
+    {% endif %}
+
+    {% if is_superuser or 'PRODUCTION' in user_groups %}
+      <section id="tab-prod" class="tab-pane hidden">
+        {% include "reports/production.html" %}
+      </section>
+      <section id="tab-disp" class="tab-pane hidden">
+        {% include "reports/dispatch.html" %}
+      </section>
+    {% endif %}
+
+    {% if is_superuser or 'UTILITY' in user_groups %}
+      <section id="tab-support" class="tab-pane hidden">
+        {% include "reports/Utlilies.html" %}
+      </section>
+    {% endif %}
+
+    {% if is_superuser or 'HR' in user_groups %}
+      <section id="tab-hr" class="tab-pane hidden">
+        {% include "reports/hr.html" %}
+      </section>
+    {% endif %}
+
+    {% if is_superuser or 'MAINTENANCE' in user_groups %}
+      <section id="tab-maint" class="tab-pane hidden">
+        {% include "reports/maintenance.html" %}
+      </section>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+/* ---------- GLOBAL LOADER HELPERS ---------- */
+(function(){
+  const overlay = document.getElementById('pageLoader');
+  const textEl  = document.getElementById('pageLoaderText');
+
+  function show(msg){
+    if (textEl && msg) textEl.textContent = msg;
+    overlay?.setAttribute('data-open','true');
+    document.documentElement.style.setProperty('cursor','progress');
+  }
+  function hide(){
+    overlay?.removeAttribute('data-open');
+    document.documentElement.style.removeProperty('cursor');
+    if (textEl) textEl.textContent = 'Loading…';
+  }
+
+  // Expose for child panes (e.g., when running fetches)
+  window.showLoader = show;
+  window.hideLoader = hide;
+
+  // Show on any form submit (any tab)
+  document.addEventListener('submit', (e)=>{
+    // ignore client-only forms if they mark data-no-loader
+    if (e.target?.closest('[data-no-loader]')) return;
+    show('Submitting…');
+  });
+
+  // Show on link navigations
+  document.addEventListener('click', (e)=>{
+    const a = e.target.closest('a[href]');
+    if (a && a.getAttribute('href') && a.getAttribute('href').charAt(0) !== '#'){
+      // ignore downloads/new-tab
+      if (a.target && a.target !== '_self') return;
+      show('Loading…');
+    }
+    // Manual trigger via attribute
+    const trigger = e.target.closest('[data-show-loader]');
+    if (trigger) show(trigger.getAttribute('data-show-loader') || 'Loading…');
+  });
+
+  // Show on programmatic navigations/refresh
+  window.addEventListener('beforeunload', ()=> { show('Loading…'); });
+
+  // Safety: hide once page has finished rendering
+  window.addEventListener('pageshow', ()=> hide());
+})();
+
+/* ---------- EXISTING TAB CONTROLLER (unchanged logic) ---------- */
+(function(){
+  const root  = document.getElementById('dashRoot');
+  // exclude disabled tabs from activation
+  const btns  = Array.from(document.querySelectorAll('.tab-btn')).filter(b => !b.dataset.disabled);
+  const panes = Array.from(document.querySelectorAll('.tab-pane'));
+
+  const avail = btns.map(b => (b.dataset.tab || '').toLowerCase()).filter(Boolean);
+  const mapBtn  = btns.reduce((m,b)=> (m[(b.dataset.tab||'').toLowerCase()] = b, m), {});
+  const mapPane = panes.reduce((m,p)=> (m[p.id.replace('tab-','').toLowerCase()] = p, m), {});
+
+  function getURLTab(){
+    const usp = new URLSearchParams(window.location.search);
+    const t = (usp.get('tab') || '').toLowerCase().trim();
+    return t || null;
+  }
+  function setURLTab(tab){
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    history.replaceState(null, '', url.toString());
+  }
+  function syncHiddenInputs(tab){
+    document.querySelectorAll('form').forEach(form => {
+      let hid = form.querySelector('input[name="tab"]');
+      if (!hid) {
+        hid = document.createElement('input');
+        hid.type = 'hidden';
+        hid.name = 'tab';
+        form.prepend(hid);
+      }
+      hid.value = tab;
+    });
+  }
+
+  function activate(tab){
+    tab = (tab || '').toLowerCase();
+    if (!avail.includes(tab)) tab = avail[0] || 'hse';
+    Object.keys(mapPane).forEach(k => mapPane[k]?.classList.toggle('hidden', k !== tab));
+    avail.forEach(k => mapBtn[k]?.setAttribute('data-active', String(k===tab)));
+    setURLTab(tab);
+    syncHiddenInputs(tab);
+
+    // lazy inits if needed
+    if (tab==='support' && window.initUtilitiesCharts) window.initUtilitiesCharts();
+    if (tab==='hr' && window.initHRPane) window.initHRPane();
+    if (tab==='hse' && window.initHSEPane) window.initHSEPane();
+  }
+
+  // click handlers (show loader while pane prepares if needed)
+  avail.forEach(k => mapBtn[k].addEventListener('click', () => {
+    // If your tab does heavy async work, it can call showLoader/hideLoader itself.
+    activate(k);
+  }));
+
+  const urlTab = getURLTab();
+  const serverTab = (root?.dataset.activeTab || 'hse').toLowerCase();
+  const initial = avail.includes(urlTab||'') ? urlTab : (avail.includes(serverTab) ? serverTab : (avail[0] || 'hse'));
+  activate(initial);
+})();
+
+/* expand/collapse rows inside whichever tab the button lives in (used by Production) */
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.expand-toggle');
+  if (!btn) return;
+  const pane = btn.closest('.tab-pane');
+  if (!pane) return;
+  if (btn.disabled) return;
+  const target = btn.dataset.target;
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', (!open).toString());
+  btn.querySelector('svg')?.classList.toggle('rotate-90', !open);
+  pane.querySelectorAll(`.stage-row[data-parent="${target}"]`).forEach(r => r.classList.toggle('hidden', open));
+});
+</script>
+{% endblock %}

@@ -1,0 +1,270 @@
+{% extends "main/index.html" %}
+{% load dict_extras %}
+{% block maincontent %}
+<div class="p-6 bg-white shadow rounded-2xl container mx-auto mt-3">
+  <div class="container mx-auto px-6">
+    <div class="flex items-center justify-between mb-4">
+        <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded shadow-md">
+            Back to Main Page
+        </a>
+        <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Contract Workers Report</h2>
+        <a href="{% url 'contract_daily_attendance_entry' %}"
+            class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+            <i class="fa-solid fa-square-plus"></i>
+        </a>
+    </div>
+  </div>
+
+  <!-- Combined Filter -->
+  <form method="get" class="mb-4 flex items-center gap-4">
+    <label class="font-semibold">Report Type:</label>
+    <select name="report_mode" id="report_mode" class="border rounded px-2 py-1" onchange="toggleDateInputs()">
+        <option value="daily" {% if mode == 'daily' %}selected{% endif %}>Daily</option>
+        <option value="monthly" {% if mode == 'monthly' %}selected{% endif %}>Monthly</option>
+    </select>
+    <div id="dailyInputs" style="display: {% if mode == 'daily' %}block{% else %}none{% endif %};">
+        <label class="font-semibold">Date:</label>
+        <input type="date" name="date" value="{{ date|default:'' }}" class="border rounded px-2 py-1">
+        <a href="{% url 'contract_daily_attendance_edit' %}?date={{ date }}" 
+           class="px-2 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 ml-2">
+           <i class="fas fa-edit"></i>
+        </a>
+    </div>
+    <div id="monthlyInputs" style="display: {% if mode == 'monthly' %}block{% else %}none{% endif %};">
+        <label class="font-semibold">Month:</label>
+        <input type="month" name="month" value="{{ month|default:'' }}" class="border rounded px-2 py-1">
+    </div>
+    <button type="submit" class="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 ml-2">
+        <i class="fa-solid fa-filter"></i>
+    </button>
+    <a href="{% url 'contract_shiftwise_report' %}" class="px-3 py-1  bg-gray-300 text-gray-900 rounded hover:bg-gray-400 ">
+        <i class="fa-solid fa-eraser"></i>
+    </a>
+	<a href="{% url 'contract_shiftwise_report_excel' %}?report_mode={{ mode }}&date={{ date }}&month={{ month }}" 
+	   class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+	  Excel
+	</a>
+  </form>
+
+  <script>
+  function toggleDateInputs() {
+      var reportMode = document.getElementById('report_mode').value;
+      document.getElementById('dailyInputs').style.display = reportMode === 'daily' ? 'block' : 'none';
+      document.getElementById('monthlyInputs').style.display = reportMode === 'monthly' ? 'block' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', toggleDateInputs);
+  </script>
+
+  {% if mode == "daily" %}
+  <!-- DAILY TABLE with Shift-Wise Totals -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full border border-slate-300 text-xs text-center">
+      <thead>
+        <tr>
+          <th rowspan="3" class="border border-slate-300 p-2 bg-[#d9ead3] text-left sticky left-0 z-10">Department</th>
+          <th rowspan="3" class="border border-slate-300 p-2 bg-[#d9ead3]">Required</th>
+          <th colspan="5" class="border border-slate-300 p-2 bg-[#cfe2f3]">Aldar</th>
+          <th colspan="5" class="border border-slate-300 p-2 bg-[#cfe2f3]">Yash</th>
+          <th colspan="5" class="border border-slate-300 p-2 bg-[#cfe2f3]">ACP</th>
+          <th colspan="5" class="border border-slate-300 p-2 bg-[#cfe2f3]">HE</th>
+          <th colspan="5" class="border border-slate-300 p-2 bg-[#ead1dc] font-bold">Shift Total</th>
+          <th rowspan="3" class="border border-slate-400 p-2 bg-[#f4cccc] font-bold">Grand Total</th>
+          <th rowspan="3" class="border border-slate-300 p-2 bg-yellow-100 font-bold">Gap (+/-)</th>
+        </tr>
+        <tr>
+          {% for contractor in contractors %}
+            <td colspan="5" class="border border-slate-300 bg-[#fff2cc] font-semibold text-center">
+              {{ contractor_daily_totals|get_item:contractor|default:"0" }}
+            </td>
+          {% endfor %}
+          <td colspan="5" class="border border-slate-300 bg-[#ead1dc] font-semibold text-center">All Contractors</td>
+        </tr>
+        <tr>
+          {% for i in "1234" %}
+            <th class="border border-slate-300 p-2 bg-[#ddebf7]">A</th>
+            <th class="border border-slate-300 p-2 bg-[#ddebf7]">G</th>
+            <th class="border border-slate-300 p-2 bg-[#ddebf7]">B</th>
+            <th class="border border-slate-300 p-2 bg-[#ddebf7]">C</th>
+            <th class="border border-slate-300 p-2 bg-[#b4c7e7] font-semibold">TTL</th>
+          {% endfor %}
+          <th class="border border-slate-300 p-2 bg-[#ead1dc]">A</th>
+          <th class="border border-slate-300 p-2 bg-[#ead1dc]">G</th>
+          <th class="border border-slate-300 p-2 bg-[#ead1dc]">B</th>
+          <th class="border border-slate-300 p-2 bg-[#ead1dc]">C</th>
+          <th class="border border-slate-300 p-2 bg-[#ead1dc] font-semibold">TTL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in table %}
+        <tr class="{% if forloop.counter0|divisibleby:2 %}bg-white{% else %}bg-gray-50{% endif %} hover:bg-blue-50">
+          <td class="border border-slate-300 p-2 text-left font-medium {% if forloop.last %}font-bold{% endif %}">{{ row.dept }}</td>
+          <td class="border border-slate-300 p-2 {% if forloop.last %}font-bold{% endif %}">{{ row.required }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Aldar_A|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Aldar_G|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Aldar_B|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Aldar_C|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2 bg-[#b4c7e7] font-semibold">{{ row.Aldar_ttl|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Yash_A|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Yash_G|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Yash_B|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.Yash_C|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2 bg-[#b4c7e7] font-semibold">{{ row.Yash_ttl|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.ACP_A|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.ACP_G|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.ACP_B|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.ACP_C|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2 bg-[#b4c7e7] font-semibold">{{ row.ACP_ttl|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.HE_A|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.HE_G|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.HE_B|floatformat:2 }}</td>
+          <td class="border border-slate-300 p-2">{{ row.HE_C|floatformat:2 }}</td>
+          <td class="border border-slate-400 p-2 bg-[#b4c7e7] font-semibold">{{ row.HE_ttl|floatformat:2 }}</td>
+          <!-- New Shift Totals columns -->
+          <td class="border border-slate-400 p-2 bg-[#ead1dc] font-semibold">{{ row.grand_A|floatformat:2 }}</td>
+          <td class="border border-slate-400 p-2 bg-[#ead1dc] font-semibold">{{ row.grand_G|floatformat:2 }}</td>
+          <td class="border border-slate-400 p-2 bg-[#ead1dc] font-semibold">{{ row.grand_B|floatformat:2 }}</td>
+          <td class="border border-slate-400 p-2 bg-[#ead1dc] font-semibold">{{ row.grand_C|floatformat:2 }}</td>
+          <td class="border border-slate-400 p-2 bg-[#ead1dc] font-bold">{{ row.grand_ttl|floatformat:2 }}</td>
+          <!-- Grand and Gap -->
+          <td class="border border-slate-400 p-2 bg-[#f4cccc] font-bold">{{ row.row_total|floatformat:2 }}</td>
+          <td class="border border-slate-400 p-2 bg-yellow-100 font-bold">{{ row.gap|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% elif mode == "monthly" %}
+  <!-- MONTHLY TABLE: PRODUCTION -->
+  <div class="overflow-x-auto mb-8">
+    <h3 class="text-lg font-bold mb-2 text-blue-800 flex items-center gap-2">
+      <i class="fa-solid fa-industry text-blue-500"></i> Production Manpower
+    </h3>
+    <table class="min-w-full border border-slate-300 text-xs text-center">
+      <thead>
+        <tr>
+          <th class="sticky left-0 z-10 bg-white border p-2">Dept</th>
+          <th class="border p-2">Required</th>
+          {% for d in dates %}
+              <th class="border p-2">{{ d.day }}</th>
+          {% endfor %}
+          <th class="border p-2">Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in production_table %}
+        <tr>
+            <td class="sticky left-0 z-10 bg-white border p-2 text-left font-medium">{{ row.dept }}</td>
+            <td class="border p-2">{{ row.required }}</td>
+            {% for i in row.days %}
+                <td class="border p-2">{{ i|floatformat:0 }}</td>
+            {% endfor %}
+            <td class="border p-2 font-bold">{{ row.avg }}</td>
+        </tr>
+        <tr>
+            <td class="sticky left-0 z-10 bg-white border p-2 text-left"></td>
+            <td class="border p-2"></td>
+            {% for pct in row.percents %}
+                <td class="border p-2 font-bold
+                    {% if pct >= 90 %}text-green-600
+                    {% elif pct >= 70 %}text-yellow-700
+                    {% else %}text-red-600
+                    {% endif %}">
+                    {{ pct }}%
+                </td>
+            {% endfor %}
+            <td class="border p-2"></td>
+        </tr>
+        {% endfor %}
+        <!-- Totals Row -->
+        <tr class="font-bold bg-gray-100">
+          <td>Total required in production</td>
+          <td>{{ prod_totals.total_required }}</td>
+          {% for t in prod_totals.daily_sum %}<td>{{ t|floatformat:0 }}</td>{% endfor %}
+          <td>{{ prod_totals.avg }}</td>
+        </tr>
+        <tr class="font-bold">
+          <td>% of Total requirement (prod)</td>
+          <td></td>
+          {% for pct in prod_totals.pct_row %}
+            <td class="{% if pct >= 90 %}text-green-600
+                       {% elif pct >= 70 %}text-yellow-700
+                       {% else %}text-red-600
+                       {% endif %}">{{ pct }}%</td>
+          {% endfor %}
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MONTHLY TABLE: SERVICE AREA -->
+  <div class="overflow-x-auto">
+    <h3 class="text-lg font-bold mb-2 text-blue-800 flex items-center gap-2">
+      <i class="fa-solid fa-screwdriver-wrench text-green-500"></i> Service Area Manpower
+    </h3>
+    <table class="min-w-full border border-slate-300 text-xs text-center">
+      <thead>
+        <tr>
+          <th class="sticky left-0 z-10 bg-white border p-2">Dept</th>
+          <th class="border p-2">Required</th>
+          {% for d in dates %}
+              <th class="border p-2">{{ d.day }}</th>
+          {% endfor %}
+          <th class="border p-2">Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in service_table %}
+        <tr>
+            <td class="sticky left-0 z-10 bg-white border p-2 text-left font-medium">{{ row.dept }}</td>
+            <td class="border p-2">{{ row.required }}</td>
+            {% for i in row.days %}
+                <td class="border p-2">{{ i|floatformat:0 }}</td>
+            {% endfor %}
+            <td class="border p-2 font-bold">{{ row.avg }}</td>
+        </tr>
+        <tr>
+            <td class="sticky left-0 z-10 bg-white border p-2 text-left"></td>
+            <td class="border p-2"></td>
+            {% for pct in row.percents %}
+                <td class="border p-2 font-bold
+                    {% if pct >= 90 %}text-green-600
+                    {% elif pct >= 70 %}text-yellow-700
+                    {% else %}text-red-600
+                    {% endif %}">
+                    {{ pct }}%
+                </td>
+            {% endfor %}
+            <td class="border p-2"></td>
+        </tr>
+        {% endfor %}
+        <!-- Totals Row -->
+        <tr class="font-bold bg-gray-100">
+          <td>Total required in service area</td>
+          <td>{{ serv_totals.total_required }}</td>
+          {% for t in serv_totals.daily_sum %}<td>{{ t|floatformat:0 }}</td>{% endfor %}
+          <td>{{ serv_totals.avg }}</td>
+        </tr>
+        <tr class="font-bold">
+          <td>% of Total requirement (serv)</td>
+          <td></td>
+          {% for pct in serv_totals.pct_row %}
+            <td class="{% if pct >= 90 %}text-green-600
+                       {% elif pct >= 70 %}text-yellow-700
+                       {% else %}text-red-600
+                       {% endif %}">{{ pct }}%</td>
+          {% endfor %}
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="mt-3 text-xs">
+    <span class="inline-block bg-green-200 w-4 h-4 align-middle"></span> 90%+ &nbsp;
+    <span class="inline-block bg-yellow-200 w-4 h-4 align-middle"></span> 70-90% &nbsp;
+    <span class="inline-block bg-red-200 w-4 h-4 align-middle"></span> Below 70%
+</div>
+  {% endif %}
+</div>
+{% endblock %}

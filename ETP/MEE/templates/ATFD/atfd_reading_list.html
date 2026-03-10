@@ -1,0 +1,232 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto bg-white shadow-xl rounded-3xl p-6 sm:p-8 mt-6">
+
+  <!-- Messages Section -->
+  {% if messages %}
+  <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+    {% for message in messages %}
+    <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white
+      {% if message.tags == 'debug' %}bg-gray-500
+      {% elif message.tags == 'info' %}bg-blue-500
+      {% elif message.tags == 'success' %}bg-green-500
+      {% elif message.tags == 'warning' %}bg-yellow-500
+      {% elif message.tags == 'error' %}bg-red-500
+      {% endif %}">
+      <span class="flex-1">{{ message }}</span>
+      <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+              onclick="this.parentElement.remove()">✖</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Title + Go to Entry -->
+  <div class="flex items-center mb-4">
+    <div class="flex-1"></div>
+
+    <h1 class="flex-none text-xl sm:text-2xl font-semibold text-gray-800 text-center">
+      ATFD Readings
+    </h1>
+
+    <div class="flex-1 flex justify-end">
+      <a href="{% url 'mee:atfd_reading_form' %}"
+         class="inline-flex items-center px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">
+        Go to Entry
+      </a>
+    </div>
+  </div>
+
+  <!-- From / To filter -->
+  <form method="get" class="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+    <div class="flex items-center gap-2">
+      <label class="text-sm font-medium text-gray-700">From:</label>
+      <input type="date" name="from_date"
+             value="{{ from_date }}"
+             class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+
+    <div class="flex items-center gap-2">
+      <label class="text-sm font-medium text-gray-700">To:</label>
+      <input type="date" name="to_date"
+             value="{{ to_date }}"
+             class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+
+    <button type="submit"
+            class="inline-flex items-center px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700">
+      Apply
+    </button>
+
+    {% if from_date or to_date %}
+      <a href="{% url 'mee:atfd_reading_list' %}"
+         class="inline-flex items-center px-4 py-1.5 rounded-lg bg-slate-400 text-white text-sm font-semibold hover:bg-slate-600">
+        Clear
+      </a>
+    {% endif %}
+
+    {% if export_enabled %}
+    <a href="{% url 'mee:atfd_reading_export_xlsx' %}?from_date={{ from_date }}&to_date={{ to_date }}"
+       class="inline-flex items-center px-4 py-1.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 ml-auto">
+      Download Excel
+    </a>
+    {% endif %}
+  </form>
+
+  <!-- Table -->
+  <div class="overflow-x-auto">
+    <table class="min-w-full text-xs sm:text-sm border border-gray-500">
+      <thead>
+        <!-- GROUP HEADER ROW -->
+        <tr>
+          <th rowspan="2" class="sticky left-0 z-30 border-b border-r border-gray-500 px-3 py-2 text-left font-semibold bg-white whitespace-nowrap">
+            Date
+          </th>
+
+          <!-- Main (green) columns -->
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Effluent Feed<br>(KL)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Steam<br>Consume (MT)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Steam Economy<br>(F/S ratio)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Blower Draft<br>(mmWC)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            Steam Inlet Pressure<br>(kg/cm2)
+          </th>
+          <th rowspan="2" class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            ATFD<br>RPM
+          </th>
+          <th rowspan="2" class="border-b  border-gray-500 px-2 py-2 text-center font-semibold bg-emerald-100 whitespace-nowrap">
+            ATFD Salt<br>(MT)
+          </th>
+
+          <!-- Group: Feed Effluent -->
+          <th colspan="4" class="border-b  border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-sky-200 whitespace-nowrap">
+            Feed Effluent
+          </th>
+
+          <!-- Group: ATFD Vapor Condensate -->
+          <th colspan="4" class="border-b border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-orange-200 whitespace-nowrap">
+            ATFD Vapor Condensate
+          </th>
+
+          <!-- Optional columns kept from your old list -->
+          <th rowspan="2" class="border-b border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-rose-100 whitespace-nowrap">
+            Downtime<br>(hrs)
+          </th>
+          <th rowspan="2" class="border-b border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-gray-100 whitespace-nowrap">
+            Action
+          </th>
+        </tr>
+
+        <!-- SUB HEADER ROW -->
+        <tr>
+          <!-- Feed Effluent sub columns -->
+          <th class="border-b border-r border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">pH</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">TDS (%)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">COD (%)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-sky-100 whitespace-nowrap">SpGr.</th>
+
+          <!-- Vapor Condensate sub columns -->
+          <th class="border-b border-r border-l-2 border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">Quantity (KL)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">pH</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">TDS (%)</th>
+          <th class="border-b border-r border-gray-500 px-2 py-2 text-center font-semibold bg-orange-100 whitespace-nowrap">COD (%)</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% if rows %}
+          {% for r in rows %}
+            <tr class="{% cycle 'bg-white' 'bg-gray-50' %}">
+              <!-- Date -->
+              <td class="sticky left-0 z-20 border-t border-r border-gray-300 px-3 py-2 font-medium whitespace-nowrap bg-white">
+                {{ r.reading_date|date:"d-m-Y" }}
+              </td>
+
+              <!-- Main values -->
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.effluent_feed|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.steam_consume|default:"-" }}</td>
+
+              <!-- highlight steam economy like your sheet -->
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right bg-yellow-100 font-semibold">
+                {{ r.steam_economy|default:"-" }}
+              </td>
+
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.blower_draft|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.steam_inlet_pressure|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.atfd_rpm|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.atfd_salt|default:"-" }}</td>
+
+              <!-- Feed Effluent -->
+              <td class="border-t border-r border-l-2 border-gray-400 px-2 py-1 text-right">{{ r.effluent_feed_ph|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.effluent_feed_TDS|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.effluent_feed_cod|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.effluent_feed_spgr|default:"-" }}</td>
+
+              <!-- ATFD Vapor Condensate -->
+              <td class="border-t border-r border-l-2 border-gray-400 px-2 py-1 text-right bg-yellow-100 font-semibold">
+                {{ r.atfd_qty|default:"-" }}
+              </td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.vapor_contensate_ph|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.vapor_contensate_tds|default:"-" }}</td>
+              <td class="border-t border-r border-gray-300 px-2 py-1 text-right">{{ r.vapor_contensate_cod|default:"-" }}</td>
+
+              <!-- downtime total -->
+              <td class="border-t border-l-2 border-gray-400 px-2 py-1 text-right whitespace-nowrap">
+                {% if r.total_downtime %}
+                  {{ r.total_downtime }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+
+              <!-- Actions -->
+              <td class="border-t border-l-2 border-gray-400 px-2 py-1 text-center whitespace-nowrap">
+                <a href="{% url 'mee:atfd_reading_detail' r.reading_date|date:'Y-m-d' %}"
+                   class="inline-flex items-center px-2 py-2 text-[11px] md:text-xs rounded bg-sky-500 text-white hover:bg-sky-600 mr-1"
+                   title="View full details">
+                  <i class="fa fa-eye"></i>
+                </a>
+
+                <a href="{% url 'mee:atfd_reading_edit' r.reading_date|date:'Y-m-d' %}"
+                   class="inline-flex items-center px-2 py-2 text-[11px] md:text-xs rounded bg-amber-500 text-white hover:bg-amber-600 mr-1"
+                   title="Edit">
+                  <i class="fa fa-edit"></i>
+                </a>
+
+                <form method="post"
+                      action="{% url 'mee:atfd_reading_delete' r.reading_date|date:'Y-m-d' %}"
+                      class="inline"
+                      onsubmit="return confirm('Delete ATFD reading for {{ r.reading_date|date:"d-m-Y" }}?');">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="inline-flex items-center px-2 py-2 text-[11px] md:text-xs rounded bg-red-500 text-white hover:bg-red-600"
+                          title="Delete">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="18" class="px-3 py-4 text-center text-gray-500">
+              No readings found.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+{% endblock %}

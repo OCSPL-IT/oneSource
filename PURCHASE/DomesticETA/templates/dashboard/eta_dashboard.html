@@ -1,0 +1,376 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="min-h-screen bg-slate-100">
+  <div class="max-w-[1600px] mx-auto px-6 py-6">
+
+    <!-- ================= HEADER ================= -->
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold text-slate-800">
+        Domestic ETA Dashboard
+      </h1>
+      <p class="text-slate-500 mt-1 text-sm">
+        Status & Summary Overview
+      </p>
+    </header>
+
+    <!-- ================= FILTER SLICERS ================= -->
+    <div class="dashboard-card mb-8">
+      <div class="flex flex-nowrap items-end gap-4 overflow-x-auto">
+
+        <!-- ETD Date From -->
+        <div class="flex flex-col min-w-[130px]">
+          <label class="text-xs text-slate-500 mb-1">ETD Date From</label>
+          <input type="date" id="filterEtdFrom" class="slicer">
+        </div>
+
+        <!-- ETD Date To -->
+        <div class="flex flex-col min-w-[130px]">
+          <label class="text-xs text-slate-500 mb-1">ETD Date To</label>
+          <input type="date" id="filterEtdTo" class="slicer">
+        </div>
+
+        <!-- Status -->
+        <div class="flex flex-col min-w-[130px]">
+          <label class="text-xs text-slate-500 mb-1">Status</label>
+          <select id="filterStatus" class="slicer">
+            <option value="">All</option>
+            {% for s in status_options %}
+            <option value="{{ s }}">{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+<!-- Supplier (Search with suggestions) -->
+<div class="flex flex-col min-w-[140vpx]">
+  <label class="text-xs text-slate-500 mb-1">Supplier</label>
+  <input list="supplierOptions" id="filterSupplier" class="slicer" placeholder="Search Supplier...">
+  <datalist id="supplierOptions">
+    {% for s in supplier_options %}
+      <option value="{{ s }}"></option>
+    {% endfor %}
+  </datalist>
+</div>
+
+<!-- Raw Material (Search with suggestions) -->
+<div class="flex flex-col min-w-[140px]">
+  <label class="text-xs text-slate-500 mb-1">Raw Material</label>
+  <input list="rawMaterialOptions" id="filterRawMaterial" class="slicer" placeholder="Search Raw Material...">
+  <datalist id="rawMaterialOptions">
+    {% for r in raw_material_options %}
+      <option value="{{ r }}"></option>
+    {% endfor %}
+  </datalist>
+</div>
+
+<!-- Transporter (Search with suggestions) -->
+<div class="flex flex-col min-w-[140px]">
+  <label class="text-xs text-slate-500 mb-1">Transporter</label>
+  <input list="transporterOptions" id="filterTransporter" class="slicer" placeholder="Search Transporter...">
+  <datalist id="transporterOptions">
+    {% for t in transporter_options %}
+      <option value="{{ t }}"></option>
+    {% endfor %}
+  </datalist>
+</div>
+
+        <!-- Buttons at the end -->
+        <div class="flex gap-2 ml-auto">
+          <!-- Clear Filter -->
+          <button onclick="clearFilters()" class="bg-yellow-500 hover:bg-yellow-600 text-white w-10 h-10 flex items-center justify-center rounded-md">
+             <i class="fa-solid fa-eraser"></i>
+          </button>
+          <!-- Download Excel -->
+          <button id="btnDownloadExcel" class="bg-green-600 hover:bg-green-700 text-white w-10 h-10 flex items-center justify-center rounded-md">
+            <i class="fas fa-file-excel"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= STATUS CARDS ================= -->
+    <div class="mb-10">
+      <div id="statusCards" class="grid gap-6 status-cards-grid"></div>
+    </div>
+
+    <!-- ================= SUMMARY TABLES ================= -->
+    <div class="grid summary-grid gap-6 mb-10">
+      <div class="dashboard-card">
+        <h3 class="card-title">Raw Material-wise</h3>
+        <div class="table-wrapper">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th>Raw Material</th>
+                <th class="text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody id="tblRawMaterial"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <h3 class="card-title">Supplier-wise</h3>
+        <div class="table-wrapper">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th>Supplier</th>
+                <th class="text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody id="tblSupplier"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dashboard-card">
+        <h3 class="card-title">Transporter-wise</h3>
+        <div class="table-wrapper">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th>Transporter</th>
+                <th class="text-right">Count</th>
+              </tr>
+            </thead>
+            <tbody id="tblTransporter"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DETAIL TABLE ================= -->
+    <div class="dashboard-card">
+      <h3 class="card-title mb-4">Detailed View (Latest 500 Records)</h3>
+      <div class="table-wrapper-large">
+        <table class="dashboard-table text-sm">
+          <thead>
+            <tr>
+              <th>PO No</th>
+              <th class="whitespace-nowrap">Status</th>
+              <th class="whitespace-nowrap">Required Date</th>
+              <th>ETD</th>
+              <th class="whitespace-nowrap">Revised ETA</th>
+              <th>Raw Material</th>
+              <th>Packing</th>
+              <th class="text-right">Qty</th>
+              <th>Supplier</th>
+              <th>Transporter</th>
+              <th>Vehicle</th>
+              <th>LR No</th>
+              <th>Driver</th>
+              <th>Evaluation</th>
+              <th>Invoice</th>
+              <th>Invoice Date</th>
+              <th>Remark</th>
+            </tr>
+          </thead>
+          <tbody id="tblDetail"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ETA_DATA = "{% url 'domestic_eta:eta_dashboard_data' %}";
+
+// ---------------- STATE ----------------
+const state = {
+    status: '',
+    supplier: '',
+    raw_material: '',
+    transporter: '',
+    invoice: '',
+    etd_from: '',
+    etd_to: ''
+};
+
+// ---------------- QUERY STRING ----------------
+function qs(base, params){
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k,v])=>{ if(v) sp.append(k,v); });
+    return sp.toString() ? `${base}?${sp.toString()}` : base;
+}
+
+// ---------------- SYNC UI ----------------
+function syncSlicers(){
+    document.getElementById("filterStatus").value = state.status;
+    document.getElementById("filterSupplier").value = state.supplier;
+    document.getElementById("filterRawMaterial").value = state.raw_material;
+    document.getElementById("filterTransporter").value = state.transporter;
+    document.getElementById("filterEtdFrom").value = state.etd_from;
+    document.getElementById("filterEtdTo").value = state.etd_to;
+}
+
+// ---------------- CLEAR FILTERS ----------------
+function clearFilters(){
+    Object.keys(state).forEach(k=>state[k]='');
+    syncSlicers();
+    load();
+}
+
+// ---------------- EVENT LISTENERS ----------------
+document.getElementById("filterStatus").addEventListener("change", e=>{ state.status = e.target.value; load(); });
+document.getElementById("filterSupplier").addEventListener("input", e=>{
+    state.supplier = e.target.value;
+    load();
+});
+
+document.getElementById("filterRawMaterial").addEventListener("input", e=>{
+    state.raw_material = e.target.value;
+    load();
+});
+
+document.getElementById("filterTransporter").addEventListener("input", e=>{
+    state.transporter = e.target.value;
+    load();
+});
+
+document.getElementById("filterEtdFrom").addEventListener("change", e=>{ state.etd_from = e.target.value; load(); });
+document.getElementById("filterEtdTo").addEventListener("change", e=>{ state.etd_to = e.target.value; load(); });
+
+// ---------------- RENDER STATUS CARDS ----------------
+function renderStatusCards(data){
+    const wrap = document.getElementById('statusCards'); 
+    wrap.innerHTML='';
+
+    // --------- STATUS CARDS ----------
+    (data.status_counts || []).forEach(s=>{
+        const div = document.createElement('div'); 
+        div.className="status-card";
+
+        div.innerHTML=`
+            <div class="card-label">${s.Status}</div>
+            <div class="card-value">${s.count}</div>
+        `;
+
+        div.addEventListener('click', ()=>{
+            state.status = s.Status; 
+            syncSlicers(); 
+            load(); 
+        });
+
+        wrap.appendChild(div);
+    });
+
+    // --------- TOTAL FREIGHT (ONLY ONCE) ----------
+    if (Number(data.freight_sum) >= 0) {
+
+        const freightCard = document.createElement('div');
+        freightCard.className = "status-card";
+
+        freightCard.innerHTML = `
+            <div class="card-label">Total Freight</div>
+            <div class="card-value text-indigo-600">
+                 ${Number(data.freight_sum).toFixed(2)}
+            </div>
+        `;
+
+        wrap.appendChild(freightCard);
+    }
+
+    // --------- PENDING INVOICE ----------
+    const p = document.createElement('div'); 
+    p.className="status-card pending-card";
+
+    p.innerHTML=`
+        <div class="card-label">Pending Invoice</div>
+        <div class="card-value">${data.pending_invoice || 0}</div>
+    `;
+
+    p.addEventListener('click', ()=>{
+        state.invoice = "pending"; 
+        syncSlicers(); 
+        load(); 
+    });
+
+    wrap.appendChild(p);
+}
+// ---------------- FILL COUNT TABLES ----------------
+function fillTable(id, rows, field, filterKey){
+    const tb = document.getElementById(id); tb.innerHTML='';
+    if(!rows?.length){ tb.innerHTML=`<tr><td colspan="2" class="text-center py-3">No Data</td></tr>`; return; }
+    rows.forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML=`<td>${r[field]||'(blank)'}</td><td class="text-right">${r.count}</td>`;
+        tr.addEventListener('click', ()=>{ if(filterKey){ state[filterKey] = r[field]; syncSlicers(); load(); } });
+        tb.appendChild(tr);
+    });
+}
+
+// ---------------- LOAD DETAIL TABLE ----------------
+function loadDetail(data){
+    const tb = document.getElementById('tblDetail'); tb.innerHTML='';
+    (data.detail_table || []).forEach(r=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML=`
+            <td>${r.PoNumber||''}</td><td>${r.Status||''}</td><td>${r.RequiredDate||''}</td><td class="whitespace-nowrap">${r.ETDDate||''}</td>
+            <td>${r.RevisedETADate||''}</td><td>${r.RawMaterial||''}</td><td>${r.Packing||''}</td>
+            <td class="text-right">${r.Qty||''}</td><td>${r.Supplier||''}</td><td>${r.TransporterName||''}</td>
+            <td>${r.VehicleNo||''}</td><td>${r.LRNo||''}</td><td>${r.DriverNo||''}</td><td>${r.Evaluation||''}</td>
+            <td>${r.InvoiceNoRemark||''}</td><td>${r.InvoiceDate||''}</td><td>${r.Remark||''}</td>
+        `;
+        tb.appendChild(tr);
+    });
+}
+
+// ---------------- LOAD DASHBOARD ----------------
+async function load(){
+    try{
+        const res = await fetch(qs(ETA_DATA,state));
+        if(!res.ok) return;
+        const data = await res.json();
+        renderStatusCards(data);
+        fillTable('tblRawMaterial', data.raw_material_counts, 'RawMaterial', 'raw_material');
+        fillTable('tblSupplier', data.supplier_counts, 'Supplier', 'supplier');
+        fillTable('tblTransporter', data.transporter_counts, 'TransporterName', 'transporter');
+        loadDetail(data);
+    } catch(err){ console.error("Error loading dashboard data:", err); }
+}
+
+// ---------------- INITIAL LOAD ----------------
+load();
+
+// ---------------- EXCEL BUTTON ----------------
+document.getElementById("btnDownloadExcel").addEventListener("click", () => {
+    const params = new URLSearchParams();
+    Object.entries(state).forEach(([k,v]) => { if(v) params.append(k, v); });
+    const url = `{% url 'domestic_eta:eta_dashboard_export_excel' %}?${params.toString()}`;
+    window.location.href = url;
+});
+</script>
+
+<style>
+/* ================= STYLES ================= */
+.status-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+.summary-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:16px; }
+
+.dashboard-card{ background:white; border-radius:14px; padding:20px; border:1px solid #e2e8f0; box-shadow:0 4px 12px rgba(0,0,0,0.04); }
+.status-card{ background:white; border-radius:14px; padding:22px; text-align:center; border:1px solid #e2e8f0; cursor:pointer; transition:0.2s; }
+.status-card:hover{ transform:translateY(-2px); box-shadow:0 6px 10px rgba(0,0,0,0.08); }
+.pending-card{ background:#fff7ed; border:1px solid #fed7aa; }
+.card-label{ font-size:13px; color:#64748b; margin-bottom:6px; }
+.card-value{ font-size:26px; font-weight:700; color:#1e293b; }
+
+.slicer{ width:100%; padding:6px 8px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; background:white; }
+.slicer:focus{ outline:none; border-color:#6366f1; }
+
+.table-wrapper{ max-height:260px; overflow:auto; margin-top:10px; }
+.table-wrapper-large{ max-height:550px; overflow:auto; margin-top:10px; }
+.dashboard-table{ width:100%; border-collapse:collapse; font-size:13px; }
+.dashboard-table th, .dashboard-table td{ padding:8px 10px; border-bottom:1px solid #f1f5f9; }
+.dashboard-table thead{ background:#f1f5f9; position:sticky; top:0; z-index:1; }
+
+#btnDownloadExcel i, .clear-btn i, .fa-filter, .fa-file-excel { font-size:18px; }
+</style>
+
+{% endblock %}

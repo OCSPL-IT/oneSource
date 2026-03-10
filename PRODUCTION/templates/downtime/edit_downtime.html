@@ -1,0 +1,839 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<!-- Flash messages -->
+{% if messages %}
+<div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+  {% for message in messages %}
+  <div class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+      {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+    <span class="flex-1">{{ message }}</span>
+    <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none" onclick="this.parentElement.remove()">✖</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="min-h-screen bg-slate-100 py-6">
+  <div class="mx-auto max-w-4xl bg-white shadow rounded-2xl p-6">
+    <div class="container mx-auto px-6 mt-6 mb-6">
+      <div class="flex items-center justify-between mb-4">
+        <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded shadow-md">Back to Main Page</a>
+        <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Edit Downtime</h2>
+        <a href="{% url 'view_downtime' %}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">View Records</a>
+      </div>
+    </div>
+
+    <!-- Boot + Initial payloads from view -->
+    <script id="dt_boot" type="application/json">{{ boot_json|safe }}</script>
+    <script id="dt_initial" type="application/json">{{ initial_json|safe }}</script>
+
+    <form id="downtimeForm" method="post" action="">
+      {% csrf_token %}
+
+      <!-- Record Date & Time -->
+      <div class="mb-4">
+        <label for="record_dt" class="block text-sm font-medium text-gray-700 mb-1">Record Date &amp; Time</label>
+        <input id="record_dt" name="record_dt" type="datetime-local" step="1"
+               value="{{ record_dt_default|default:'' }}"
+               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+
+      <!-- Idle -->
+      <div class="mb-6">
+        <label for="idle_flag" class="block text-sm font-medium text-gray-700 mb-1">Idle</label>
+        <select id="idle_flag" name="idle_flag"
+                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">— Select —</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+
+      <!-- Block -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="block_select">Block</label>
+        <select id="block_select" name="block"
+                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">— Select Block —</option>
+          <option value="A-Block">A-Block</option>
+          <option value="B-Block">B-Block</option>
+          <option value="C-Block">C-Block</option>
+          <option value="D-Block">D-Block</option>
+          <option value="E-Block">E-Block</option>
+        </select>
+      </div>
+
+      <!-- Equipment -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="equip_input">Equipment</label>
+        <div class="relative">
+          <input id="equip_input" name="eqpt_name" type="text"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                 placeholder="Select Block first…" autocomplete="off" disabled />
+          <div id="equip_menu"
+               class="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-md border border-gray-200
+                      bg-white shadow hidden"></div>
+        </div>
+        <input type="hidden" id="equipment_id" name="equipment_id" />
+        <p id="equipHelp" class="text-xs text-gray-500 mt-1 hidden"></p>
+      </div>
+
+      <!-- Stage -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="stage_input">Stage Name</label>
+        <div class="relative">
+          <input id="stage_input" name="stage_name" type="text"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm
+                        focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 placeholder="Type to search Stage…" autocomplete="off" />
+          <div id="stage_menu"
+               class="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-md border border-gray-200
+                      bg-white shadow hidden"></div>
+        </div>
+      </div>
+
+      <!-- FG -->
+      <div class="mb-4">
+        <label for="id_fg" class="block text-sm font-medium text-gray-700 mb-1">FG Name</label>
+        <input id="id_fg" name="product_name" type="text"
+               class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-100"
+               placeholder="Auto-loaded from Stage" readonly />
+      </div>
+
+      <!-- Batch -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="batch_input">Batch No</label>
+        <div class="relative">
+          <input id="batch_input" name="batch_no" type="text"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                 placeholder="Select Stage first…" autocomplete="off" disabled />
+          <div id="batch_menu"
+               class="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto rounded-md border border-gray-200
+                      bg-white shadow hidden"></div>
+        </div>
+        <p id="batchHelp" class="text-xs text-gray-500 mt-1 hidden"></p>
+      </div>
+
+      <!-- BOM Qty / BCT / Loss per hr -->
+      <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">BOM Quantity</label>
+          <input id="bom_qty_input" name="bom_qty" type="number" step="1"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-100"
+                 placeholder="—" readonly hidden disabled />
+          <select id="bom_qty_select" name="bom_qty"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  hidden disabled></select>
+          <p id="bomHelp" class="text-xs text-gray-500 mt-1 hidden"></p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">BCT</label>
+          <input id="bom_bct_input" name="bom_bct" type="number" step="1"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-100"
+                 placeholder="—" readonly hidden disabled />
+          <select id="bom_bct_select" name="bom_bct"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  hidden disabled></select>
+          <p id="bctHelp" class="text-xs text-gray-500 mt-1 hidden"></p>
+        </div>
+        <div>
+          <label class="block text sm font-medium text-gray-700 mb-1">Loss / hr (Qty ÷ BCT)</label>
+          <input id="loss_per_hr" name="loss_per_hr" type="number" step="1"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-100"
+                 placeholder="—" readonly />
+        </div>
+      </div>
+
+      <!-- Start/End + Duration -->
+      <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="start_date" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+          <input id="start_date" name="start_date" type="date"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label for="start_time" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+          <input id="start_time" name="start_time" type="time" step="1"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label for="end_date" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+          <input id="end_date" name="end_date" type="date"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label for="end_time" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+          <input id="end_time" name="end_time" type="time" step="1"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      </div>
+
+      <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Total Duration (Hours, decimal)</label>
+          <input id="duration_hours" name="duration_hours" type="number" step="0.01"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-100" readonly />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Total Loss</label>
+          <input id="total_loss" name="total_loss" type="number" step="1"
+                 class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm bg-gray-100" readonly />
+        </div>
+      </div>
+      <p id="duration_error" class="text-sm text-red-600 hidden">End must be after Start.</p>
+
+      <!-- Dept / Category -->
+      <div class="mt-8 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label for="dept_select" class="block text-sm font-medium text-gray-700 mb-1">Department</label>
+          <select id="dept_select" name="downtime_dept"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">— Select Department —</option>
+          </select>
+          <p id="deptHelp" class="text-xs text-gray-500 mt-1 hidden"></p>
+        </div>
+        <div>
+          <label for="cat_select" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          <select id="cat_select" name="downtime_category" disabled
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed">
+            <option value="">— Select Category —</option>
+          </select>
+          <p id="catHelp" class="text-xs text-gray-500 mt-1 hidden"></p>
+        </div>
+      </div>
+
+      <!-- Reason -->
+      <div class="mb-6">
+        <label for="reason" class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+        <textarea id="reason" name="reason" rows="4" maxlength="500"
+                  class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter reason (max 500 characters)"></textarea>
+        <div class="flex items-center justify-between mt-1">
+          <p id="reasonHelp" class="text-xs text-gray-500">Be specific. Include context if helpful.</p>
+          <p class="text-xs text-gray-500"><span id="reason_count">0</span>/500</p>
+        </div>
+      </div>
+
+      <button type="submit" id="btnSubmit"
+              class="mt-3 inline-flex items-center px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+        Update
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ====================== SCRIPT (full, self-contained) ====================== -->
+<script>
+  const BOOT    = JSON.parse(document.getElementById("dt_boot").textContent);
+  const INITIAL = JSON.parse(document.getElementById("dt_initial").textContent);
+
+  // ---------- Searchable dropdown helpers ----------
+  function makeSearch({ inputEl, menuEl, items = [], onSelect }) {
+    let all = Array.from(new Set(items)).filter(Boolean);
+    let filtered = all.slice();
+    let active = -1;
+
+    function render() {
+      menuEl.innerHTML = "";
+      filtered.forEach((v, idx) => {
+        const d = document.createElement("div");
+        d.className = "px-3 py-2 cursor-pointer hover:bg-gray-100";
+        d.textContent = v;
+        d.dataset.index = idx;
+        if (idx === active) d.classList.add("bg-blue-50");
+        menuEl.appendChild(d);
+      });
+      menuEl.classList.toggle("hidden", filtered.length === 0);
+    }
+    function filter() {
+      const q = inputEl.value.trim().toLowerCase();
+      filtered = q ? all.filter(v => String(v).toLowerCase().includes(q)) : all.slice();
+      active = -1; render();
+    }
+    function choose(idx) {
+      if (idx < 0 || idx >= filtered.length) return;
+      inputEl.value = filtered[idx]; close(); onSelect && onSelect(filtered[idx]);
+    }
+    function open(){ if(filtered.length) menuEl.classList.remove("hidden"); }
+    function close(){ menuEl.classList.add("hidden"); }
+
+    inputEl.addEventListener("input", () => { filter(); open(); });
+    inputEl.addEventListener("focus", () => { filter(); open(); });
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, filtered.length - 1); render(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+      else if (e.key === "Enter")   { e.preventDefault(); choose(active >= 0 ? active : 0); }
+      else if (e.key === "Escape")  { close(); }
+    });
+    menuEl.addEventListener("click", (e) => {
+      const node = e.target.closest("[data-index]"); if (!node) return;
+      choose(parseInt(node.dataset.index, 10));
+    });
+    document.addEventListener("click", (e) => {
+      if (!menuEl.contains(e.target) && e.target !== inputEl) close();
+    });
+
+    return {
+      setItems(newItems){ all = Array.from(new Set(newItems||[])).filter(Boolean); filter(); },
+      get value(){ return inputEl.value; },
+      set value(v){ inputEl.value = v||""; filter(); },
+      clear(){ inputEl.value=""; all=[]; filtered=[]; close(); }
+    };
+  }
+
+  function makeSearchObj({ inputEl, menuEl, items = [], onSelect }) {
+    let all = Array.isArray(items) ? items.slice() : [];
+    let filtered = all.slice();
+    let active = -1;
+
+    function render() {
+      menuEl.innerHTML = "";
+      filtered.forEach((o, idx) => {
+        const d = document.createElement("div");
+        d.className = "px-3 py-2 cursor-pointer hover:bg-gray-100";
+        d.textContent = o.label || "";
+        d.dataset.index = idx;
+        if (idx === active) d.classList.add("bg-blue-50");
+        menuEl.appendChild(d);
+      });
+      menuEl.classList.toggle("hidden", filtered.length === 0);
+    }
+    function filter(){
+      const q = inputEl.value.trim().toLowerCase();
+      filtered = q ? all.filter(o => (o.label||"").toLowerCase().includes(q)) : all.slice();
+      active = -1; render();
+    }
+    function choose(idx){
+      if(idx<0 || idx>=filtered.length) return;
+      const picked = filtered[idx];
+      inputEl.value = picked.label || ""; close(); onSelect && onSelect(picked);
+    }
+    function open(){ if(filtered.length) menuEl.classList.remove("hidden"); }
+    function close(){ menuEl.classList.add("hidden"); }
+
+    inputEl.addEventListener("input", () => { filter(); open(); });
+    inputEl.addEventListener("focus", () => { filter(); open(); });
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, filtered.length - 1); render(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render(); }
+      else if (e.key === "Enter") { e.preventDefault(); choose(active >= 0 ? active : 0); }
+      else if (e.key === "Escape") { close(); }
+    });
+    menuEl.addEventListener("click", (e) => {
+      const node = e.target.closest("[data-index]"); if(!node) return;
+      choose(parseInt(node.dataset.index, 10));
+    });
+    document.addEventListener("click", (e) => {
+      if (!menuEl.contains(e.target) && e.target !== inputEl) close();
+    });
+
+    return {
+      setItems(newItems){ all = Array.isArray(newItems)? newItems.slice():[]; filter(); },
+      get value(){ return inputEl.value; },
+      set value(v){ inputEl.value = v||""; filter(); },
+      clear(){ inputEl.value=""; all=[]; filtered=[]; close(); }
+    };
+  }
+
+  // ---------- Elements ----------
+  const blockSelect = document.getElementById("block_select");
+
+  const equipInput  = document.getElementById("equip_input");
+  const equipMenu   = document.getElementById("equip_menu");
+  const equipHelp   = document.getElementById("equipHelp");
+  const equipHidden = document.getElementById("equipment_id");
+
+  const stageInput  = document.getElementById("stage_input");
+  const stageMenu   = document.getElementById("stage_menu");
+  const fgInput     = document.getElementById("id_fg");
+
+  const batchInput  = document.getElementById("batch_input");
+  const batchMenu   = document.getElementById("batch_menu");
+  const batchHelp   = document.getElementById("batchHelp");
+
+  const recordDt    = document.getElementById("record_dt");
+  const idleSelect  = document.getElementById("idle_flag");
+
+  const deptSelect  = document.getElementById("dept_select");
+  const deptHelp    = document.getElementById("deptHelp");
+  const catSelect   = document.getElementById("cat_select");
+  const catHelp     = document.getElementById("catHelp");
+
+  const reasonEl    = document.getElementById("reason");
+  const reasonCount = document.getElementById("reason_count");
+
+  const bomQtyInput  = document.getElementById("bom_qty_input");
+  const bomQtySelect = document.getElementById("bom_qty_select");
+  const bomHelp      = document.getElementById("bomHelp");
+
+  const bomBctInput  = document.getElementById("bom_bct_input");
+  const bomBctSelect = document.getElementById("bom_bct_select");
+  const bctHelp      = document.getElementById("bctHelp");
+
+  const lossPerHr    = document.getElementById("loss_per_hr");
+
+  const startDate   = document.getElementById("start_date");
+  const startTime   = document.getElementById("start_time");
+  const endDate     = document.getElementById("end_date");
+  const endTime     = document.getElementById("end_time");
+  const durHours    = document.getElementById("duration_hours");
+  const durationErr = document.getElementById("duration_error");
+  const totalLoss   = document.getElementById("total_loss");
+
+  // ---------- State ----------
+  let selectedBlockDisplay = "";
+  let selectedBlockKey     = "";
+  let selectedStage        = "";
+  let selectedFG           = "";
+  let selectedEquipment    = null;
+
+  // ---------- Instances ----------
+  const equipDD = makeSearchObj({
+    inputEl: equipInput,
+    menuEl: equipMenu,
+    items: [],
+    onSelect: (obj) => {
+      selectedEquipment = obj;
+      equipHidden.value = obj?.value || "";
+    }
+  });
+
+  const stageDD = makeSearch({
+    inputEl: stageInput,
+    menuEl: stageMenu,
+    items: BOOT.stages,
+    onSelect: onStageSelect
+  });
+
+  const batchDD = makeSearch({
+    inputEl: batchInput,
+    menuEl: batchMenu,
+    items: [],
+    onSelect: () => {}
+  });
+
+  // ---------- Utils ----------
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function nowLocalDate(){ const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function nowLocalTime(){ const d=new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+  function nowLocalDateTimeValue(){
+    const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function safeDateFromParts(dateStr, timeStr){
+    if(!dateStr || !timeStr) return null;
+    const t = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+    const s = `${dateStr}T${t}`;
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function setHiddenDisabled(el, flag){
+    if (flag) { el.setAttribute("hidden", "hidden"); el.setAttribute("disabled","disabled"); }
+    else { el.removeAttribute("hidden"); el.removeAttribute("disabled"); }
+  }
+
+  // ---------- Dept/Category ----------
+  function populateDepartments(){
+    deptSelect.innerHTML = "";
+    const ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "— Select Department —";
+    deptSelect.appendChild(ph);
+
+    (BOOT.departments || []).forEach(d => {
+      const o = document.createElement("option");
+      o.value = d; o.textContent = d;
+      deptSelect.appendChild(o);
+    });
+  }
+  function onDeptChange(){
+    const d = deptSelect.value || "";
+    catSelect.innerHTML = "";
+    const ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "— Select Category —";
+    catSelect.appendChild(ph);
+
+    if (!d){ catSelect.disabled = true; return; }
+    const cats = (BOOT.categories_by_dept && BOOT.categories_by_dept[d]) ? BOOT.categories_by_dept[d] : [];
+    if (!cats.length){
+      catHelp.textContent = "No categories for selected department.";
+      catHelp.classList.remove("hidden");
+      catSelect.disabled = true;
+      return;
+    }
+    catHelp.classList.add("hidden");
+    cats.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      catSelect.appendChild(o);
+    });
+    catSelect.disabled = false;
+  }
+
+  // ---------- Duration & Loss ----------
+  function recomputeDuration(){
+    const s = safeDateFromParts(startDate.value, startTime.value);
+    const e = safeDateFromParts(endDate.value, endTime.value);
+    durationErr.classList.add("hidden");
+    durHours.value = "";
+    totalLoss.value = "";
+
+    if(!s || !e) return;
+    const diffMs = e - s;
+    if (diffMs < 0){
+      durationErr.textContent = "End must be after Start.";
+      durationErr.classList.remove("hidden");
+      return;
+    }
+    const hoursDecimal = (diffMs / 1000) / 3600;
+    durHours.value = Number(hoursDecimal.toFixed(2));
+    updateTotalLoss();
+  }
+
+  function currentQty(){
+    if (!bomQtyInput.hasAttribute("hidden")) {
+      const v = parseInt(bomQtyInput.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    if (!bomQtySelect.hasAttribute("hidden")) {
+      const v = parseInt(bomQtySelect.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    return NaN;
+  }
+
+  function currentBct(){
+    if (!bomBctInput.hasAttribute("hidden")) {
+      const v = parseInt(bomBctInput.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    if (!bomBctSelect.hasAttribute("hidden")) {
+      const v = parseInt(bomBctSelect.value, 10);
+      return Number.isFinite(v) ? v : NaN;
+    }
+    return NaN;
+  }
+
+  function updateLossPerHr(){
+    const q = currentQty();
+    const b = currentBct();
+    if (!isFinite(q) || !isFinite(b) || b <= 0) {
+      lossPerHr.value = "";
+      updateTotalLoss();
+      return;
+    }
+    lossPerHr.value = String(Math.round(q / b));
+    updateTotalLoss();
+  }
+
+  function updateTotalLoss(){
+    const lph = parseInt(lossPerHr.value, 10);
+    const hrs = parseFloat(durHours.value);
+    if (!isFinite(lph) || !isFinite(hrs)) {
+      totalLoss.value = "";
+      return;
+    }
+    totalLoss.value = String(Math.round(lph * hrs));
+  }
+
+  // ---------- BOM UI ----------
+  function clearBomUI(){
+    bomHelp.classList.add("hidden");
+    bctHelp.classList.add("hidden");
+
+    setHiddenDisabled(bomQtyInput,  true);
+    setHiddenDisabled(bomQtySelect, true);
+    bomQtyInput.value = "";
+    bomQtySelect.innerHTML = "";
+
+    setHiddenDisabled(bomBctInput,  true);
+    setHiddenDisabled(bomBctSelect, true);
+    bomBctInput.value = "";
+    bomBctSelect.innerHTML = "";
+
+    lossPerHr.value = "";
+    totalLoss.value = "";
+  }
+
+  function updateBomUI(){
+    clearBomUI();
+
+    const stage = (selectedStage || "").trim();
+    const fg    = (selectedFG || "").trim();
+    if(!stage || !fg) return;
+
+    const key = `${stage.toLowerCase()}||${fg.toLowerCase()}`;
+    const rec = BOOT.bom_meta_by_stage_fg ? BOOT.bom_meta_by_stage_fg[key] : null;
+
+    if (!rec){
+      bomHelp.textContent = "No BOM metadata available for this Stage + FG.";
+      bomHelp.classList.remove("hidden");
+      return;
+    }
+
+    const quantities = Array.isArray(rec.quantities) ? rec.quantities.slice() : [];
+    const bcts       = Array.isArray(rec.bcts) ? rec.bcts.slice() : [];
+
+    // Quantity
+    if (quantities.length === 0){
+      bomHelp.textContent = "No Quantity found for this Stage + FG.";
+      bomHelp.classList.remove("hidden");
+    } else if (quantities.length === 1){
+      bomQtyInput.value = String(quantities[0]);
+      setHiddenDisabled(bomQtyInput, false);
+    } else {
+      const ph = document.createElement("option");
+      ph.value = "";
+      ph.textContent = "— Please select Quantity —";
+      bomQtySelect.appendChild(ph);
+      quantities.forEach(q => {
+        const o = document.createElement("option");
+        o.value = String(q);
+        o.textContent = String(q);
+        bomQtySelect.appendChild(o);
+      });
+      bomQtySelect.onchange = () => updateLossPerHr();
+      setHiddenDisabled(bomQtySelect, false);
+    }
+
+    // BCT
+    if (bcts.length === 0){
+      bctHelp.textContent = "No BCT found for this Stage + FG.";
+      bctHelp.classList.remove("hidden");
+    } else if (bcts.length === 1){
+      bomBctInput.value = String(bcts[0]);
+      setHiddenDisabled(bomBctInput, false);
+    } else {
+      const ph2 = document.createElement("option");
+      ph2.value = "";
+      ph2.textContent = "— Please select BCT —";
+      bomBctSelect.appendChild(ph2);
+      bcts.forEach(b => {
+        const o = document.createElement("option");
+        o.value = String(b);
+        o.textContent = String(b);
+        bomBctSelect.appendChild(o);
+      });
+      bomBctSelect.onchange = () => updateLossPerHr();
+      setHiddenDisabled(bomBctSelect, false);
+    }
+
+    updateLossPerHr();
+  }
+
+  // ---------- Block -> Equipment ----------
+  function onBlockChange(display){
+    selectedBlockDisplay = display;
+    selectedBlockKey = (BOOT.block_display_to_key[display] || "");
+
+    selectedEquipment = null;
+    equipHidden.value = "";
+    equipDD.clear();
+    equipInput.disabled = true;
+    equipHelp.classList.add("hidden");
+
+    if(!selectedBlockKey) return;
+    const eqItems = BOOT.equipment_by_block[selectedBlockKey] || [];
+    if(eqItems.length === 0){
+      equipHelp.textContent = "No equipment found for this Block.";
+      equipHelp.classList.remove("hidden");
+    } else {
+      equipDD.setItems(eqItems);
+      equipInput.disabled = false;
+      equipInput.placeholder = "Type to search Equipment…";
+    }
+  }
+
+  // ---------- Stage -> FG -> Batch ----------
+  function onStageSelect(stage){
+    selectedStage = stage;
+
+    selectedFG = BOOT.fg_by_stage[stage] || "";
+    fgInput.value = selectedFG;
+
+    batchDD.clear(); batchInput.disabled = true; batchHelp.classList.add("hidden");
+    if(!selectedFG){
+      batchHelp.textContent = "No FG mapping found for this Stage.";
+      batchHelp.classList.remove("hidden");
+      updateBomUI();
+      return;
+    }
+    const key = `${stage}||${selectedFG}`;
+    const batches = BOOT.batches_by_stage_fg[key] || [];
+    if(batches.length === 0){
+      batchHelp.textContent = "No batches found for this Stage + FG.";
+      batchHelp.classList.remove("hidden");
+    } else {
+      batchDD.setItems(batches);
+      batchInput.disabled = false;
+      batchInput.placeholder = "Type to search Batch…";
+    }
+
+    updateBomUI();
+  }
+
+  // ---------- Validation ----------
+  document.getElementById("stage_input").addEventListener("blur", (e)=>{
+    const val = e.target.value.trim();
+    if(!val || !BOOT.stages.includes(val)){
+      e.target.value = "";
+      onStageSelect("");
+    }
+  });
+
+  // ---------- Hydration helpers ----------
+  function findInsensitive(list, needle) {
+    if (!list || !needle) return null;
+    const n = String(needle).trim().toLowerCase();
+    return (list.find(x => String(x).trim().toLowerCase() === n)) || null;
+  }
+
+  // ---------- Initial hydration ----------
+  document.addEventListener("DOMContentLoaded", () => {
+    if (!recordDt.value) recordDt.value = INITIAL.record_dt || nowLocalDateTimeValue();
+
+    // Dept/Category
+    populateDepartments();
+    deptSelect.addEventListener("change", onDeptChange);
+    if (INITIAL.downtime_dept) {
+      deptSelect.value = INITIAL.downtime_dept;
+      onDeptChange();
+      if (INITIAL.downtime_category) catSelect.value = INITIAL.downtime_category;
+    }
+
+    // Reason counter
+    const updateReasonCount = () => { reasonCount.textContent = String((reasonEl.value||"").length); };
+    reasonEl.addEventListener("input", updateReasonCount);
+
+    // Idle
+    idleSelect.value = INITIAL.idle || "No";
+
+    // Block -> Equipment
+    if (INITIAL.block) {
+      blockSelect.value = INITIAL.block;
+      onBlockChange(INITIAL.block);
+
+      setTimeout(() => {
+        const key   = BOOT.block_display_to_key[INITIAL.block] || "";
+        const items = (BOOT.equipment_by_block[key] || []);
+        let picked  = null;
+
+        if (INITIAL.eqpt_id) {
+          picked = items.find(o => String(o.value) === String(INITIAL.eqpt_id));
+        }
+        if (!picked && INITIAL.eqpt_id) {
+          // global fallback if equip moved blocks
+          Object.values(BOOT.equipment_by_block || {}).forEach(arr => {
+            if (!picked) picked = (arr || []).find(o => String(o.value) === String(INITIAL.eqpt_id));
+          });
+        }
+
+        if (picked) {
+          equipHidden.value = picked.value;
+          equipInput.value  = picked.label;
+          equipInput.disabled = false;
+          selectedEquipment = picked;
+        } else {
+          if (INITIAL.eqpt_id)   equipHidden.value = INITIAL.eqpt_id;
+          if (INITIAL.eqpt_name) equipInput.value  = INITIAL.eqpt_name;
+          equipInput.disabled = false;
+        }
+      }, 0);
+    }
+
+    // Stage -> FG -> Batch
+    let stageToUse = INITIAL.stage_name ? findInsensitive(BOOT.stages, INITIAL.stage_name) : null;
+    if (!stageToUse && INITIAL.stage_name) stageToUse = INITIAL.stage_name;
+
+    if (stageToUse) {
+      stageDD.value = stageToUse;
+      onStageSelect(stageToUse);
+
+      setTimeout(() => {
+        const mappedFG = BOOT.fg_by_stage[stageToUse] || "";
+        if (mappedFG) {
+          fgInput.value = mappedFG; selectedFG = mappedFG;
+        } else if (INITIAL.product_name) {
+          fgInput.value = INITIAL.product_name; selectedFG = INITIAL.product_name;
+        }
+
+        if (INITIAL.batch_no) {
+          batchInput.disabled = false;
+          batchInput.value    = INITIAL.batch_no;
+        }
+      }, 0);
+    } else {
+      if (INITIAL.product_name) fgInput.value = INITIAL.product_name;
+      if (INITIAL.batch_no)     batchInput.value = INITIAL.batch_no;
+    }
+
+    // BOM Qty / BCT + Loss/hr
+    setTimeout(() => {
+      const stageKey = (stageInput.value || "").toLowerCase();
+      const fgKey    = (fgInput.value    || "").toLowerCase();
+      const metaKey  = stageKey && fgKey ? `${stageKey}||${fgKey}` : "";
+      const rec      = metaKey ? (BOOT.bom_meta_by_stage_fg || {})[metaKey] : null;
+
+      const hasQtyOptions = rec && Array.isArray(rec.quantities) && rec.quantities.length;
+      const hasBctOptions = rec && Array.isArray(rec.bcts)       && rec.bcts.length;
+
+      if (!hasQtyOptions) {
+        setHiddenDisabled(bomQtyInput, false);
+        bomQtyInput.readOnly = false;
+        if (INITIAL.bom_qty !== "" && INITIAL.bom_qty != null) bomQtyInput.value = String(parseInt(INITIAL.bom_qty, 10));
+      } else {
+        const savedQ = INITIAL.bom_qty != null ? String(parseInt(INITIAL.bom_qty, 10)) : "";
+        if (!bomQtyInput.hasAttribute("hidden") && savedQ) bomQtyInput.value = savedQ;
+        if (!bomQtySelect.hasAttribute("hidden") && savedQ) bomQtySelect.value = savedQ;
+      }
+
+      if (!hasBctOptions) {
+        setHiddenDisabled(bomBctInput, false);
+        bomBctInput.readOnly = false;
+        if (INITIAL.bct !== "" && INITIAL.bct != null) bomBctInput.value = String(parseInt(INITIAL.bct, 10));
+      } else {
+        const savedB = INITIAL.bct != null ? String(parseInt(INITIAL.bct, 10)) : "";
+        if (!bomBctInput.hasAttribute("hidden") && savedB) bomBctInput.value = savedB;
+        if (!bomBctSelect.hasAttribute("hidden") && savedB) bomBctSelect.value = savedB;
+      }
+
+      updateLossPerHr();
+    }, 0);
+
+    // Start/End + Duration + Total loss
+    if (INITIAL.start_date) startDate.value = INITIAL.start_date;
+    if (INITIAL.start_time) startTime.value = INITIAL.start_time.length === 5 ? INITIAL.start_time : INITIAL.start_time.slice(0,8);
+    if (INITIAL.end_date)   endDate.value   = INITIAL.end_date;
+    if (INITIAL.end_time)   endTime.value   = INITIAL.end_time.length === 5 ? INITIAL.end_time : INITIAL.end_time.slice(0,8);
+
+    recomputeDuration();
+    if (INITIAL.duration_hours !== "" && INITIAL.duration_hours != null) {
+      durHours.value = Number(INITIAL.duration_hours).toFixed(2);
+    }
+    if (INITIAL.loss !== "" && INITIAL.loss != null) {
+      totalLoss.value = String(parseInt(INITIAL.loss, 10));
+    } else {
+      updateTotalLoss();
+    }
+
+    // Reason + counter
+    if (INITIAL.reason) reasonEl.value = INITIAL.reason;
+    updateReasonCount();
+  });
+
+  // Listeners
+  [startDate, startTime, endDate, endTime].forEach(el => {
+    el.addEventListener("change", recomputeDuration);
+    el.addEventListener("input",  recomputeDuration);
+  });
+  bomQtyInput.addEventListener("input", updateLossPerHr);
+  bomBctInput.addEventListener("input", updateLossPerHr);
+
+  document.getElementById("downtimeForm").addEventListener("submit", () => {
+    if (typeof recomputeDuration === "function") recomputeDuration();
+    if (typeof updateLossPerHr === "function")  updateLossPerHr();
+  });
+</script>
+{% endblock maincontent %}

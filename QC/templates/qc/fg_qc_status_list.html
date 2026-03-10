@@ -1,0 +1,162 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}FG Product QC Status – List{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+    <div>
+      <h1 class="text-xl font-semibold text-slate-800">FG Product QC Status</h1>
+      <p class="text-sm text-slate-500">
+        Summary of Approved / Off Spec / Under Analysis quantities product-wise.
+      </p>
+    </div>
+
+
+    <!-- Add Entry button like Vehicle page -->
+     {% if perms.QC.add_fgproductqcstatus %}
+    <a href="{% url 'qc:fg_qc_status_create' %}"
+       class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md flex items-center justify-center">
+      <i class="fa-solid fa-square-plus text-lg"></i>
+    </a>
+    {% endif %}
+  </div>
+
+  {% if messages %}
+  <div class="messages-container">
+    {% for message in messages %}
+    <div class="message-box {{ message.tags }}" role="alert">
+      <span>
+        {% if 'success' in message.tags %}<i class="fa-solid fa-check-circle"></i>
+        {% elif 'error' in message.tags %}<i class="fa-solid fa-times-circle"></i>
+        {% elif 'warning' in message.tags %}<i class="fa-solid fa-exclamation-triangle"></i>
+        {% else %}<i class="fa-solid fa-info-circle"></i>{% endif %}
+        {{ message }}
+      </span>
+      <button type="button" class="close-btn" onclick="this.parentElement.remove()">&times;</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Filters (styled like Vehicle Records – filter + clear + excel inline) -->
+  <form method="get"
+        class="mb-4 bg-white border border-slate-200 rounded-lg shadow-sm px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-end">
+    <!-- Product dropdown -->
+    <div class="flex-1">
+      <label for="product_filter" class="block text-xs font-medium text-slate-600 mb-1">Product</label>
+      <select id="product_filter" name="product"
+              class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        <option value="">All Products</option>
+        {% for p in products %}
+          <option value="{{ p }}" {% if selected_product == p %}selected{% endif %}>
+            {{ p }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Buttons: filter, clear, excel -->
+    <div class="flex items-center space-x-2 mt-1 sm:mt-0">
+      <!-- Filter -->
+      <button type="submit"
+              class="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition duration-300 flex items-center justify-center"
+              title="Apply Filter">
+        <i class="fa-solid fa-filter"></i>
+      </button>
+
+      <!-- Clear filter -->
+      <a href="{% url 'qc:fg_qc_status_list' %}"
+         class="bg-gray-400 text-white px-3 py-2 rounded-lg hover:bg-gray-500 transition duration-300 flex items-center justify-center"
+         title="Clear Filter">
+        <i class="fa-solid fa-eraser"></i>
+      </a>
+
+      <!-- Excel export (keeps current filter) -->
+      <a href="{% url 'qc:fg_qc_status_export' %}?product={{ selected_product|urlencode }}"
+         class="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition duration-300 flex items-center justify-center"
+         title="Download Excel">
+        <i class="fa-solid fa-file-excel"></i>
+      </a>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Sr No</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Product</th>
+          <th class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Approved Qty</th>
+          <th class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Off Spec Qty</th>
+          <th class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Under Analysis</th>
+          <th class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Total Qty</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Remark</th>
+          {% if perms.QC.change_fgproductqcstatus or perms.QC.delete_fgproductqcstatus %}
+          <th class="px-3 py-2 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% if statuses %}
+          {% for row in statuses %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-3 py-2 text-slate-500">{{ forloop.counter }}</td>
+            <td class="px-3 py-2 text-slate-800">{{ row.date|date:"d-m-Y" }}</td>
+            <td class="px-3 py-2 text-slate-800">{{ row.product }}</td>
+            <td class="px-3 py-2 text-right tabular-nums">{{ row.approved_qty }}</td>
+            <td class="px-3 py-2 text-right tabular-nums">{{ row.off_spec_qty }}</td>
+            <td class="px-3 py-2 text-right tabular-nums">{{ row.under_analysis }}</td>
+            <td class="px-3 py-2 text-right font-semibold text-slate-900 tabular-nums">{{ row.total_qty }}</td>
+            <td class="px-3 py-2 text-slate-700 max-w-xs">
+              <span class="line-clamp-2">{{ row.remark|default:"—" }}</span>
+            </td>
+            <!-- Actions: edit + delete -->
+             {% if perms.QC.change_fgproductqcstatus or perms.QC.delete_fgproductqcstatus %}
+            <td class="px-3 py-2 text-center whitespace-nowrap">
+              <div class="inline-flex items-center gap-1">
+                <!-- Edit -->
+                 {% if perms.QC.change_fgproductqcstatus %}
+                <a href="{% url 'qc:fg_qc_status_update' row.pk %}"
+                   class="inline-flex items-center px-2 py-2 text-[11px] md:text-xs rounded bg-amber-500 text-white hover:bg-amber-600">
+                  <i class="fa fa-edit"></i>
+                </a>
+                {% endif %}
+                <!-- Delete -->
+                 {% if perms.QC.delete_fgproductqcstatus %}
+                <form method="post"
+                      action="{% url 'qc:fg_qc_status_delete' row.pk %}"
+                      class="inline"
+                      onsubmit="return confirm('Delete this entry for {{ row.product }} on {{ row.date|date:'d-m-Y' }}?');">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="inline-flex items-center px-2 py-2 text-[11px] md:text-xs rounded bg-rose-500 text-white hover:bg-rose-600">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="9" class="px-4 py-6 text-center text-sm text-slate-500">
+              No records found.
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+</style>
+{% endblock maincontent %}

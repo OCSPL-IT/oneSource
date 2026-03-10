@@ -1,0 +1,132 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+{% block head_extra %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+{% endblock %}
+
+<div class="p-4 md:p-6 bg-gray-50 min-h-screen">
+  <div class="bg-white rounded-lg shadow-lg p-6 md:p-8 border border-gray-200">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 border-b border-gray-200 pb-5">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">Daily Check Details</h1>
+        <p class="mt-1 text-sm text-gray-500">Transaction #{{ report.transaction_number }}</p>
+      </div>
+      <div class="mt-4 md:mt-0 flex space-x-3">
+        <a href="{% url 'daily_checks:daily_block_list' %}" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-white text-gray-700 border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors">
+          <i class="bi bi-arrow-left mr-2"></i>Back to List
+        </a>
+        {% if perms.daily_block.change_dailycheckheader %}
+        <a href="{% url 'daily_checks:entry_edit' pk=report.pk %}" class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition-colors">
+          <i class="bi bi-pencil-square mr-2"></i>Edit
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Report Info -->
+    <div class="mb-8">
+      <dl class="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-3">
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Block</dt>
+          <dd class="mt-1 text-sm text-gray-900">{{ report.block.display_name }}</dd>
+        </div>
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Report Date & Time</dt>
+          <dd class="mt-1 text-sm text-gray-900">{{ report.report_dt|date:"d M Y, P" }}</dd>
+        </div>
+        <div class="sm:col-span-1">
+          <dt class="text-sm font-medium text-gray-500">Prepared By</dt>
+          <dd class="mt-1 text-sm text-gray-900">{{ report.prepared_by.get_full_name|default:report.prepared_by.username }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Output Rows Section -->
+    <div class="space-y-8">
+      <h2 class="text-lg font-semibold text-gray-900">Output Records</h2>
+      {% for output_row in output_rows %}
+        <div class="border border-gray-200 rounded-lg">
+          <!-- Output Row Details -->
+          <div class="bg-gray-50 p-4 border-b border-gray-200">
+            <h3 class="font-semibold text-gray-800">Stage: {{ output_row.out_stage }}</h3>
+            <dl class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-sm">
+              <div><dt class="font-medium text-gray-500">Product</dt><dd class="text-gray-900">{{ output_row.out_item_id }}</dd></div>
+              <div><dt class="font-medium text-gray-500">Equipment</dt><dd class="text-gray-900">{{ output_row.out_equip }}</dd></div>
+              <div><dt class="font-medium text-gray-500">Batch No</dt><dd class="text-gray-900">{{ output_row.out_bno }}</dd></div>
+              <div><dt class="font-medium text-gray-500">Output Qty</dt><dd class="text-gray-900">{{ output_row.out_qty }}</dd></div>
+              <div><dt class="font-medium text-gray-500">Batch Size</dt><dd class="text-gray-900">{{ output_row.batch_size }}</dd></div>
+              <div><dt class="font-medium text-gray-500">Start Time</dt><dd class="text-gray-900">{{ output_row.out_b_starttime|date:"d-m-Y H:i" }}</dd></div>
+              <div><dt class="font-medium text-gray-500">End Time</dt><dd class="text-gray-900">{{ output_row.out_b_endtime|date:"d-m-Y H:i" }}</dd></div>
+              <div class="col-span-1"><dt class="font-medium text-gray-500">Remarks</dt><dd class="text-gray-900">{{ output_row.out_remarks|default:"N/A" }}</dd></div>
+            </dl>
+          </div>
+          
+          <div class="p-4 space-y-6">
+            <!-- BOM Inputs -->
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700 mb-2">Input Items</h4>
+              <div class="overflow-x-auto rounded border">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-gray-100"><tr class="border-b"><th class="p-2 text-left">Category</th><th class="p-2 text-left">Material</th><th class="p-2 text-right">Actual Qty</th><th class="p-2 text-right">Std Qty (KG)</th><th class="p-2 text-right">Litre</th><th class="p-2 text-right">Density</th><th class="p-2 text-right">Ratio</th></tr></thead>
+                  <tbody class="divide-y">
+                    {% for item in output_row.bom_inputs.all %}<tr><td class="p-2">{{ item.material_category }}</td><td class="p-2">{{ item.material_name }}</td><td class="p-2 text-right">{{ item.actual_qty }}</td><td class="p-2 text-right">{{ item.quantity }}</td><td class="p-2 text-right">{{ item.litre }}</td><td class="p-2 text-right">{{ item.density }}</td><td class="p-2 text-right">{{ item.ratio }}</td></tr>{% empty %}<tr><td colspan="7" class="p-4 text-center text-gray-500">No input items recorded.</td></tr>{% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- BOM Outputs -->
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700 mb-2">Output Items</h4>
+              <div class="overflow-x-auto rounded border">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-gray-100"><tr class="border-b"><th class="p-2 text-left">Category</th><th class="p-2 text-left">Material</th><th class="p-2 text-right">Actual Qty</th><th class="p-2 text-right">Std Qty (KG)</th><th class="p-2 text-right">Litre</th><th class="p-2 text-right">Density</th><th class="p-2 text-right">Ratio</th></tr></thead>
+                  <tbody class="divide-y">
+                    {% for item in output_row.bom_outputs.all %}<tr><td class="p-2">{{ item.material_category }}</td><td class="p-2">{{ item.material_name }}</td><td class="p-2 text-right">{{ item.actual_qty }}</td><td class="p-2 text-right">{{ item.quantity }}</td><td class="p-2 text-right">{{ item.litre }}</td><td class="p-2 text-right">{{ item.density }}</td><td class="p-2 text-right">{{ item.ratio }}</td></tr>{% empty %}<tr><td colspan="7" class="p-4 text-center text-gray-500">No output items recorded.</td></tr>{% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- BOM Waste -->
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700 mb-2">Waste Generation</h4>
+              <div class="overflow-x-auto rounded border">
+                <table class="min-w-full text-sm">
+                   <thead class="bg-gray-100"><tr class="border-b"><th class="p-2 text-left">Type</th><th class="p-2 text-left">Name</th><th class="p-2 text-right">Actual Qty</th><th class="p-2 text-right">Std Qty (KG)</th><th class="p-2 text-right">Litre</th><th class="p-2 text-right">Density</th><th class="p-2 text-right">Ratio</th></tr></thead>
+                   <tbody class="divide-y">
+                     {% for item in output_row.bom_waste.all %}<tr><td class="p-2">{{ item.waste_type }}</td><td class="p-2">{{ item.waste_name }}</td><td class="p-2 text-right">{{ item.actual_qty }}</td><td class="p-2 text-right">{{ item.quantity }}</td><td class="p-2 text-right">{{ item.litre }}</td><td class="p-2 text-right">{{ item.density }}</td><td class="p-2 text-right">{{ item.ratio }}</td></tr>{% empty %}<tr><td colspan="7" class="p-4 text-center text-gray-500">No waste items recorded.</td></tr>{% endfor %}
+                   </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- BOM Equipment -->
+            <div>
+              <h4 class="text-sm font-semibold text-gray-700 mb-2">Equipment Used</h4>
+              <div class="overflow-x-auto rounded border">
+                <table class="min-w-full text-sm">
+                   <thead class="bg-gray-100"><tr class="border-b"><th class="p-2 text-left">ID</th><th class="p-2 text-left">Type</th><th class="p-2 text-left">Capacity</th><th class="p-2 text-right">Start</th><th class="p-2 text-right">End</th><th class="p-2 text-right">Actual BCT</th></tr></thead>
+                   <tbody class="divide-y">
+                     {% for item in output_row.bom_equipment.all %}<tr><td class="p-2">{{ item.equipment_id }}</td><td class="p-2">{{ item.equipment_type }}</td><td class="p-2">{{ item.capacity }}</td><td class="p-2 text-right">{{ item.starttime|date:"H:i" }}</td><td class="p-2 text-right">{{ item.endtime|date:"H:i" }}</td><td class="p-2 text-right">{{ item.actual_bct }}</td></tr>{% empty %}<tr><td colspan="6" class="p-4 text-center text-gray-500">No equipment recorded.</td></tr>{% endfor %}
+                   </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      {% empty %}
+        <div class="text-center py-12 text-gray-500">
+          <p>No output records found for this daily check.</p>
+        </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+{% endblock maincontent %}

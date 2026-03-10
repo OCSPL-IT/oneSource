@@ -1,0 +1,74 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" x-data="appState()" x-init="init()" class="h-full">
+  <head>
+    <title>oneSource | {% block title %}Dashboard{% endblock %}</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <link rel="stylesheet" href="{% static 'main/css/fontawesome.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+      [x-cloak]{display:none!important}
+      body{font-family:'Inter',sans-serif}
+      .scroll-area::-webkit-scrollbar{width:8px;height:8px}
+      .scroll-area::-webkit-scrollbar-track{background:#f1f5f9}
+      .scroll-area::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+      .scroll-area::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+    </style>
+  </head>
+
+  <body class="h-screen overflow-hidden bg-slate-50">
+    <!-- App shell: adds left padding when sidebar is open on lg+ -->
+    <div id="app-shell"
+         class="h-screen w-full lg:flex lg:overflow-hidden"
+         :class="isSidebarOpen ? 'lg:pl-64' : 'lg:pl-0'">
+
+      {% include 'main/sidebar.html' %}
+
+      <!-- Right panel -->
+      <div class="flex flex-col flex-1 min-w-0 h-screen overflow-hidden">
+        <div class="shrink-0">
+          {% include 'main/navbar.html' %}
+        </div>
+
+        <main class="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden scroll-area">
+          {% block maincontent %}{% include 'main/modules.html' %}{% endblock %}
+        </main>
+
+        <footer class="shrink-0 border-t border-slate-200 bg-white">
+          <div class="max-w-screen-2xl mx-auto h-14 px-4 sm:px-6 lg:px-8
+                      flex items-center justify-center text-sm text-slate-500">
+            © {% now "Y" %} OC Specialities Pvt Ltd · All Rights Reserved | Chemistry can be REDEFINED
+          </div>
+        </footer>
+      </div>
+
+      <!-- Mobile backdrop -->
+      <div x-show="isSidebarOpen"
+           @click="isSidebarOpen=false"
+           x-transition.opacity
+           class="fixed inset-0 z-20 bg-black/40 lg:hidden">
+      </div>
+    </div>
+
+    <script src="{% static 'main/js/fontawesome.js' %}"></script>
+
+    <!-- Alpine global state -->
+    <script>
+      document.addEventListener('alpine:init', () => {
+        Alpine.data('appState', () => ({
+          isSidebarOpen: false,
+          init(){
+            const saved = localStorage.getItem('os:isSidebarOpen');
+            const isLg  = window.matchMedia('(min-width:1024px)').matches;
+            // default: open on desktop, closed on mobile (unless user saved a choice)
+            this.isSidebarOpen = saved === null ? isLg : (saved === '1');
+            this.$watch('isSidebarOpen', v => localStorage.setItem('os:isSidebarOpen', v ? '1' : '0'));
+          }
+        }));
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,332 @@
+{# templates/store/inv_ageing_drill_report.html #}
+{% extends "main/index.html" %}
+{% block maincontent %}
+
+<style>
+  /* Standard ERP Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; border: 2px solid #f1f5f9; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  /* Tabular Numbers for financial data alignment */
+  .num-font { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
+  
+  /* Animations */
+  .fade-in { animation: fadeIn 0.2s ease-in-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 0.8s linear infinite; }
+
+  /* Sticky Header Styles */
+  .sticky-header th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: #f8fafc; /* bg-slate-50 */
+    border-bottom: 1px solid #e2e8f0; /* border-slate-200 */
+  }
+</style>
+
+<div class="max-w-[95%] mx-auto py-6 px-4 font-sans text-slate-800">
+
+  <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+    <div>
+      <h1 class="text-xl font-bold text-slate-900 tracking-tight">Location Wise Stock</h1>
+
+      <div class="mt-1 flex items-center flex-wrap gap-2 text-sm text-slate-500">
+        <span class="inline-flex items-center gap-1.5 py-0.5 px-2 rounded-md font-medium bg-blue-50 text-blue-700 border border-blue-100 text-xs uppercase tracking-wide">
+          {{ company_name }}
+        </span>
+
+        <span class="text-slate-300">|</span>
+        <span class="font-medium">{% if mode == "summary" %}Summary{% else %}Detail{% endif %}</span>
+
+        {% if last_synced_at %}
+          <span class="text-slate-300">|</span>
+          <span class="text-xs">
+            Synced: <span class="font-semibold text-slate-700">{{ last_synced_at }}</span>
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <form method="post" action="{% url 'inv_ageing_sync' %}" class="flex items-center gap-2">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ current_full_path }}" />
+      <button type="submit" id="syncBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 shadow-sm transition-colors">
+        <svg id="syncIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M5 19a9 9 0 0114-7M19 5a9 9 0 01-14 7"/>
+        </svg>
+        <span id="syncText">Sync Data</span>
+      </button>
+    </form>
+  </div>
+
+  {% if mode == "summary" %}
+  <div class="bg-white rounded-lg border border-slate-200 shadow-sm mb-4">
+    <div class="px-4 py-2 border-b border-slate-100 bg-slate-50/50 rounded-t-lg flex justify-between items-center cursor-pointer" onclick="document.getElementById('filterForm').classList.toggle('hidden')">
+      <h3 class="text-xs font-bold uppercase text-slate-500 tracking-wider flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+        Filter Report
+      </h3>
+      <span class="text-slate-400 text-xs">Click to toggle</span>
+    </div>
+
+    <form method="get" id="filterForm" class="p-4 block">
+      <input type="hidden" name="mode" value="summary" />
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+        <div class="md:col-span-3 space-y-1">
+          <label class="text-[10px] font-bold uppercase text-slate-400">Item Name</label>
+          <input type="text" name="item_q" value="{{ item_q }}" class="w-full px-3 py-2 text-sm rounded border border-slate-300 focus:ring-1 focus:ring-blue-500" placeholder="Search..." />
+        </div>
+        <div class="md:col-span-2 space-y-1">
+          <label class="text-[10px] font-bold uppercase text-slate-400">Item Code</label>
+          <input type="text" name="item_code_q" value="{{ item_code_q }}" class="w-full px-3 py-2 text-sm rounded border border-slate-300 focus:ring-1 focus:ring-blue-500" placeholder="Code..." />
+        </div>
+        <div class="md:col-span-3 space-y-1">
+          <label class="text-[10px] font-bold uppercase text-slate-400">Location</label>
+          <select name="txn_sel" class="w-full px-3 py-2 text-sm rounded border border-slate-300 bg-white">
+            <option value="">All Locations</option>
+            {% for loc in txn_locations %}
+              <option value="{{ loc }}" {% if txn_sel == loc %}selected{% endif %}>{{ loc }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="md:col-span-4 flex gap-2">
+          <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-slate-800 hover:bg-slate-700 rounded shadow-sm">Apply</button>
+          <a href="{% url 'inv_ageing_drill_report' %}" class="px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-300 hover:bg-slate-50 rounded shadow-sm">Reset</a>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if mode == "summary" %}
+    <div class="bg-white rounded border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-300px)]">
+      
+      <div class="px-4 py-2 border-b border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+        <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Inventory Hierarchy</span>
+        <button type="button" onclick="toggleAll(true)" class="text-xs text-blue-600 hover:text-blue-800 font-medium">Expand All</button>
+      </div>
+
+      <div class="overflow-auto custom-scrollbar flex-1 relative">
+        <table class="w-full text-sm text-left border-collapse table-fixed">
+          <thead class="sticky-header">
+            <tr>
+              <th class="w-[45%] px-4 py-3 font-semibold text-slate-500 uppercase text-xs tracking-wider">Transaction Location / Origin</th>
+              <th class="w-[20%] px-4 py-3 text-right font-semibold text-slate-500 uppercase text-xs tracking-wider">Closing Qty</th>
+              <th class="w-[20%] px-4 py-3 text-right font-semibold text-slate-500 uppercase text-xs tracking-wider">Closing Value</th>
+              <th class="w-[15%] px-4 py-3 text-center font-semibold text-slate-500 uppercase text-xs tracking-wider">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100 bg-white">
+            {% for t in txn_list %}
+              <tr class="group hover:bg-blue-50/50 transition-colors border-b border-slate-100">
+                <td class="px-4 py-3 truncate">
+                  <button type="button" class="flex items-center gap-3 w-full text-left focus:outline-none" onclick="toggleRow('{{ forloop.counter0 }}')">
+                    <span id="chev-{{ forloop.counter0 }}" class="text-slate-400 transition-transform duration-200">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </span>
+                    <div class="font-bold text-slate-800 group-hover:text-blue-700 truncate">
+                      {{ t.txn_location }}
+                      {% if t.children|length > 0 %}
+                        <span class="ml-2 px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-500 border border-slate-200 rounded font-normal">{{ t.children|length }}</span>
+                      {% endif %}
+                    </div>
+                  </button>
+                </td>
+
+                <td class="px-4 py-3 text-right num-font font-medium text-slate-700">
+                  <span class="indnum" data-num="{{ t.closing_qty|floatformat:3 }}" data-dec="3">{{ t.closing_qty|floatformat:3 }}</span>
+                </td>
+
+                <td class="px-4 py-3 text-right num-font font-bold text-slate-800">
+                  <span class="indnum" data-num="{{ t.closing_value|floatformat:2 }}" data-dec="2">{{ t.closing_value|floatformat:2 }}</span>
+                </td>
+
+                <td class="px-4 py-3 text-center">
+                  <a href="{% url 'inv_ageing_drill_report' %}?export=1&txn_location={{ t.txn_location|urlencode }}&item_q={{ item_q|urlencode }}&item_code_q={{ item_code_q|urlencode }}&txn_sel={{ txn_sel|urlencode }}"
+                     class="text-xs font-medium text-emerald-600 hover:text-emerald-800 hover:underline flex justify-center items-center gap-1"
+                     title="Export Excel">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M7 18h10a2 2 0 002-2V8a2 2 0 00-2-2h-3l-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    Excel
+                  </a>
+                </td>
+              </tr>
+
+              <tr id="childwrap-{{ forloop.counter0 }}" class="hidden bg-slate-50/40 shadow-inner">
+                <td colspan="4" class="p-0">
+                  <div class="fade-in">
+                    <table class="w-full text-sm text-left border-collapse table-fixed">
+                      <tbody class="divide-y divide-slate-100">
+                        {% for c in t.children %}
+                          <tr class="hover:bg-blue-50 transition-colors">
+                            <td class="w-[45%] px-4 py-2 text-slate-600 pl-12 flex items-center gap-2 truncate">
+                              <span class="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span>
+                              <span class="truncate" title="{{ c.from_location }}">{{ c.from_location }}</span>
+                            </td>
+
+                            <td class="w-[20%] px-4 py-2 text-right num-font text-slate-500">
+                              <span class="indnum" data-num="{{ c.closing_qty|floatformat:3 }}" data-dec="3">{{ c.closing_qty|floatformat:3 }}</span>
+                            </td>
+
+                            <td class="w-[20%] px-4 py-2 text-right num-font font-medium text-slate-600">
+                              <span class="indnum" data-num="{{ c.closing_value|floatformat:2 }}" data-dec="2">{{ c.closing_value|floatformat:2 }}</span>
+                            </td>
+
+                            <td class="w-[15%] px-4 py-2 text-center">
+                              <a href="{% url 'inv_ageing_drill_report' %}?mode=detail&item_q={{ item_q|urlencode }}&item_code_q={{ item_code_q|urlencode }}&txn_sel={{ txn_sel|urlencode }}&txn_location={{ t.txn_location|urlencode }}&from_location={{ c.from_location|urlencode }}"
+                                 class="text-[10px] px-2 py-1 rounded border border-slate-300 bg-white text-slate-600 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 transition-all shadow-sm">
+                                View Batch
+                              </a>
+                            </td>
+                          </tr>
+                        {% empty %}
+                          <tr><td colspan="4" class="px-12 py-3 text-slate-400 italic text-xs">No origin data available</td></tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="px-6 py-12 text-center text-slate-500">
+                  <p class="font-medium">No inventory data found</p>
+                  <p class="text-xs">Adjust filters to see results.</p>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+
+    <div class="bg-white rounded border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-200px)]">
+      <div class="px-4 py-3 border-b border-slate-200 bg-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <a href="{% url 'inv_ageing_drill_report' %}{{ back_url }}" class="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
+             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          </a>
+          <div>
+            <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+              {{ txn_location }} <span class="text-slate-300">/</span> <span class="text-blue-600">{{ from_location }}</span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500">Rows: <strong>{{ total_rows }}</strong></span>
+            <div class="h-4 w-px bg-slate-200"></div>
+            <a href="{% url 'inv_ageing_drill_report' %}?export=1&txn_location={{ txn_location|urlencode }}&from_location={{ from_location|urlencode }}&item_q={{ item_q|urlencode }}&item_code_q={{ item_code_q|urlencode }}&txn_sel={{ txn_sel|urlencode }}"
+               class="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 text-xs font-semibold transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M7 18h10a2 2 0 002-2V8a2 2 0 00-2-2h-3l-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              Export
+            </a>
+        </div>
+      </div>
+
+      <div class="overflow-auto custom-scrollbar flex-1">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
+            <tr class="text-slate-500 font-bold uppercase tracking-wider">
+              <th class="px-4 py-3">Item Name / Code</th>
+              <th class="px-4 py-3">Batch Info</th>
+              <th class="px-4 py-3">Origin</th>
+              <th class="px-4 py-3">Bin Location</th>
+              <th class="px-4 py-3 text-right">Closing Qty</th>
+              <th class="px-4 py-3 text-right">Closing Val</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 bg-white">
+            {% for r in rows %}
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-4 py-2 w-[30%]">
+                  <div class="font-semibold text-slate-800">{{ r.item_name }}</div>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    <span class="bg-slate-100 text-slate-600 px-1 py-0.5 rounded border border-slate-200 font-mono text-[10px]">{{ r.item_code }}</span>
+                    <span class="text-slate-400 text-[10px]">{{ r.unit }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-2 whitespace-nowrap">
+                  <div class="font-mono text-slate-700">{{ r.batch_no }}</div>
+                  <div class="text-slate-400 text-[10px]">Mfg: {{ r.mfg_date }}</div>
+                </td>
+                <td class="px-4 py-2 text-slate-600">{{ r.from_location }}</td>
+                <td class="px-4 py-2 text-slate-600">
+                    {% if r.stock_location %}{{ r.stock_location }}{% else %}-{% endif %}
+                </td>
+                <td class="px-4 py-2 text-right num-font font-medium text-slate-700">
+                  <span class="indnum" data-num="{{ r.closing_qty|floatformat:3 }}" data-dec="3">{{ r.closing_qty|floatformat:3 }}</span>
+                </td>
+                <td class="px-4 py-2 text-right num-font font-bold text-slate-800">
+                  <span class="indnum" data-num="{{ r.closing_value|floatformat:2 }}" data-dec="2">{{ r.closing_value|floatformat:2 }}</span>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="6" class="px-4 py-12 text-center text-slate-500">No data found.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="px-4 py-2 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+        <span class="text-[10px] text-slate-500">Page {{ page }} of {{ total_pages }}</span>
+        <div class="flex gap-1">
+          {% if page > 1 %}
+            <a class="px-2 py-1 bg-white border border-slate-300 rounded text-xs hover:bg-slate-50"
+               href="?mode=detail&item_q={{ item_q|urlencode }}&item_code_q={{ item_code_q|urlencode }}&txn_sel={{ txn_sel|urlencode }}&txn_location={{ txn_location|urlencode }}&from_location={{ from_location|urlencode }}&page={{ page|add:'-1' }}&page_size={{ page_size }}">Prev</a>
+          {% endif %}
+          {% if page < total_pages %}
+            <a class="px-2 py-1 bg-white border border-slate-300 rounded text-xs hover:bg-slate-50"
+               href="?mode=detail&item_q={{ item_q|urlencode }}&item_code_q={{ item_code_q|urlencode }}&txn_sel={{ txn_sel|urlencode }}&txn_location={{ txn_location|urlencode }}&from_location={{ from_location|urlencode }}&page={{ page|add:'1' }}&page_size={{ page_size }}">Next</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  function toggleRow(idx){
+    const wrap = document.getElementById("childwrap-" + idx);
+    const chev = document.getElementById("chev-" + idx);
+    if(!wrap) return;
+
+    const isHidden = wrap.classList.contains("hidden");
+    wrap.classList.toggle("hidden");
+    if(chev) chev.style.transform = isHidden ? "rotate(90deg)" : "rotate(0deg)";
+  }
+
+  function toggleAll(expand){
+    document.querySelectorAll("[id^='childwrap-']").forEach(w => w.classList.remove("hidden"));
+    document.querySelectorAll("[id^='chev-']").forEach(c => c.style.transform = "rotate(90deg)");
+  }
+
+  // Indian format formatter
+  (function(){
+    const fmt = (val, dec) => new Intl.NumberFormat('en-IN', { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(val);
+
+    document.querySelectorAll(".indnum").forEach(el => {
+      const raw = (el.getAttribute("data-num") || "").trim();
+      const dec = parseInt(el.getAttribute("data-dec") || "2", 10);
+      const n = parseFloat(raw);
+      if (isFinite(n)) el.textContent = fmt(n, dec);
+    });
+
+    const btn = document.getElementById("syncBtn");
+    if(btn){
+        btn.addEventListener("click", () => {
+            btn.classList.add("opacity-70", "cursor-wait");
+            document.getElementById("syncText").textContent = "Syncing...";
+            document.getElementById("syncIcon").classList.add("spin");
+        });
+    }
+  })();
+</script>
+
+{% endblock %}

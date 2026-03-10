@@ -1,0 +1,472 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* --- Theme Colors --- */
+    --primary: #0f172a;       
+    --primary-light: #334155; 
+    --text-main: #1e293b;     
+    --text-muted: #64748b;    
+    
+    --bg-app: #f1f5f9;        
+    --bg-surface: #ffffff;
+    --border-color: #e2e8f0;  
+    --border-focus: #6366f1;  
+
+    /* --- Accents --- */
+    --accent: #4f46e5;        
+    --accent-hover: #4338ca;  
+    --accent-subtle: #e0e7ff; 
+
+    /* --- Excel Green --- */
+    --excel-bg: #f0fdf4;      
+    --excel-text: #166534;    
+    --excel-border: #bbf7d0;  
+    --excel-hover: #16a34a;   
+
+    /* --- Column Colors --- */
+    --bg-plan: #f0f9ff; --text-plan: #0369a1;
+    --bg-est: #f5f3ff;  --text-est: #7c3aed;
+    --bg-act: #fff7ed;  --text-act: #c2410c;
+    --bg-rate: #f0fdf4; --text-rate: #15803d; --border-rate: #dcfce7;
+  }
+
+  /* --- Global Reset --- */
+  * { box-sizing: border-box; }
+  
+  .erp-container {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    color: var(--text-main);
+    background-color: var(--bg-app);
+    /* Reduced padding to fit better with sidebar */
+    padding: 1rem; 
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevent double scrollbars */
+  }
+
+  /* --- Main Card --- */
+  .section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: 8px; /* Slightly tighter radius */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Fill available height */
+    overflow: hidden;
+  }
+
+  /* --- Header (Titlebar) --- */
+  .titlebar {
+    padding: 0.75rem 1rem; /* Compact header */
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  .title-text { font-size: 1.1rem; font-weight: 700; color: var(--primary); letter-spacing: -0.01em; }
+  .subtitle-text { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; margin-top: 1px; }
+
+  .header-actions { display: flex; align-items: center; gap: 0.75rem; }
+
+  .date-badge {
+    background: #fff; border: 1px solid var(--border-color); color: var(--text-muted);
+    padding: 0.35rem 0.65rem; border-radius: 5px; font-size: 0.75rem; font-weight: 600;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+
+  .btn-excel {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    background-color: var(--excel-bg); color: var(--excel-text);
+    border: 1px solid var(--excel-border);
+    padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600;
+    border-radius: 5px; text-decoration: none; transition: all 0.2s ease;
+  }
+  .btn-excel:hover {
+    background-color: var(--excel-hover); color: #fff; border-color: var(--excel-hover);
+  }
+  .btn-excel svg { width: 14px; height: 14px; }
+
+  /* --- Controls / Filter Bar --- */
+  .controls {
+    padding: 0.75rem 1rem; /* Compact controls */
+    background: #fdfdfd;
+    border-bottom: 1px solid var(--border-color);
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 0.75rem; /* Tighter gap */
+    align-items: end;
+    flex-shrink: 0;
+  }
+  .controls label {
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 0.25rem; display: block;
+  }
+  .input-base, .controls input[type="date"], .controls select, .dd-btn {
+    width: 100%; font-family: inherit; font-size: 0.8rem;
+    height: 2.1rem; /* Shorter inputs */
+    padding: 0 0.5rem;
+    border: 1px solid var(--border-color); border-radius: 5px;
+    background: #fff; color: var(--primary); 
+    display: flex; align-items: center;
+  }
+  .controls input:focus, .controls select:focus, .dd-btn:focus {
+    outline: none; border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+  }
+
+  /* --- Buttons --- */
+  .btn {
+    display: inline-flex; justify-content: center; align-items: center;
+    height: 2.1rem; padding: 0 1rem; font-size: 0.8rem; font-weight: 500;
+    border-radius: 5px; cursor: pointer; text-decoration: none; border: 1px solid transparent;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: #fff; color: var(--text-muted); border-color: var(--border-color); }
+  .btn-ghost:hover { background: #f8fafc; color: var(--primary); }
+  .btn-link { color: var(--accent); background: none; border: none; padding: 0; font-size: 0.7rem; cursor: pointer; }
+
+  /* --- Dropdown --- */
+  .dd-wrapper { position: relative; }
+  .dd-btn { justify-content: space-between; cursor: pointer; }
+  .dd-panel {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 100;
+    background: #fff; border: 1px solid var(--border-color); border-radius: 6px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    display: none; flex-direction: column; max-height: 250px;
+  }
+  .dd-actions { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; background: #f8fafc; }
+  .dd-content { overflow-y: auto; padding: 0.4rem; display: grid; grid-template-columns: 1fr; gap: 1px; }
+  .dd-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem; font-size: 0.75rem; cursor: pointer; border-radius: 3px; }
+  .dd-item:hover { background: #f1f5f9; }
+  
+  .chipbar { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.4rem; max-height: 38px; overflow: hidden; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.2rem;
+    background: var(--accent-subtle); color: var(--accent-hover);
+    padding: 0.1rem 0.5rem; border-radius: 99px;
+    font-size: 0.7rem; font-weight: 600; 
+  }
+  .chip button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.9rem; padding: 0; display:flex; }
+
+  /* --- Table Styles (Compact Mode) --- */
+  .table-wrap {
+    flex: 1; overflow: auto; position: relative;
+    /* Custom Scrollbar */
+    scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;
+  }
+  .table-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+  .table-wrap::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+
+  .erp-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.75rem; /* Smaller font */ }
+  
+  .erp-table th, .erp-table td {
+    /* Tighter cell padding */
+    padding: 0.4rem 0.6rem; 
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    white-space: nowrap;
+  }
+  .erp-table th:last-child, .erp-table td:last-child { border-right: none; }
+  
+  .erp-table thead th {
+    font-weight: 600; text-transform: uppercase; font-size: 0.65rem;
+    letter-spacing: 0.04em; color: var(--text-muted); background: #f8fafc;
+  }
+
+  /* Sticky Headers */
+  .sticky-top { position: sticky; top: 0; z-index: 10; background: #f8fafc; box-shadow: 0 1px 0 #e2e8f0; }
+  .sticky-left { position: sticky; left: 0; z-index: 20; background: #fff; border-right: 2px solid var(--border-color) !important; color: var(--primary); }
+  .sticky-right { position: sticky; right: 0; z-index: 20; background: #fff; border-left: 2px solid var(--border-color) !important; }
+  .sticky-corner { position: sticky; top: 0; left: 0; z-index: 30; background: #f8fafc; border-right: 2px solid var(--border-color) !important; box-shadow: 0 1px 0 #e2e8f0; }
+  .sticky-top-right { position: sticky; top: 0; right: 0; z-index: 30; background: #f8fafc; border-left: 2px solid var(--border-color) !important; box-shadow: 0 1px 0 #e2e8f0; }
+
+  /* Colors */
+  .bg-plan { background-color: var(--bg-plan); color: var(--text-plan); }
+  .bg-est  { background-color: var(--bg-est);  color: var(--text-est); }
+  .bg-act  { background-color: var(--bg-act);  color: var(--text-act); }
+  .bg-rate { background-color: var(--bg-rate); color: var(--text-rate); }
+  .rate-col { box-shadow: inset 3px 0 0 -1px var(--border-rate); border-right: 1px dashed var(--border-rate); }
+
+  .erp-table tbody tr:hover td:not(.sticky-left):not(.sticky-right) { background-color: #f1f5f9; }
+  .erp-table tbody tr:hover td.sticky-left, .erp-table tbody tr:hover td.sticky-right { background-color: #f8fafc; }
+
+  /* Sticky Footer */
+  .erp-table tfoot td {
+    border-top: 2px solid var(--primary-light);
+    color: var(--primary);
+    position: sticky; bottom: 0; z-index: 25;
+    background: #f1f5f9; 
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    font-family: 'Inter', monospace;
+    font-weight: 700;
+    padding-top: 0.6rem; padding-bottom: 0.6rem;
+  }
+  .erp-table tfoot td.sticky-left { left: 0; z-index: 35; background: #e2e8f0; border-right: 2px solid #cbd5e1 !important; }
+  .erp-table tfoot td.sticky-right { right: 0; z-index: 35; background: #f1f5f9; border-left: 2px solid #cbd5e1 !important; }
+
+  /* Utils */
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .w-fixed { width: 220px; min-width: 220px; max-width: 220px; text-overflow: ellipsis; overflow: hidden; }
+  .fw-bold { font-weight: 600; }
+  .muted-empty { color: var(--text-light); font-style: italic; }
+</style>
+
+<div class="erp-container">
+  <div class="section">
+
+    <div class="titlebar">
+      <div>
+        <div class="title-text">Dispatch Analysis</div>
+        <div class="subtitle-text">Plan vs Actual</div>
+      </div>
+      <div class="header-actions">
+        <div class="date-badge">
+          <span>📅</span> {{ from_date|date:"d M" }} &rarr; {{ to_date|date:"d M Y" }}
+        </div>
+        <a class="btn-excel" href="?{{ request.GET.urlencode }}&export=xlsx">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Export
+        </a>
+      </div>
+    </div>
+
+    <form method="get" class="controls" id="disp-filters">
+      <div style="grid-column: span 2;">
+        <label>View</label>
+        <select name="period">
+          <option value="MTD"    {% if period == "MTD" %}selected{% endif %}>MTD</option>
+          <option value="YTD"    {% if period == "YTD" %}selected{% endif %}>YTD</option>
+          <option value="DAILY"  {% if period == "DAILY" %}selected{% endif %}>Daily</option>
+          <option value="CUSTOM" {% if period == "CUSTOM" %}selected{% endif %}>Custom</option>
+        </select>
+      </div>
+
+      <div style="grid-column: span 2;">
+        <label>From</label>
+        <input type="date" name="from" value="{{ from_date|date:'Y-m-d' }}">
+      </div>
+
+      <div style="grid-column: span 2;">
+        <label>To</label>
+        <input type="date" name="to" value="{{ to_date|date:'Y-m-d' }}">
+      </div>
+
+      <div class="dd-wrapper" style="grid-column: span 4;">
+        <label>Products (FG)</label>
+        <button type="button" id="fg-dd-btn" class="dd-btn" aria-expanded="false">
+          <span class="text-truncate" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            {% if selected_fgs %}
+              <span style="color:var(--primary); font-weight:600;">{{ selected_fgs|length }}</span> selected
+            {% else %}
+              <span style="color:var(--text-light);">Select...</span>
+            {% endif %}
+          </span>
+          <span style="opacity:0.5; font-size:0.7rem;">▼</span>
+        </button>
+
+        <div id="fg-dd-panel" class="dd-panel">
+          <div class="dd-actions">
+            <button type="button" id="fg-select-all" class="btn-link">All</button>
+            <button type="button" id="fg-clear-all"  class="btn-link" style="color:#ef4444;">Clear</button>
+          </div>
+          <div class="dd-content">
+            {% if all_fg_list %}
+              {% for fg in all_fg_list %}
+                <label class="dd-item">
+                  <input type="checkbox" name="fg_name" value="{{ fg }}" {% if selected_fgs and fg in selected_fgs %}checked{% endif %}>
+                  <span>{{ fg }}</span>
+                </label>
+              {% empty %}
+                <div class="text-center muted-empty" style="padding:1rem;">No items</div>
+              {% endfor %}
+            {% elif fg_available %}
+              {% for fg in fg_available %}
+                <label class="dd-item">
+                  <input type="checkbox" name="fg_name" value="{{ fg }}" {% if selected_fgs and fg in selected_fgs %}checked{% endif %}>
+                  <span>{{ fg }}</span>
+                </label>
+              {% empty %}
+                <div class="text-center muted-empty" style="padding:1rem;">No items</div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+
+        {% if selected_fgs %}
+          <div class="chipbar" id="fg-chipbar">
+            {% for a in selected_fgs %}
+              <span class="chip" data-fg="{{ a|escapejs }}">{{ a }}<button type="button" data-remove="{{ a|escapejs }}">×</button></span>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+
+      <div style="grid-column: span 2; display:flex; gap:0.5rem; justify-content:flex-end;">
+        <a class="btn btn-ghost" href="{{ request.path }}">↺</a>
+        <button class="btn btn-primary" type="submit">Apply</button>
+      </div>
+    </form>
+
+    <div class="table-wrap">
+      <table class="erp-table">
+        <thead>
+          <tr>
+            <th class="sticky-corner w-fixed text-left" style="vertical-align: bottom;">Product / FG</th>
+            {% for dlabel in disp_grid.months %}
+              <th class="sticky-top text-center" colspan="{% if period == 'DAILY' %}4{% else %}7{% endif %}" style="border-left:2px solid var(--border-color); color:var(--primary);">{{ dlabel }}</th>
+            {% endfor %}
+            <th class="sticky-top-right text-center" style="vertical-align: bottom;">Stock</th>
+          </tr>
+          <tr>
+            <th class="sticky-corner text-left" style="top: 29px;">Alias / Alpha</th>
+            {% for _ in disp_grid.months %}
+              {% if period == "DAILY" %}
+                <th class="sticky-top bg-plan text-center" style="top:29px; border-left:2px solid var(--border-color);">Plan</th>
+                <th class="sticky-top bg-act  text-center" colspan="2" style="top:29px;">Actual</th>
+                <th class="sticky-top bg-rate text-center rate-col" style="top:29px;">Rate</th>
+              {% else %}
+                <th class="sticky-top bg-plan text-center" colspan="2" style="top:29px; border-left:2px solid var(--border-color);">Plan</th>
+                <th class="sticky-top bg-est  text-center" colspan="2" style="top:29px;">Est (MTD)</th>
+                <th class="sticky-top bg-act  text-center" colspan="2" style="top:29px;">Actual</th>
+                <th class="sticky-top bg-rate text-center rate-col" style="top:29px;">Rate</th>
+              {% endif %}
+            {% endfor %}
+            <th class="sticky-top-right text-center" style="top: 29px;">Qty</th>
+          </tr>
+          <tr>
+            <th class="sticky-corner" style="top: 58px; border-bottom: 2px solid var(--border-color);"></th>
+            {% for _ in disp_grid.months %}
+              {% if period == "DAILY" %}
+                <th class="sticky-top bg-plan text-center" style="top:58px; border-left:2px solid var(--border-color); border-bottom: 2px solid var(--border-color);">Qty</th>
+                <th class="sticky-top bg-act  text-center" style="top:58px; border-bottom: 2px solid var(--border-color);">Qty</th>
+                <th class="sticky-top bg-act  text-center" style="top:58px; border-bottom: 2px solid var(--border-color);">Val</th>
+                <th class="sticky-top bg-rate text-center rate-col" style="top:58px; border-bottom: 2px solid var(--border-color);">Avg</th>
+              {% else %}
+                <th class="sticky-top bg-plan text-center" style="top:58px; border-left:2px solid var(--border-color); border-bottom: 2px solid var(--border-color);">Qty</th>
+                <th class="sticky-top bg-plan text-center" style="top:58px; border-bottom: 2px solid var(--border-color);">Val</th>
+                <th class="sticky-top bg-est text-center" style="top:58px; border-bottom: 2px solid var(--border-color);">Qty</th>
+                <th class="sticky-top bg-est text-center" style="top:58px; border-bottom: 2px solid var(--border-color);">Val</th>
+                <th class="sticky-top bg-act text-center" style="top:58px; border-bottom: 2px solid var(--border-color);">Qty</th>
+                <th class="sticky-top bg-act text-center" style="top:58px; border-bottom: 2px solid var(--border-color);">Val</th>
+                <th class="sticky-top bg-rate text-center rate-col" style="top:58px; border-bottom: 2px solid var(--border-color);">Avg</th>
+              {% endif %}
+            {% endfor %}
+            <th class="sticky-top-right" style="top: 58px; border-bottom: 2px solid var(--border-color);"></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% if disp_grid.rows %}
+          {% for r in disp_grid.rows %}
+            <tr>
+              <td class="sticky-left fw-bold" title="{{ r.fg }}" style="font-size:0.7rem;">{{ r.alias }}</td>
+              {% for c in r.cells %}
+                {% if period == "DAILY" %}
+                  <td class="bg-plan text-right num fmt-qty" style="border-left:2px solid var(--border-color);" data-num="{{ c.plan|default_if_none:0 }}">0</td>
+                  <td class="bg-act  text-right num fmt-qty" data-num="{{ c.actual|default_if_none:0 }}">0</td>
+                  <td class="bg-act  text-right num fmt-amt" data-num="{{ c.actual_value|default_if_none:0 }}">0</td>
+                  <td class="bg-rate text-right num fmt-rate rate-col" data-num="{{ c.actual_rate|default_if_none:0 }}">0</td>
+                {% else %}
+                  <td class="bg-plan text-right num fmt-qty" style="border-left:2px solid var(--border-color);" data-num="{{ c.plan|default_if_none:0 }}">0</td>
+                  <td class="bg-plan text-right num fmt-amt plan-val" data-qty="{{ c.plan|default_if_none:0 }}" data-rate="{{ c.actual_rate|default_if_none:0 }}">0</td>
+                  <td class="bg-est  text-right num fmt-qty" data-num="{{ c.est|default_if_none:0 }}">0</td>
+                  <td class="bg-est  text-right num fmt-amt est-val" data-qty="{{ c.est|default_if_none:0 }}" data-rate="{{ c.actual_rate|default_if_none:0 }}">0</td>
+                  <td class="bg-act  text-right num fmt-qty" data-num="{{ c.actual|default_if_none:0 }}">0</td>
+                  <td class="bg-act  text-right num fmt-amt" data-num="{{ c.actual_value|default_if_none:0 }}">0</td>
+                  <td class="bg-rate text-right num fmt-rate rate-col" data-num="{{ c.actual_rate|default_if_none:0 }}">0</td>
+                {% endif %}
+              {% endfor %}
+              <td class="sticky-right text-right fw-bold num fmt-qty" data-num="{{ r.stock_qty|default_if_none:0 }}">0</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="100%" class="text-center" style="padding:4rem; color:var(--text-light);">No dispatch data available.</td></tr>
+        {% endif %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="sticky-left fw-bold text-right" style="text-transform:uppercase; font-size:0.7rem;">Totals</td>
+            {% for f in disp_grid.footer.months %}
+              {% if period == "DAILY" %}
+                <td class="bg-plan text-right fw-bold num fmt-qty" style="border-left:2px solid #cbd5e1;" data-num="{{ f.plan|default_if_none:0 }}">0</td>
+                <td class="bg-act  text-right fw-bold num fmt-qty" data-num="{{ f.actual|default_if_none:0 }}">0</td>
+                <td class="bg-act  text-right fw-bold num fmt-amt" data-num="{{ f.actual_value|default_if_none:0 }}">0</td>
+                <td class="bg-rate text-right fw-bold num fmt-rate rate-col" data-num="{{ f.actual_rate|default_if_none:0 }}">0</td>
+              {% else %}
+                <td class="bg-plan text-right fw-bold num fmt-qty" style="border-left:2px solid #cbd5e1;" data-num="{{ f.plan|default_if_none:0 }}">0</td>
+                <td class="bg-plan text-right fw-bold num fmt-amt plan-val" data-qty="{{ f.plan|default_if_none:0 }}" data-rate="{{ f.actual_rate|default_if_none:0 }}">0</td>
+                <td class="bg-est  text-right fw-bold num fmt-qty" data-num="{{ f.est|default_if_none:0 }}">0</td>
+                <td class="bg-est  text-right fw-bold num fmt-amt est-val" data-qty="{{ f.est|default_if_none:0 }}" data-rate="{{ f.actual_rate|default_if_none:0 }}">0</td>
+                <td class="bg-act  text-right fw-bold num fmt-qty" data-num="{{ f.actual|default_if_none:0 }}">0</td>
+                <td class="bg-act  text-right fw-bold num fmt-amt" data-num="{{ f.actual_value|default_if_none:0 }}">0</td>
+                <td class="bg-rate text-right fw-bold num fmt-rate rate-col" data-num="{{ f.actual_rate|default_if_none:0 }}">0</td>
+              {% endif %}
+            {% endfor %}
+            <td class="sticky-right text-right fw-bold num fmt-qty" data-num="{{ disp_grid.footer.stock_qty|default_if_none:0 }}">0</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const btn=document.getElementById('fg-dd-btn'), panel=document.getElementById('fg-dd-panel'), 
+        selAll=document.getElementById('fg-select-all'), clrAll=document.getElementById('fg-clear-all'), 
+        chipbar=document.getElementById('fg-chipbar'), form=document.getElementById('disp-filters');
+
+  if(btn && panel){
+    function setOpen(open){
+      panel.style.display=open?'flex':'none'; btn.setAttribute('aria-expanded',open);
+      btn.style.borderColor=open?'var(--accent)':'';
+      if(open)setTimeout(()=>document.addEventListener('click',outside),0);
+      else document.removeEventListener('click',outside);
+    }
+    function outside(e){if(!panel.contains(e.target)&&!btn.contains(e.target))setOpen(false);}
+    btn.addEventListener('click',()=>setOpen(panel.style.display==='none'));
+    if(selAll)selAll.addEventListener('click',()=>{panel.querySelectorAll('input').forEach(c=>c.checked=true);});
+    if(clrAll)clrAll.addEventListener('click',()=>{panel.querySelectorAll('input').forEach(c=>c.checked=false);});
+    if(chipbar && form){
+      chipbar.addEventListener('click',e=>{
+        const rm=e.target.closest('button'); if(!rm)return;
+        const val=rm.dataset.remove;
+        const esc=(window.CSS&&CSS.escape)?CSS.escape(val):val.replace(/["\\]/g,'\\$&');
+        let cb; try{cb=panel.querySelector(`input[value="${esc}"]`);}catch(e){cb=[...panel.querySelectorAll('input')].find(i=>i.value===val);}
+        if(cb)cb.checked=false; form.submit();
+      });
+    }
+  }
+
+  function toNum(v){const n=parseFloat(String(v).replace(/[, ]+/g,'').trim());return Number.isFinite(n)?n:0;}
+  const fmt0=new Intl.NumberFormat('en-IN',{maximumFractionDigits:0}), fmtRate2=new Intl.NumberFormat('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  document.querySelectorAll('.plan-val, .est-val').forEach(el=>{
+    el.setAttribute('data-num',toNum(el.dataset.qty)*toNum(el.dataset.rate));
+  });
+
+  document.querySelectorAll('.num[data-num]').forEach(el=>{
+    const n=toNum(el.dataset.num);
+    if(Math.abs(n)<0.001){el.textContent='-';el.style.color='#cbd5e1';return;}
+    el.style.color='';
+    el.textContent=el.classList.contains('fmt-rate')?fmtRate2.format(n):fmt0.format(n);
+  });
+})();
+</script>
+
+{% endblock %}

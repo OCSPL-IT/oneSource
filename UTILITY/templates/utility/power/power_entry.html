@@ -1,0 +1,278 @@
+{% extends "main/index.html" %}
+{% block maincontent %}
+<div class="min-h-screen bg-slate-100 py-4">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white shadow-xl rounded-2xl p-4 sm:p-8 relative">
+
+      <!-- Messages, Header, Form, Date Picker, and Tabs sections remain unchanged -->
+      
+      <div class="container mx-auto px-6 mt-1">
+        <div class="flex items-center justify-between mb-4">
+          <a href="/" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-1 px-3 rounded shadow-md">
+            Back to Main Page
+          </a>
+          <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">Power Consumption Entry</h2>
+          <a href="{% url 'power_readings_report' %}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded shadow-md">
+            View Records
+          </a>
+        </div>
+      </div>
+      <hr>
+
+      <form method="post" class="space-y-8">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <!-- Date picker -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:gap-4 border-b border-slate-200 pb-6">
+          <label for="date" class="w-full sm:w-auto text-sm font-medium text-slate-700 mb-1 sm:mb-0">
+            Reading Date:
+          </label>
+          <div class="relative w-full sm:max-w-xs">
+            <input
+                  type="date" name="date" id="date" required
+                  class="pr-4 px-2 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-slate-700 transition duration-150"
+                  value="{{ edit_date|date:'Y-m-d' }}"
+              >
+          </div>
+        </div>
+
+        <!-- Tabs navigation -->
+        <nav class="sticky top-0 bg-white z-10 border-b border-slate-200 mb-4">
+          <ul id="tabs" class="flex overflow-auto text-sm font-medium" role="tablist">
+            {% for form in formset.forms %}
+              <li class="flex-1" role="presentation">
+                <button
+                  type="button"
+                  class="tab-link w-full py-3 px-4 text-center border-b-2 border-transparent text-slate-600 hover:text-slate-800 hover:border-slate-300 transition duration-150"
+                  data-tab="{{ forloop.counter0 }}"
+                  aria-controls="panel-{{ forloop.counter0 }}"
+                  aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                  role="tab">
+                  {{ form.initial.reading_type }}
+                </button>
+              </li>
+            {% endfor %}
+          </ul>
+        </nav>
+
+        <!-- All panels -->
+        {% for form in formset.forms %}
+          <section
+            id="panel-{{ forloop.counter0 }}"
+            class="tab-panel {% if not forloop.first %}hidden{% endif %} bg-white rounded-xl p-6 shadow divide-y divide-slate-200 space-y-6"
+            role="tabpanel"
+            aria-labelledby="tab-{{ forloop.counter0 }}">
+            <h2 class="text-2xl font-semibold text-slate-800 mb-4">{{ form.initial.reading_type }}</h2>
+            {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+            
+            <!-- E-18 POWER CONSUMPTION -->
+            {% if form.initial.reading_type == "E-18 POWER CONSUMPTION" %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_a1.id_for_label }}">BLOCK A1</label>{{ form.block_a1 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_a2.id_for_label }}">BLOCK A2</label>{{ form.block_a2 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_b1.id_for_label }}">BLOCK B1</label>{{ form.block_b1 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_b2.id_for_label }}">BLOCK B2</label>{{ form.block_b2 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_d1.id_for_label }}">BLOCK D 1</label>{{ form.block_d1 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_d2.id_for_label }}">BLOCK D2</label>{{ form.block_d2 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_c1.id_for_label }}">BLOCK C1</label>{{ form.block_c1 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_b_all_ejector.id_for_label }}">Block B + All Ejector</label>{{ form.block_b_all_ejector }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.utility_2.id_for_label }}">UTILITY 2</label>{{ form.utility_2 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.utility_3.id_for_label }}">UTILITY 3</label>{{ form.utility_3 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_b3_ut04.id_for_label }}">BLOCK B3(UT-04)</label>{{ form.block_b3_ut04 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.utility_05_block_b_anfd.id_for_label }}">UTILITY-05 (BLOCK B ANFD)</label>{{ form.utility_05_block_b_anfd }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.tf_unit.id_for_label }}">TF UNIT</label>{{ form.tf_unit }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.ct_75hp_pump2.id_for_label }}">CT 75 HP (PUMP.2)</label>{{ form.ct_75hp_pump2 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.stabilizer.id_for_label }}">STABILIZER</label>{{ form.stabilizer }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.etp_e17.id_for_label }}">ETP (E.17)</label>{{ form.etp_e17 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.mee_e17.id_for_label }}">MEE (E.17)</label>{{ form.mee_e17 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.c03_air_compressor_40hp.id_for_label }}">(C-03)Air Compressor (40HP)</label>{{ form.c03_air_compressor_40hp }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.trane1_brine_comp_110tr.id_for_label }}">TRANE 1 (BRINE COMP 110TR)</label>{{ form.trane1_brine_comp_110tr }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.chiller_02_trane2.id_for_label }}">Chiller - 02 (Trane 2)</label>{{ form.chiller_02_trane2 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.voltas_chiller_02.id_for_label }}">Voltas Chiller-02</label>{{ form.voltas_chiller_02 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.block_c2_d04.id_for_label }}">Block C2 (D-04)</label>{{ form.block_c2_d04 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.ct_75hp_pump1.id_for_label }}">CT 75 HP (PUMP.1)</label>{{ form.ct_75hp_pump1 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.new_ro.id_for_label }}">NEW RO</label>{{ form.new_ro }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.new_atfd.id_for_label }}">NEW ATFD</label>{{ form.new_atfd }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.admin.id_for_label }}">ADMIN</label>{{ form.admin }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.etp_press_filter.id_for_label }}">ETP PRESS FILTER</label>{{ form.etp_press_filter }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.others_e18_fire.id_for_label }}">OTHERS E-18( Fire)</label>{{ form.others_e18_fire }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.mcc_total.id_for_label }}">MCC TOTAL</label>{{ form.mcc_total }}</div>
+            </div>
+            {% elif form.initial.reading_type == "E-17 POWER CONSUMPTION" %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.imcc_panel_01_utility.id_for_label }}">IMCC PANEL 01 UTILITY</label>{{ form.imcc_panel_01_utility }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.imcc_panel_02_utility.id_for_label }}">IMCC PANEL 02 UTILITY</label>{{ form.imcc_panel_02_utility }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.imcc_panel_03.id_for_label }}">IMCC PANEL 03</label>{{ form.imcc_panel_03 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.imcc_panel_04.id_for_label }}">IMCC PANEL 04</label>{{ form.imcc_panel_04 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.imcc_panel_05.id_for_label }}">IMCC PANEL 05</label>{{ form.imcc_panel_05 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.row_power_panel.id_for_label }}">Row power panel</label>{{ form.row_power_panel }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.lighting_panel.id_for_label }}">Lighting Panel</label>{{ form.lighting_panel }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.brine_chiller_1_5f_30.id_for_label }}">BRINE CHILLER (1/5F-30)</label>{{ form.brine_chiller_1_5f_30 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.water_chiller_2_4r_440.id_for_label }}">WATER CHILLER (2/4R-440)</label>{{ form.water_chiller_2_4r_440 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.others_e17.id_for_label }}">OTHERS E-17</label>{{ form.others_e17 }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.imcc_total.id_for_label }}">IMCC TOTAL</label>{{ form.imcc_total }}</div>
+            </div>
+            {% elif form.initial.reading_type == "E-22 POWER CONSUMPTION" %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.e22_mseb.id_for_label }}">E-22 MSEB</label>{{ form.e22_mseb }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.e22_pcc.id_for_label }}">E-22 PCC</label>{{ form.e22_pcc }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.e22_boiler.id_for_label }}">E-22 BOILER</label>{{ form.e22_boiler }}</div>
+                <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.e22_aircom_tf_boiler_other.id_for_label }}">E-22 Air com, TF Boiler & Other</label>{{ form.e22_aircom_tf_boiler_other }}</div>
+            </div>
+            {% elif form.initial.reading_type == "TOTAL POWER CONSUMPTION" %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-4">
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.mcc_imcc_total.id_for_label }}">MCC & IMCC TOTAL</label>{{ form.mcc_imcc_total }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.pcc_main_e17.id_for_label }}">PCC MAIN E-17</label>{{ form.pcc_main_e17 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.mseb_e18.id_for_label }}">MSEB E-18</label>{{ form.mseb_e18 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.pcc_01.id_for_label }}">PCC-01</label>{{ form.pcc_01 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.pcc_02.id_for_label }}">PCC-02</label>{{ form.pcc_02 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.tr_losses_e18.id_for_label }}">TR. LOSSES E-18</label>{{ form.tr_losses_e18 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.tr_losses_e22.id_for_label }}">TR. LOSSES E-22</label>{{ form.tr_losses_e22 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.e16_mseb.id_for_label }}">E-16 MSEB</label>{{ form.e16_mseb }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.dg_total_e18.id_for_label }}">DG TOTAL E-18</label>{{ form.dg_total_e18 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.dg_total_e22.id_for_label }}">DG TOTAL E-22</label>{{ form.dg_total_e22 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.dg_pcc_e18.id_for_label }}">DG + PCC E-18</label>{{ form.dg_pcc_e18 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.dg_pcc_e22.id_for_label }}">DG + PCC E-22</label>{{ form.dg_pcc_e22 }}</div>
+              <div class="space-y-1"><label class="text-sm font-medium text-slate-600" for="{{ form.total_kwh_e18_e22_e16.id_for_label }}">TOTAL (KWH) E-18, E-22 & E-16</label>{{ form.total_kwh_e18_e22_e16 }}</div>
+            </div>
+            {% endif %} 
+
+            {% if form.non_field_errors %}
+              <!-- Error display section remains unchanged -->
+            {% endif %}
+          </section>
+        {% endfor %}
+
+        <div class="mt-2 flex justify-end border-t border-slate-200 pt-2">
+          <button
+            type="submit"
+            class="px-4 py-2 bg-indigo-600 text-white font-medium text-sm rounded-lg shadow hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+            Save Readings
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Tab logic -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const tabs = document.querySelectorAll('.tab-link');
+  const panels = document.querySelectorAll('.tab-panel');
+  if (!tabs.length) return;
+  tabs[0].classList.add('border-indigo-500', 'text-indigo-600');
+  tabs[0].setAttribute('aria-selected', 'true');
+  panels[0].classList.remove('hidden');
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      tabs.forEach(t => {
+        t.classList.remove('border-indigo-500', 'text-indigo-600');
+        t.setAttribute('aria-selected', 'false');
+      });
+      panels.forEach(p => p.classList.add('hidden'));
+      tab.classList.add('border-indigo-500', 'text-indigo-600');
+      tab.setAttribute('aria-selected', 'true');
+      panels[i].classList.remove('hidden');
+    });
+    tab.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        tab.click();
+      }
+    });
+  });
+});
+</script>
+
+<!-- ########## UPDATED CALCULATION SCRIPT ########## -->
+<script>
+function getVal(id) {
+    const el = document.getElementById(id);
+    if (!el) return 0;
+    const val = parseFloat(el.value);
+    return isNaN(val) ? 0 : val;
+}
+
+function setVal(id, value) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.value = value.toFixed(2);
+    }
+}
+
+// Main calculation function, called on any input change
+function calcAll() {
+    // --- STEP 1: Calculate Intermediate Totals ---
+    const mcc_ids = [ 'id_block_a1','id_block_a2','id_block_b1','id_block_b2','id_block_d1','id_block_d2','id_block_c1','id_block_b_all_ejector','id_utility_2','id_utility_3','id_block_b3_ut04','id_utility_05_block_b_anfd','id_tf_unit','id_ct_75hp_pump2','id_stabilizer','id_etp_e17','id_mee_e17','id_c03_air_compressor_40hp','id_trane1_brine_comp_110tr','id_chiller_02_trane2','id_voltas_chiller_02','id_block_c2_d04','id_ct_75hp_pump1','id_new_ro','id_new_atfd','id_admin','id_etp_press_filter' ];
+    const mcc_total = mcc_ids.reduce((sum, id) => sum + getVal(id), 0);
+    setVal('id_mcc_total', mcc_total);
+
+    const imcc_ids = [ 'id_imcc_panel_01_utility','id_imcc_panel_02_utility','id_imcc_panel_03','id_imcc_panel_04','id_imcc_panel_05','id_row_power_panel','id_lighting_panel','id_brine_chiller_1_5f_30','id_water_chiller_2_4r_440' ];
+    const imcc_total = imcc_ids.reduce((sum, id) => sum + getVal(id), 0);
+    setVal('id_imcc_total', imcc_total);
+
+    // --- STEP 2: Gather all other necessary input values ---
+    const pcc_main_e17 = getVal('id_pcc_main_e17');
+    const pcc_01 = getVal('id_pcc_01');
+    const dg_total_e18 = getVal('id_dg_total_e18');
+    const dg_total_e22 = getVal('id_dg_total_e22');
+    const e16_mseb = getVal('id_e16_mseb');
+    const e22_mseb = getVal('id_e22_mseb');
+    const e22_pcc = getVal('id_e22_pcc');
+    const mseb_e18 = getVal('id_mseb_e18');
+    
+    // --- STEP 3: Perform Final Calculations in Correct Dependency Order ---
+
+    // ** Corrected based on your forms.py **
+    const mcc_imcc_total = mcc_total + pcc_main_e17; 
+    setVal('id_mcc_imcc_total', mcc_imcc_total);
+
+    // ** UPDATED FORMULA for OTHERS E-18 (Fire) **
+    const others_e18_fire = pcc_01 + dg_total_e18 - mcc_imcc_total;
+    setVal('id_others_e18_fire', others_e18_fire);
+
+    // ** UPDATED FORMULA for OTHERS E-17 **
+    const others_e17 =  pcc_main_e17 - imcc_total;
+    setVal('id_others_e17', others_e17);
+
+    const tr_losses_e18 = mseb_e18 - pcc_01;
+    setVal('id_tr_losses_e18', tr_losses_e18);
+    
+    const tr_losses_e22 = e22_mseb - e22_pcc;
+    setVal('id_tr_losses_e22', tr_losses_e22);
+
+    const dg_pcc_e18 = pcc_01 + dg_total_e18;
+    setVal('id_dg_pcc_e18', dg_pcc_e18);
+
+    const dg_pcc_e22 = e22_pcc + dg_total_e22;
+    setVal('id_dg_pcc_e22', dg_pcc_e22);
+    
+    // Total Power Source Calculation
+    const total_kwh = e22_mseb + mseb_e18 + e16_mseb + dg_total_e18 + dg_total_e22;
+    setVal('id_total_kwh_e18_e22_e16', total_kwh);
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    // List of all user-editable fields that trigger a recalculation.
+    const fieldsToMonitor = [
+        'id_block_a1','id_block_a2','id_block_b1','id_block_b2','id_block_d1','id_block_d2','id_block_c1','id_block_b_all_ejector','id_utility_2','id_utility_3','id_block_b3_ut04','id_utility_05_block_b_anfd','id_tf_unit','id_ct_75hp_pump2','id_stabilizer','id_etp_e17','id_mee_e17','id_c03_air_compressor_40hp','id_trane1_brine_comp_110tr','id_chiller_02_trane2','id_voltas_chiller_02','id_block_c2_d04','id_ct_75hp_pump1','id_new_ro','id_new_atfd','id_admin','id_etp_press_filter',
+        'id_imcc_panel_01_utility','id_imcc_panel_02_utility','id_imcc_panel_03','id_imcc_panel_04','id_imcc_panel_05','id_row_power_panel','id_lighting_panel','id_brine_chiller_1_5f_30','id_water_chiller_2_4r_440',
+        'id_e22_mseb', 'id_e22_pcc', 'id_e22_boiler', 'id_e22_aircom_tf_boiler_other',
+        'id_pcc_main_e17', 'id_mseb_e18', 'id_pcc_01', 'id_pcc_02', 'id_e16_mseb', 'id_dg_total_e18', 'id_dg_total_e22'
+    ];
+    
+    const uniqueFields = [...new Set(fieldsToMonitor)];
+    uniqueFields.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('input', calcAll);
+        }
+    });
+    calcAll();
+});
+</script>
+{% endblock %}

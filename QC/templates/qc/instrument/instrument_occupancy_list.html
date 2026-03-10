@@ -1,0 +1,187 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Instrument Occupancy – List{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+
+  {% if messages %}
+    <div class="mt-3 sm:mx-auto sm:w-full sm:max-w-sm">
+        {% for message in messages %}
+        <div
+            class="relative flex justify-between items-center px-4 py-3 rounded-lg shadow-md text-white 
+                            {% if message.tags == 'debug' %}bg-gray-500{% elif message.tags == 'info' %}bg-blue-500{% elif message.tags == 'success' %}bg-green-500{% elif message.tags == 'warning' %}bg-yellow-500{% elif message.tags == 'error' %}bg-red-500{% endif %}">
+            <span class="flex-1">{{ message }}</span>
+            <!-- Close Button -->
+            <button type="button" class="ml-3 text-white hover:text-gray-200 focus:outline-none"
+                onclick="this.parentElement.remove()">
+                ✖
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+    <div class="flex items-center gap-3">
+      <a href="{% url 'indexpage' %}"
+         class="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700">
+        Back to Main Page
+      </a>
+      <div>
+        <h1 class="text-xl font-semibold text-slate-800">Instrument Occupancy</h1>
+        <p class="text-sm text-slate-500">Date/Area wise instrument occupancy (% usage) with remarks.</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      {% if perms.QC.add_instrumentoccupancy %}
+      <a href="{% url 'qc:instrument_occupancy_create' %}?date={{ selected_date }}"
+         class="inline-flex items-center justify-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-emerald-600">
+        <i class="fa-solid fa-square-plus mr-1"></i> New Entry
+      </a>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get"
+        class="mb-4 bg-white border border-slate-200 rounded-lg shadow-sm px-4 py-3 flex flex-col xl:flex-row xl:items-end gap-3">
+
+    <!-- Date (dropdown of saved dates) -->
+    <div class="w-full xl:w-1/4">
+      <label for="date_filter" class="block text-xs font-medium text-slate-600 mb-1">Date</label>
+      <select id="date_filter" name="date"
+              class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        <option value="">All Dates</option>
+        {% for d in dates %}
+          <option value="{{ d|date:'Y-m-d' }}" {% if selected_date == d|date:'Y-m-d' %}selected{% endif %}>
+            {{ d|date:"d-m-Y" }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Area -->
+    <div class="w-full xl:w-1/4">
+      <label for="area_filter" class="block text-xs font-medium text-slate-600 mb-1">Area</label>
+      <select id="area_filter" name="area"
+              class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        <option value="">All Areas</option>
+        {% for a in areas %}
+          <option value="{{ a }}" {% if selected_area == a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Make -->
+    <div class="w-full xl:w-1/4">
+      <label for="make_filter" class="block text-xs font-medium text-slate-600 mb-1">Make</label>
+      <select id="make_filter" name="make"
+              class="block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+        <option value="">All Makes</option>
+        {% for m in makes %}
+          <option value="{{ m }}" {% if selected_make == m %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Buttons: filter + clear + excel -->
+    <div class="flex items-center gap-2 mt-1">
+      <button type="submit"
+              class="inline-flex items-center justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+        <i class="fa-solid fa-filter"></i>
+      </button>
+
+      <a href="{% url 'qc:instrument_occupancy_list' %}"
+         class="inline-flex items-center justify-center rounded-md bg-gray-400 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500">
+        <i class="fa-solid fa-eraser"></i>
+      </a>
+
+      <a title="Download Excel"
+         href="{% url 'qc:instrument_occupancy_export_excel' %}?date={{ selected_date }}&area={{ selected_area }}&make={{ selected_make }}"
+         class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+        <i class="fa-solid fa-file-excel"></i>
+      </a>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="bg-white border border-slate-200 rounded-lg shadow-sm overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Sr No</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Area</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Make</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Model</th>
+          <th class="px-3 py-2 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">% Occupancy</th>
+          <th class="px-3 py-2 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Remarks</th>
+
+          {% if perms.QC.change_instrumentoccupancy or perms.QC.delete_instrumentoccupancy %}
+          <th class="px-3 py-2 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-100">
+        {% if records %}
+          {% for row in records %}
+          <tr class="hover:bg-slate-50">
+            <td class="px-3 py-2 text-slate-500">{{ forloop.counter }}</td>
+            <td class="px-3 py-2 text-slate-800">{{ row.date|date:"d-m-Y" }}</td>
+            <td class="px-3 py-2 text-slate-800">{{ row.area }}</td>
+            <td class="px-3 py-2 text-slate-800">{{ row.make }}</td>
+            <td class="px-3 py-2 text-slate-800">{{ row.model }}</td>
+            <td class="px-3 py-2 text-right font-semibold text-slate-900 tabular-nums">{{ row.occupancy_percent }}%</td>
+            <td class="px-3 py-2 text-slate-700 max-w-xs">
+              <span class="line-clamp-2">{{ row.remarks|default:"—" }}</span>
+            </td>
+
+            {% if perms.QC.change_instrumentoccupancy or perms.QC.delete_instrumentoccupancy %}
+            <td class="px-3 py-2 text-center whitespace-nowrap">
+              <div class="inline-flex items-center gap-1">
+                {% if perms.QC.change_instrumentoccupancy %}
+                {# ✅ Bulk edit by date (not by pk) #}
+                <a href="{% url 'qc:instrument_occupancy_edit' %}?date={{ row.date|date:'Y-m-d' }}"
+                   title="Edit this date"
+                   class="inline-flex items-center px-2 py-2 text-[11px] md:text-xs rounded bg-amber-500 text-white hover:bg-amber-600">
+                  <i class="fa fa-edit"></i>
+                </a>
+                {% endif %}
+
+                {% if perms.QC.delete_instrumentoccupancy %}
+                <form method="post"
+                      action="{% url 'qc:instrument_occupancy_delete' row.pk %}"
+                      class="inline"
+                      onsubmit="return confirm('Delete {{ row.date|date:'d-m-Y' }} – {{ row.area }} – {{ row.make }} {{ row.model }} record?');">
+                  {% csrf_token %}
+                  <button type="submit"
+                          class="inline-flex items-center px-2 py-2 text-[11px] md:text-xs rounded bg-rose-500 text-white hover:bg-rose-600">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="px-4 py-6 text-center text-sm text-slate-500">No records found.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+</style>
+{% endblock maincontent %}

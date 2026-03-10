@@ -1,0 +1,187 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+<div class="container mx-auto p-6">
+<div class="container mx-auto px-6">
+    <div class="flex items-center justify-between mb-4">
+        <!-- Back to Main Page Button -->
+        <a href="/" class="bg-blue-500 hover:bg-blue-600 text-xs text-white font-bold py-2 px-4 rounded shadow-md">
+            Back to Main Page
+        </a>
+        <!-- Heading -->
+        <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">General Effluent Overview</h2>
+        <!-- View Records Button -->
+        <a href="{% url 'view_general_effluent' %}" class="text-xs bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+            View Records
+        </a>
+    </div>
+</div>
+  
+<form method="get" class="mb-6">
+  <div class="flex flex-wrap items-end justify-center space-x-4">
+    <!-- Period dropdown -->
+    <div>
+      <label class="block text-gray-700 font-semibold">Period</label>
+      <select name="period" id="period-select" class="border rounded px-2 py-1">
+        <option value="mtd"         {% if period == "mtd" %}selected{% endif %}>This Month (MTD)</option>
+        <option value="weekly"      {% if period == "weekly" %}selected{% endif %}>Last 7 Days</option>
+        <option value="fortnightly" {% if period == "fortnightly" %}selected{% endif %}>Last 15 Days</option>
+        <option value="custom"      {% if period == "custom" %}selected{% endif %}>Custom</option>
+      </select>
+    </div>
+
+    <!-- Custom range -->
+    <div class="custom-range flex space-x-4">
+      <div>
+        <label class="block text-gray-700 font-semibold">From</label>
+        <input type="date" name="from_date" value="{{ from_date }}"
+               class="border rounded px-2 py-1"/>
+      </div>
+      <div>
+        <label class="block text-gray-700 font-semibold">To</label>
+        <input type="date" name="to_date" value="{{ to_date }}"
+               class="border rounded px-2 py-1"/>
+      </div>
+    </div>
+
+    <!-- Location filter -->
+    <div>
+      <label class="block text-gray-700 font-semibold">Location</label>
+      <select name="location" class="border rounded px-2 py-1">
+        <option value="">All</option>
+        {% for loc in ALL_LOCATIONS %}
+          <option value="{{ loc }}" {% if loc == location_filter %}selected{% endif %}>
+            {{ loc }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Effluent nature filter -->
+    <div>
+      <label class="block text-gray-700 font-semibold">Nature</label>
+      <select name="effluent_nature" class="border rounded px-2 py-1">
+        <option value="">All</option>
+        {% for nat in ALL_NATURES %}
+          <option value="{{ nat }}" {% if nat == nature_filter %}selected{% endif %}>
+            {{ nat }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Apply & Clear -->
+    <div class="flex space-x-2">
+      <button type="submit"
+              class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+        Apply filters
+      </button>
+      <a href="{% url 'general_effluent_charts' %}"
+         class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
+        Clear filters
+      </a>
+    </div>
+  </div>
+</form>
+
+
+  <div class="mt-8">
+    <h3 class="text-xl font-semibold mb-2">Effluent by Location</h3>
+    <div class="w-full">
+      <canvas id="locationPieChart" class="w-full h-64"></canvas>
+    </div>
+  </div>
+
+  <hr class="my-4">
+
+  <div class="mt-8">
+    <h3 class="text-xl font-semibold mb-2">Effluent Nature wise</h3>
+    <div class="w-full">
+      <canvas id="natureBarChart" class="w-full h-64"></canvas>
+    </div>
+  </div>
+</div>
+
+  
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Pie chart: Location
+  const locLabels = {{ loc_labels|safe }};
+  const locData   = {{ loc_data|safe }};
+
+  new Chart(
+    document.getElementById('locationPieChart').getContext('2d'),
+    {
+      type: 'pie',
+      data: {
+        labels: locLabels,
+        datasets: [{
+          data: locData,
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+      }
+    }
+  );
+
+  // Bar chart: Effluent Nature
+  const natureLabels = {{ nature_labels|safe }};
+  const natureData   = {{ nature_data|safe }};
+
+  new Chart(
+    document.getElementById('natureBarChart').getContext('2d'),
+    {
+      type: 'bar',
+      data: {
+        labels: natureLabels,
+        datasets: [{
+          label: 'Actual Quantity (KL)',
+          data: natureData,
+          backgroundColor: 'rgba(75, 192, 192, 0.6)',
+          borderColor:     'rgba(75, 192, 192, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Actual Quantity (KL)'
+            }
+          },
+          x: {
+            title: {
+              display: true,
+              text: 'Effluent Nature'
+            }
+          }
+        }
+      }
+    }
+  );
+
+
+  document.addEventListener("DOMContentLoaded", function(){
+    const period = document.getElementById("period-select");
+    const customRange = document.querySelector(".custom-range");
+
+    function toggleDates(){
+      if(period.value==="custom"){
+        customRange.style.display = "flex";
+      } else {
+        customRange.style.display = "none";
+      }
+    }
+
+    period.addEventListener("change", toggleDates);
+    toggleDates();
+  });
+</script>
+{% endblock %}

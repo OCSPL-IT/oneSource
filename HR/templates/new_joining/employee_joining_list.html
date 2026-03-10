@@ -1,0 +1,337 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-5">
+    {% if messages %}
+      <div class="max-w-5xl mx-auto mt-4 space-y-2">
+        {% for message in messages %}
+          <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                      {% if message.tags == 'success' %}bg-green-600{% else %}bg-red-600{% endif %}">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()">✖</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- Header -->
+    <header
+      class="mb-4 px-4 py-3 sm:px-6 sm:py-4 rounded-xl shadow-sm border border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div>
+        <h1 class="text-lg sm:text-xl font-semibold text-slate-800 tracking-tight">
+          Employee Joining Records
+        </h1>
+        <p class="text-xs text-slate-500 mt-1">
+          View and filter employee onboarding details (IT / infra / access).
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if perms.HR.add_employeejoining %}
+        <a href="{% url 'employee_joining_create' %}"
+           class="inline-flex items-center justify-center px-3 py-2 rounded-md text-sm font-medium
+                  bg-indigo-600 text-white hover:bg-indigo-700">
+          + New Employee Joining
+        </a>
+        {% endif %}
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <div class="mb-4 bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-sm">
+      <form method="get" class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <!-- Search -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              Search (Name / Employee ID / Email)
+            </label>
+            <input type="text" name="search" value="{{ search }}"
+              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="e.g. Abc, 1234, abc@ocspl.com" />
+          </div>
+
+          <!-- Company -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              Company
+            </label>
+            <select name="company"
+              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="">All</option>
+              {% for value, label in company_choices %}
+              <option value="{{ value }}" {% if value == company %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Location -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              Location
+            </label>
+            <select name="location"
+              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="">All</option>
+              {% for value, label in location_choices %}
+              <option value="{{ value }}" {% if value == location %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Department -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              Department
+            </label>
+            <select name="department"
+              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="">All</option>
+              {% for value, label in department_choices %}
+              <option value="{{ value }}" {% if value == department %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Status -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              Status
+            </label>
+            <select name="status"
+              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+              <option value="">All</option>
+              {% for value, label in status_choices %}
+              <option value="{{ value }}" {% if value == status %}selected{% endif %}>
+                {{ label }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <button type="submit"
+                  class="inline-flex items-center px-4 py-2 text-xs sm:text-sm font-semibold rounded-md
+                         bg-indigo-600 text-white hover:bg-indigo-700">
+            Apply Filters
+          </button>
+
+          <a href="{% url 'employee_joining_list' %}"
+             class="inline-flex items-center px-3 py-2 text-xs sm:text-sm font-medium rounded-md
+                    border border-slate-300 text-slate-700 bg-white hover:bg-slate-50">
+            Clear
+          </a>
+
+          <!-- Excel button just right of Clear -->
+          <a href="{% url 'employee_joining_export_excel' %}?search={{ search }}&company={{ company }}&location={{ location }}&department={{ department }}&status={{ status }}"
+             class="inline-flex items-center text-xs sm:text-sm font-medium rounded-md
+                    border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 mx-1">
+            <i class="fa-2xl fa-solid fa-file-excel text-green-900"></i>
+          </a>
+
+          <p class="ml-auto text-[11px] text-slate-500">
+            Showing
+            <span class="font-semibold">{{ page_obj.paginator.count }}</span>
+            record(s)
+          </p>
+        </div>
+      </form>
+    </div>
+
+    <!-- Table -->
+    <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-left text-xs sm:text-sm text-slate-700">
+          <thead class="bg-slate-100 text-[11px] uppercase tracking-wide text-slate-600">
+            <tr>
+              <th class="px-3 py-2 border-b border-slate-200">Emp ID</th>
+              <th class="px-3 py-2 border-b border-slate-200 whitespace-nowrap">Employee Name</th>
+              <th class="px-3 py-2 border-b border-slate-200">Company</th>
+              <th class="px-3 py-2 border-b border-slate-200">Location</th>
+              <th class="px-3 py-2 border-b border-slate-200">Department</th>
+              <th class="px-3 py-2 border-b border-slate-200">Designation</th>
+              <th class="px-3 py-2 border-b border-slate-200">DOJ</th>
+              <th class="px-3 py-2 border-b border-slate-200 hidden md:table-cell">Email</th>
+              <th class="px-3 py-2 border-b border-slate-200 hidden lg:table-cell">Device</th>
+              <th class="px-3 py-2 border-b border-slate-200">Status</th>
+              {% if perms.HR.view_employeejoining or perms.HR.change_employeejoining or perms.HR.delete_employeejoining or is_it_user or is_it_approver %}
+              <th class="px-3 py-2 border-b border-slate-200 text-right">Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% if page_obj.object_list %}
+              {% for obj in page_obj.object_list %}
+              <tr class="hover:bg-slate-50">
+                <td class="px-3 py-2 whitespace-nowrap font-semibold text-slate-800">
+                  {{ obj.employee_id }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {{ obj.employee_name }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {{ obj.company }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {{ obj.location }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {{ obj.department|default:"-" }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {{ obj.designation|default:"-" }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {{ obj.date_of_joining|date:"d-M-Y" }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap hidden md:table-cell">
+                  {{ obj.email_id|default:"-" }}
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap hidden lg:table-cell">
+                  {{ obj.computer|default:"-" }}
+                </td>
+
+                <!-- Status badge -->
+                <td class="px-3 py-2 whitespace-nowrap">
+                  {% if obj.status == "hr_submitted" %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      HR Submitted
+                    </span>
+                  {% elif obj.status == "it_in_progress" %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                      IT In Progress
+                    </span>
+                  {% elif obj.status == "pending_approval" %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-50 text-violet-700 border border-violet-200">
+                      Pending Approval
+                    </span>
+                  {% elif obj.status == "approved" %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Approved
+                    </span>
+                  {% elif obj.status == "rejected" %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                      Rejected
+                    </span>
+                  {% else %}
+                    <span class="text-[11px] text-slate-500">-</span>
+                  {% endif %}
+                </td>
+
+                {% if perms.HR.view_employeejoining or perms.HR.change_employeejoining or perms.HR.delete_employeejoining or is_it_user or is_it_approver %}
+                <td class="px-3 py-2 whitespace-nowrap text-right">
+                  <div class="inline-flex items-center gap-1">
+
+                    {# ---- HR actions (view/edit/delete) ---- #}
+                    {% if perms.HR.view_employeejoining %}
+                    <a href="{% url 'employee_joining_detail' obj.pk %}"
+                       class="inline-flex items-center px-2.5 py-1.5 rounded border border-indigo-200
+                              text-[11px] font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                       title="View Detail">
+                      <i class="fa fa-eye"></i>
+                    </a>
+                    {% endif %}
+
+                    {% if perms.HR.change_employeejoining %}
+                    <a href="{% url 'employee_joining_edit' obj.pk %}"
+                       class="inline-flex items-center px-2.5 py-1.5 text-[11px] font-medium rounded
+                              border border-sky-500 text-sky-700 bg-sky-50 hover:bg-sky-100"
+                       title="Edit">
+                      <i class="fa fa-edit"></i>
+                    </a>
+                    {% endif %}
+
+                    {% if perms.HR.delete_employeejoining %}
+                    <a href="{% url 'employee_joining_delete' obj.pk %}"
+                       class="inline-flex items-center px-2.5 py-1.5 text-[11px] font-medium rounded
+                              border border-red-500 text-red-600 bg-red-50 hover:bg-red-100"
+                       title="Delete">
+                      <i class="fa fa-trash"></i>
+                    </a>
+                    {% endif %}
+
+                    {# ---- IT user workflow action ---- #}
+                    {% if is_it_user and obj.status in "hr_submitted,it_in_progress" %}
+                    <a href="{% url 'employee_joining_it_update' obj.pk %}"
+                       class="inline-flex items-center px-2.5 py-1.5 text-[11px] font-medium rounded
+                              border border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-100"
+                       title="IT Process">
+                      IT
+                    </a>
+                    {% endif %}
+
+                    {# ---- IT approver action ---- #}
+                    {% if is_it_approver and obj.status == "pending_approval" %}
+                    <a href="{% url 'employee_joining_approve' obj.pk %}"
+                       class="inline-flex items-center px-2.5 py-1.5 text-[11px] font-medium rounded
+                              border border-emerald-500 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                       title="Approve / Reject">
+                      Approve
+                    </a>
+                    {% endif %}
+
+                  </div>
+                </td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="11" class="px-3 py-6 text-center text-sm text-slate-500">
+                No records found for the selected filters.
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if page_obj.has_other_pages %}
+      <div class="px-3 sm:px-4 py-3 flex items-center justify-between border-t border-slate-200 bg-slate-50">
+        <div class="text-[11px] text-slate-500">
+          Page
+          <span class="font-semibold">{{ page_obj.number }}</span>
+          of
+          <span class="font-semibold">{{ page_obj.paginator.num_pages }}</span>
+        </div>
+        <div class="flex items-center gap-1">
+          {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}&company={{ company }}&location={{ location }}&department={{ department }}&status={{ status }}"
+            class="px-2 py-1 text-[11px] rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">
+            Previous
+          </a>
+          {% else %}
+          <span class="px-2 py-1 text-[11px] rounded border border-slate-100 bg-slate-100 text-slate-400">
+            Previous
+          </span>
+          {% endif %}
+
+          {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}&search={{ search }}&company={{ company }}&location={{ location }}&department={{ department }}&status={{ status }}"
+            class="px-2 py-1 text-[11px] rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-100">
+            Next
+          </a>
+          {% else %}
+          <span class="px-2 py-1 text-[11px] rounded border border-slate-100 bg-slate-100 text-slate-400">
+            Next
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

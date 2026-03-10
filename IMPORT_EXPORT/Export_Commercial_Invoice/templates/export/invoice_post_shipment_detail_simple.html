@@ -1,0 +1,291 @@
+{% extends "main/index.html" %}
+{% block maincontent %}
+
+<div class="bg-slate-50 min-h-screen">
+  <div class="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-6">
+
+    {% if messages %}
+      <div class="space-y-2 mb-4">
+        {% for message in messages %}
+          <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                      {% if message.tags == 'success' %}bg-emerald-600{% else %}bg-rose-600{% endif %}">
+            <span>{{ message }}</span>
+            <button type="button" onclick="this.parentElement.remove()">✖</button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <!-- HEADER BAR -->
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Invoice Post Shipment Detail</h1>
+        <p class="mt-1 text-sm text-slate-500">
+          Invoice No:
+          <span class="font-semibold text-slate-800">{{ obj.invoice_number }}</span>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- small chip showing created date -->
+        <div class="hidden sm:flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full text-xs font-medium text-slate-700">
+          <span>Created:</span>
+          <span>
+            {% if obj.created_at %}
+              {{ obj.created_at|date:"d-m-Y H:i" }}
+            {% else %}
+              -
+            {% endif %}
+          </span>
+        </div>
+
+        <a href="{% url 'invoice_post_shipment_detail' obj.pk %}"
+             class="inline-flex items-center gap-1 px-1 py-1 text-sm font-medium rounded-md bg-blue-200 text-slate-800 hover:bg-blue-300 border border-slate-300">
+            Print / PDF View
+        </a>
+
+        {% if has_attachment %}
+          <a href="{% url 'invoice_post_shipment_download_attachment' obj.pk %}"
+             target="_blank"
+             class="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700
+                    text-xs sm:text-sm font-semibold text-white px-3 py-1.5 shadow-sm">
+            <i class="fa-solid fa-paperclip mr-1"></i>
+            Attachment
+          </a>
+        {% endif %}
+
+        <a href="{% url 'invoice_post_shipment_edit' obj.pk %}"
+           class="inline-flex items-center rounded-lg bg-yellow-600 hover:bg-yellow-700
+                  text-xs sm:text-sm font-semibold text-white px-3 py-1.5 shadow-sm">
+          Edit
+        </a>
+
+        <a href="{% url 'invoice_post_shipment_list' %}"
+           class="inline-flex items-center rounded-lg bg-slate-200 hover:bg-slate-200
+                  text-xs sm:text-sm font-semibold text-slate-700 px-4 py-2 border border-slate-200">
+          Back to List
+        </a>
+      </div>
+    </div>
+
+    <!-- CARD : ORDER / INVOICE DETAILS -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+      <div class="px-5 py-3 bg-amber-50 border-b border-amber-100">
+        <h2 class="text-xs font-semibold tracking-[0.12em] text-amber-900 uppercase">
+          Invoice Details
+        </h2>
+      </div>
+
+      <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Invoice No.</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.invoice_number|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Invoice Date</p>
+          <p class="mt-1 text-slate-900 font-medium">
+            {% if obj.invoice_date %}{{ obj.invoice_date|date:"d-m-Y" }}{% else %}-{% endif %}
+          </p>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Transaction Type</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.transaction_type|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Buyer’s Order No.</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.buyers_order_no|default:"-" }}</p>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Buyer’s Order Date</p>
+          <p class="mt-1 text-slate-900 font-medium">
+            {% if obj.buyers_order_date %}{{ obj.buyers_order_date|date:"d-m-Y" }}{% else %}-{% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD : CONSIGNEE / NOTIFY -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+      <div class="px-5 py-3 bg-sky-50 border-b border-sky-100">
+        <h2 class="text-xs font-semibold tracking-[0.12em] text-sky-900 uppercase">
+          Consignee & Notify Details
+        </h2>
+      </div>
+
+      <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Consignee Name</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.consignee_name|default:"-" }}</p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Consignee Address</p>
+          <p class="mt-1 text-slate-900 whitespace-pre-line">{{ obj.consignee_address|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Notify Party 1</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.notify_party1_name|default:"-" }}</p>
+          <p class="mt-1 text-xs text-slate-700 whitespace-pre-line">{{ obj.notify_party1_address|default:"-" }}</p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Notify Party 2</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.notify_party2_name|default:"-" }}</p>
+          <p class="mt-1 text-xs text-slate-700 whitespace-pre-line">{{ obj.notify_party2_address|default:"-" }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD : ORIGIN / DESTINATION / BANK -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+      <div class="px-5 py-3 bg-emerald-50 border-b border-emerald-100">
+        <h2 class="text-xs font-semibold tracking-[0.12em] text-emerald-900 uppercase">
+          Shipping & Bank Details
+        </h2>
+      </div>
+
+      <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Country of Origin</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.country_origin|default:"-" }}</p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Country of Final Destination</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.country_destination|default:"-" }}</p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Final Destination</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.final_destination|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">District / State</p>
+          <p class="mt-1 text-slate-900">
+            <span class="font-semibold">District:</span> {{ obj.district_origin|default:"-" }}<br>
+            <span class="font-semibold">State:</span> {{ obj.state_origin|default:"-" }}
+          </p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Vessel & Ports</p>
+          <p class="mt-1 text-slate-900">
+            <span class="font-semibold">Vessel:</span> {{ obj.vessel_name_no|default:"-" }}<br>
+            <span class="font-semibold">Loading:</span> {{ obj.port_loading|default:"-" }}<br>
+            <span class="font-semibold">Discharge:</span> {{ obj.port_discharge|default:"-" }}
+          </p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Preferential / Std Unit</p>
+          <p class="mt-1 text-slate-900">
+            <span class="font-semibold">Preferential:</span> {{ obj.preferential_agreement|default:"-" }}<br>
+            <span class="font-semibold">Std Unit:</span> {{ obj.standard_unit_qty_code|default:"-" }}
+          </p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Bank Details</p>
+          <p class="mt-1 text-slate-900">
+            <span class="font-semibold">Bank:</span> {{ obj.bank_name|default:"-" }}<br>
+            <span class="font-semibold">A/c:</span> {{ obj.bank_account_no|default:"-" }}<br>
+            <span class="font-semibold">AD Code:</span> {{ obj.ad_code|default:"-" }}<br>
+            <span class="font-semibold">Swift:</span> {{ obj.swift_code|default:"-" }}
+          </p>
+          <p class="mt-1 text-xs text-slate-700 whitespace-pre-line">{{ obj.bank_address|default:"-" }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD : GOODS / QTY / RATES -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+      <div class="px-5 py-3 bg-indigo-50 border-b border-indigo-100">
+        <h2 class="text-xs font-semibold tracking-[0.12em] text-indigo-900 uppercase">
+          Goods & Amount Details
+        </h2>
+      </div>
+
+      <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Product Name</p>
+          <p class="mt-1 text-slate-900 font-medium">{{ obj.product_name|default:"-" }}</p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Container No.</p>
+          <p class="mt-1 text-slate-900">{{ obj.container_no|default:"-" }}</p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">No. & Kind of Packing</p>
+          <p class="mt-1 text-slate-900 whitespace-pre-line">{{ obj.packing_details|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Marks / Container Nos.</p>
+          <p class="mt-1 text-xs text-slate-900 whitespace-pre-line">
+            {{ obj.merks_and_container_no|default:"-" }}
+          </p>
+          <p class="mt-1 text-xs text-slate-900 whitespace-pre-line">
+            {{ obj.merks_and_container_no1|default:"-" }}
+          </p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Description of Goods</p>
+          <p class="mt-1 text-slate-900 whitespace-pre-line">{{ obj.description_of_goods|default:"-" }}</p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Item / HSN</p>
+          <p class="mt-1 text-slate-900">
+            <span class="font-semibold">Item:</span> {{ obj.item_no|default:"-" }}<br>
+            <span class="font-semibold">HSN:</span> {{ obj.hsn_no|default:"-" }}
+          </p>
+
+          <p class="mt-3 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Quantity / Rate / Amount</p>
+          <p class="mt-1 text-slate-900">
+            <span class="font-semibold">Quantity:</span> {{ obj.quantity }} {{ obj.quantity_unit|default:"" }}<br>
+            <span class="font-semibold">Rate (US$):</span> {{ obj.rate_usd }}<br>
+            <span class="font-semibold">Amount (US$):</span> {{ obj.amount_usd }}<br>
+            <span class="font-semibold">Conversion Rate:</span> {{ obj.conversion_rate|default:"-" }}<br>
+            <span class="font-semibold">Gross Wt:</span> {{ obj.gross_wt|default:"-" }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD : BL / SHIPPING BILL / ATTACHMENT -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 mb-10 overflow-hidden">
+      <div class="px-5 py-3 bg-slate-100 border-b border-slate-200">
+        <h2 class="text-xs font-semibold tracking-[0.12em] text-slate-900 uppercase">
+          B/L, Shipping Bill & Attachment
+        </h2>
+      </div>
+
+      <div class="px-5 py-4 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Bill of Lading No / Date</p>
+          <p class="mt-1 text-slate-900">
+            {{ obj.bl_number|default:"-" }} /
+            {% if obj.bl_date %}{{ obj.bl_date|date:"d-m-Y" }}{% else %}-{% endif %}
+          </p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Shipping Bill No / Date</p>
+          <p class="mt-1 text-slate-900">
+            {{ obj.shipping_bill_no|default:"-" }} /
+            {% if obj.shipping_bill_date %}{{ obj.shipping_bill_date|date:"d-m-Y" }}{% else %}-{% endif %}
+          </p>
+        </div>
+
+        <div>
+          <p class="text-[11px] font-semibold tracking-wide text-slate-500 uppercase">Attachment</p>
+          <p class="mt-1">
+            {% if has_attachment %}
+              <span class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                <i class="fa-solid fa-circle-check mr-1"></i>
+                {% if attachment_name %}
+                  {{ attachment_name }}
+                {% else %}
+                  Attachment Available
+                {% endif %}
+              </span>
+            {% else %}
+              <span class="text-xs text-slate-500">No attachment uploaded.</span>
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

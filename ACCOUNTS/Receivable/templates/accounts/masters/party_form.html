@@ -1,0 +1,234 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}{% if is_edit %}Edit Party{% else %}New Party{% endif %}{% endblock %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">
+        {% if is_edit %}Edit Party{% else %}New Party{% endif %}
+      </h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Maintain party master details and contact reminder preferences.
+      </p>
+    </div>
+
+    <a href="{% url 'accounts:party_list' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-slate-300
+              bg-white text-sm font-medium text-slate-700 hover:bg-slate-50">
+      <i class="fa-solid fa-arrow-left"></i>
+      Back to List
+    </a>
+  </div>
+
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+
+    <!-- Party Details -->
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <h2 class="text-sm font-semibold text-slate-700 mb-4">Party Details</h2>
+
+      <!-- Render fields in a responsive grid (keeps your form as-is) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for field in form %}
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+              {{ field.label }}{% if field.field.required %}<span class="text-rose-600"> *</span>{% endif %}
+            </label>
+
+            {{ field }}
+
+            {% if field.help_text %}
+              <p class="text-xs text-slate-500 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+
+            {% for error in field.errors %}
+              <p class="text-xs text-rose-600 mt-1">{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="mt-3 rounded-md bg-rose-50 border border-rose-200 p-3">
+          {% for error in form.non_field_errors %}
+            <p class="text-sm text-rose-700">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Contacts -->
+    <div class="bg-white border border-slate-200 rounded-lg p-4">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-700">Contacts (Emails / Phones)</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Add multiple contacts. Mark Primary and enable reminders (PDC) as required.
+          </p>
+        </div>
+
+        <button type="button"
+                id="btn-add-row"
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-md
+                       bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700">
+          <i class="fa-solid fa-plus"></i>
+          Add Contact
+        </button>
+      </div>
+
+      {{ formset.management_form }}
+
+      {% if formset.non_form_errors %}
+        <div class="mb-3 rounded-md bg-rose-50 border border-rose-200 p-3">
+          {% for error in formset.non_form_errors %}
+            <p class="text-sm text-rose-700">{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="overflow-x-auto border border-slate-200 rounded-md">
+        <table class="min-w-full text-sm">
+          <thead class="bg-slate-50 text-slate-600">
+            <tr>
+              <th class="px-3 py-2 text-left font-medium">Name</th>
+              <th class="px-3 py-2 text-left font-medium">Email</th>
+              <th class="px-3 py-2 text-center font-medium">PDC?</th>
+              <th class="px-3 py-2 text-center font-medium">Primary</th>
+              <th class="px-3 py-2 text-center font-medium">Active</th>
+              <th class="px-3 py-2 text-center font-medium">Delete</th>
+            </tr>
+          </thead>
+
+          <tbody id="contacts-tbody" class="divide-y divide-slate-200">
+            {% for f in formset %}
+            <tr class="hover:bg-slate-50">
+              <td class="px-3 py-2">
+                {{ f.contact_person }}
+                {% for e in f.contact_person.errors %}
+                  <p class="text-xs text-rose-600 mt-1">{{ e }}</p>
+                {% endfor %}
+              </td>
+
+              <td class="px-3 py-2">
+                {{ f.email }}
+                {% for e in f.email.errors %}
+                  <p class="text-xs text-rose-600 mt-1">{{ e }}</p>
+                {% endfor %}
+              </td>
+
+              <td class="px-3 py-2 text-center">
+                {{ f.receive_pdc_reminder }}
+              </td>
+
+              <td class="px-3 py-2 text-center">
+                {{ f.is_primary }}
+              </td>
+
+              <td class="px-3 py-2 text-center">
+                {{ f.is_active }}
+              </td>
+
+              <td class="px-3 py-2 text-center">
+                {{ f.DELETE }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="px-3 py-6 text-center text-slate-500">
+                No contacts added yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty form template for "Add Contact" -->
+      <template id="empty-form-template">
+        <tr class="hover:bg-slate-50">
+          <td class="px-3 py-2">__CONTACT_PERSON__</td>
+          <td class="px-3 py-2">__EMAIL__</td>
+          <td class="px-3 py-2 text-center">__PDC__</td>
+          <td class="px-3 py-2 text-center">__PRIMARY__</td>
+          <td class="px-3 py-2 text-center">__ACTIVE__</td>
+          <td class="px-3 py-2 text-center">__DELETE__</td>
+        </tr>
+      </template>
+
+      <!-- Hidden HTML chunks from Django empty_form (keeps naming correct) -->
+      <div id="empty-form-fields" class="hidden">
+        <div data-field="contact_person">{{ formset.empty_form.contact_person }}</div>
+        <div data-field="email">{{ formset.empty_form.email }}</div>
+        <div data-field="receive_pdc_reminder">{{ formset.empty_form.receive_pdc_reminder }}</div>
+        <div data-field="is_primary">{{ formset.empty_form.is_primary }}</div>
+        <div data-field="is_active">{{ formset.empty_form.is_active }}</div>
+        <div data-field="DELETE">{{ formset.empty_form.DELETE }}</div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="px-5 py-2 rounded-md bg-indigo-600 text-white font-medium hover:bg-indigo-700">
+        Save
+      </button>
+
+      <a href="{% url 'accounts:party_list' %}"
+         class="px-5 py-2 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  (function () {
+    const addBtn = document.getElementById("btn-add-row");
+    const tbody = document.getElementById("contacts-tbody");
+    const totalForms = document.getElementById("id_{{ formset.prefix }}-TOTAL_FORMS");
+    const emptyTpl = document.getElementById("empty-form-template");
+    const emptyFields = document.getElementById("empty-form-fields");
+
+    if (!addBtn || !tbody || !totalForms || !emptyTpl || !emptyFields) return;
+
+    function cloneField(fieldKey, idx) {
+      const src = emptyFields.querySelector(`[data-field="${fieldKey}"]`);
+      if (!src) return document.createTextNode("");
+
+      // Convert __prefix__ to the real index
+      const html = src.innerHTML.replaceAll("__prefix__", idx);
+      const wrap = document.createElement("div");
+      wrap.innerHTML = html;
+      return wrap.firstElementChild || document.createTextNode("");
+    }
+
+    addBtn.addEventListener("click", function () {
+      const idx = parseInt(totalForms.value || "0", 10);
+
+      const row = emptyTpl.content.cloneNode(true);
+      const tr = row.querySelector("tr");
+
+      tr.innerHTML = tr.innerHTML
+        .replace("__CONTACT_PERSON__", cloneField("contact_person", idx).outerHTML || "")
+        .replace("__EMAIL__", cloneField("email", idx).outerHTML || "")
+        .replace("__PDC__", cloneField("receive_pdc_reminder", idx).outerHTML || "")
+        .replace("__PRIMARY__", cloneField("is_primary", idx).outerHTML || "")
+        .replace("__ACTIVE__", cloneField("is_active", idx).outerHTML || "")
+        .replace("__DELETE__", cloneField("DELETE", idx).outerHTML || "");
+
+      // If tbody currently has "No contacts added yet." row, remove it
+      const emptyRow = tbody.querySelector('tr td[colspan="6"]');
+      if (emptyRow) emptyRow.closest("tr").remove();
+
+      tbody.appendChild(tr);
+      totalForms.value = idx + 1;
+    });
+  })();
+</script>
+{% endblock %}

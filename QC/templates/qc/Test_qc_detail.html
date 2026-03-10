@@ -1,0 +1,252 @@
+{# qc/templates/qc/qc_detail.html #}
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}QC Entry Details – QC Project{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<style>
+  :root{
+    --c-primary:#0d6efd;--c-sec:#6c757d;--c-success:#198754;--c-danger:#dc3545;--c-warn:#ffc107;--c-orange:#fd7e14;
+    --t-primary:#212529;--t-sec:#495057;--t-on-dark:#fff;--t-on-warn:#000;
+    --bg-page:#f8f9fa;--bg-surface:#fff;--bg-subtle:#f8f9fa;
+    --border:#dee2e6;--radius:.5rem;--shadow:0 4px 12px rgba(0,0,0,.08);
+  }
+  body{background:var(--bg-page);color:var(--t-primary);}
+  .detail-container{background:var(--bg-surface);padding:2rem;border-radius:var(--radius);box-shadow:var(--shadow);}
+  .detail-header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:1.5rem;border-bottom:1px solid var(--border);margin-bottom:1.5rem;}
+  .detail-header h1{margin:0;font-size:2.25rem;font-weight:700;}
+  .status-badge{display:inline-block;padding:.4rem .8rem;border-radius:999px;font-weight:600;text-transform:uppercase;font-size:.8rem;color:var(--t-on-dark);}
+  .status-draft{background:var(--c-sec);}
+  .status-pending{background:var(--c-warn);color:var(--t-on-warn);}
+  .status-completed{background:var(--c-success);}
+  .status-cancelled{background:var(--c-danger);}
+
+  .qc-decision-section{padding:1.25rem;background:var(--bg-subtle);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:2rem;text-align:center;}
+  .qc-decision-section .label{display:block;font-size:1rem;font-weight:600;margin-bottom:.5rem;color:var(--t-sec);}
+  .decision-pill{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border-radius:999px;font-weight:700;font-size:1.1rem;text-transform:uppercase;color:var(--t-on-dark);}
+  .decision-approved{background:var(--c-success);}
+  .decision-variation{background:var(--c-orange);}
+  .decision-rejected{background:var(--c-danger);}
+
+  .info-cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-bottom:2rem;}
+  .info-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .info-card-header{background:var(--bg-subtle);padding:.75rem 1rem;font-weight:600;border-bottom:1px solid var(--border);}
+  .info-list{display:flex;flex-direction:column;}
+  .info-item{display:flex;justify-content:space-between;padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:.95rem;}
+  .info-item:last-child{border-bottom:none;}
+  .info-label{font-weight:600;color:var(--t-sec);}
+  .info-value{text-align:right;}
+  .info-value.important{font-weight:700;}
+
+  .section-title{font-size:1.35rem;font-weight:600;margin:0 0 .75rem;}
+  .qc-spec-table{width:100%;border-collapse:collapse;margin-top:1rem;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;font-size:.95rem;}
+  .qc-spec-table thead th{background:var(--bg-subtle);padding:.8rem 1rem;border-bottom:2px solid var(--border);text-transform:uppercase;font-size:.85rem;color:var(--t-sec);text-align:left;}
+  .qc-spec-table tbody td{padding:.8rem 1rem;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .qc-spec-table tbody tr:nth-of-type(odd){background:var(--bg-subtle);}
+  .qc-spec-table tbody tr:last-child td{border-bottom:none;}
+
+  .remark-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .6rem;border-radius:.25rem;font-size:.9rem;font-weight:600;color:var(--t-on-dark);}
+  .remark-pass{background:var(--c-success);}
+  .remark-fail{background:var(--c-danger);}
+  .remark-deviation{background:var(--c-orange);}
+
+  .actions-bar{margin-top:2rem;border-top:1px solid var(--border);padding-top:1.5rem;display:flex;gap:.75rem;flex-wrap:wrap;}
+  .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;font-size:.9rem;font-weight:500;border-radius:.375rem;text-decoration:none;border:1px solid transparent;transition:.2s;}
+  .btn-primary{background:var(--c-primary);color:var(--t-on-dark);}
+  .btn-secondary{background:var(--c-sec);color:var(--t-on-dark);}
+  .btn-success{background:var(--c-success);color:var(--t-on-dark);}
+  .btn-danger{background:var(--c-danger);color:var(--t-on-dark);}
+  .btn-orange{background:var(--c-orange);color:var(--t-on-dark);}
+  .btn:hover{opacity:.85;}
+</style>
+{% endblock head_extra %}
+
+{% block content %}
+<div class="detail-container">
+
+  <!-- Header -->
+  <div class="detail-header">
+    <h1>QC Entry #{{ entry.entry_no }}</h1>
+    {% if entry.status == 'draft' %}
+      <span class="status-badge status-draft">Draft</span>
+    {% elif entry.status == 'pending_qc' %}
+      <span class="status-badge status-pending">Pending QC</span>
+    {% elif entry.status == 'qc_completed' %}
+      <span class="status-badge status-completed">QC Completed</span>
+    {% else %}
+      <span class="status-badge status-cancelled">Cancelled</span>
+    {% endif %}
+  </div>
+
+  <!-- Decision (if completed) -->
+  {% if entry.status == 'qc_completed' and entry.decision_status %}
+    <div class="qc-decision-section">
+      <span class="label">Final QC Decision</span>
+      {% if entry.decision_status == 'approved' %}
+        <span class="decision-pill decision-approved">
+          <i class="fa-solid fa-check-circle"></i> {{ entry.get_decision_status_display }}
+        </span>
+      {% elif entry.decision_status == 'approved_under_deviation' %}
+        <span class="decision-pill decision-variation">
+          <i class="fa-solid fa-exclamation-triangle"></i> {{ entry.get_decision_status_display }}
+        </span>
+      {% else %}
+        <span class="decision-pill decision-rejected">
+          <i class="fa-solid fa-times-circle"></i> {{ entry.get_decision_status_display }}
+        </span>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <!-- Info cards -->
+  <div class="info-cards-grid">
+    <div class="info-card">
+      <div class="info-card-header">Key Info</div>
+      <div class="info-list">
+        <div class="info-item"><span class="info-label">Product</span><span class="info-value important">{{ entry.product.name }}</span></div>
+        <div class="info-item"><span class="info-label">Batch No.</span><span class="info-value important">{{ entry.batch_no|default:"—" }}</span></div>
+        <div class="info-item"><span class="info-label">Stage</span><span class="info-value">{{ entry.get_stage_display }}</span></div>
+        {% if selected_group %}
+        <div class="info-item"><span class="info-label">Spec Group</span><span class="info-value important">{{ selected_group|default:"—" }}</span></div>
+        {% endif %}
+        <div class="info-item"><span class="info-label">General Remarks</span><span class="info-value">{{ entry.general_remarks|default:"—" }}</span></div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-header">Process Timeline</div>
+      <div class="info-list">
+        <div class="info-item"><span class="info-label">Created By (Prod)</span>
+          <span class="info-value">
+            {% if entry.created_by %}{{ entry.created_by.get_full_name|default:entry.created_by.username }}{% else %}—{% endif %}
+          </span>
+        </div>
+        <div class="info-item"><span class="info-label">Entry Date (Prod)</span><span class="info-value">{{ entry.entry_date|date:"Y-m-d H:i" }}</span></div>
+        <div class="info-item"><span class="info-label">Sample Sent</span><span class="info-value">{{ entry.sample_sent_at|date:"Y-m-d H:i"|default:"—" }}</span></div>
+        <div class="info-item"><span class="info-label">Sample Received (QC)</span><span class="info-value">{{ entry.sample_received_at|date:"Y-m-d H:i"|default:"—" }}</span></div>
+        <div class="info-item"><span class="info-label">Completed By (QC)</span>
+          <span class="info-value">
+            {% if entry.qc_completed_by %}{{ entry.qc_completed_by.get_full_name|default:entry.qc_completed_by.username }}{% else %}—{% endif %}
+          </span>
+        </div>
+        <div class="info-item"><span class="info-label">Released by QC</span><span class="info-value">{{ entry.release_by_qc_at|date:"Y-m-d H:i"|default:"—" }}</span></div>
+      </div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-header">Additional Details</div>
+      <div class="info-list">
+        <div class="info-item"><span class="info-label">AR No.</span><span class="info-value">{{ entry.ar_no|default:"—" }}</span></div>
+        <div class="info-item"><span class="info-label">Equipment</span><span class="info-value">{{ entry.equipment_id|default:"—" }}</span></div>
+        <div class="info-item"><span class="info-label">Block</span><span class="info-value">{{ entry.block|default:"—" }}</span></div>
+        <div class="info-item"><span class="info-label">Sample Description</span><span class="info-value">{{ entry.sample_description|default:"—" }}</span></div>
+        {% if entry.sample_description_text %}
+        <div class="info-item"><span class="info-label">Description Notes</span><span class="info-value">{{ entry.sample_description_text }}</span></div>
+        {% endif %}
+        <div class="info-item"><span class="info-label">Test Required For</span><span class="info-value">{{ entry.test_required_for|default:"—" }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Parameter Results -->
+  <h2 class="section-title">
+    Test Parameter Results{% if selected_group %} — Group: {{ selected_group }}{% endif %}
+  </h2>
+
+  {% if rows %}
+    <div class="table-responsive">
+      <table class="qc-spec-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Parameter</th><th>Specification</th>
+            <th>Acceptance</th><th>Value</th><th>Unit</th><th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows %}
+            {% with spec=row.spec entry=row.entry %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ spec.name }}</td>
+              <td>
+                {% if spec.min_val is not None and spec.max_val is not None %}
+                  {{ spec.min_val }}–{{ spec.max_val }}
+                {% elif spec.allowed_choices %}
+                  {{ spec.allowed_choices }}
+                {% else %}—{% endif %}
+              </td>
+              <td>{{ spec.acceptance_criteria|default:"—" }}</td>
+              <td>
+                {% if entry %}<strong>{{ entry.value|default:"—" }}</strong>
+                {% else %}—{% endif %}
+              </td>
+              <td>{{ spec.unit|default:"—" }}</td>
+              <td>
+                {% if entry and entry.remark == "Pass" %}
+                  <span class="remark-badge remark-pass">
+                    <i class="fa-solid fa-check"></i> Pass
+                  </span>
+                {% elif entry and entry.remark == "Fail" %}
+                  <span class="remark-badge remark-fail">
+                    <i class="fa-solid fa-times"></i> Fail
+                  </span>
+                {% elif entry and entry.remark == "Approved under deviation" %}
+                  <span class="remark-badge remark-deviation">
+                    <i class="fa-solid fa-exclamation-triangle"></i> Deviation
+                  </span>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endwith %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p>No test parameters recorded for this group.</p>
+  {% endif %}
+
+  <!-- Actions + Print COA -->
+  <div class="actions-bar">
+    <a href="{% url 'qc:qc_list' %}" class="btn btn-secondary">
+      <i class="fa-solid fa-list"></i> Back to List
+    </a>
+
+    {% if entry.status == 'draft' %}
+      <a href="{% url 'qc:qc_update' entry.id %}" class="btn btn-primary">
+        <i class="fa-solid fa-pencil"></i> Edit (Prod)
+      </a>
+    {% elif entry.status == 'pending_qc' %}
+      <a href="{% url 'qc:qc_update' entry.id %}" class="btn btn-primary">
+        <i class="fa-solid fa-pencil"></i> Enter QC Results
+      </a>
+      <a href="{% url 'qc:qc_reopen_for_prod' entry.id %}" class="btn btn-orange">
+        <i class="fa-solid fa-arrow-rotate-left"></i> Reopen for Prod
+      </a>
+    {% elif entry.status == 'qc_completed' %}
+      <a href="{% url 'qc:qc_reopen_for_qc' entry.id %}" class="btn btn-success">
+        <i class="fa-solid fa-vial-circle-check"></i> Reopen for QC
+      </a>
+      <a href="{% url 'qc:qc_reopen_for_prod' entry.id %}" class="btn btn-orange">
+        <i class="fa-solid fa-arrow-rotate-left"></i> Reopen for Prod
+      </a>
+    {% endif %}
+
+    {# Print COA button #}
+    <a href="{% url 'qc:print_coa' entry.id %}" class="btn btn-primary">
+      <i class="fa-solid fa-file-pdf"></i> Print COA
+    </a>
+
+    {% if entry.status != 'cancelled' %}
+      <a href="{% url 'qc:qc_cancel' entry.id %}"
+         class="btn btn-danger ms-auto"
+         onclick="return confirm('Cancel QC entry #{{ entry.entry_no }}?');">
+        <i class="fa-solid fa-trash"></i> Cancel
+      </a>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

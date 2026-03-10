@@ -1,0 +1,119 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+<div class="max-w-7xl mx-auto py-8 space-y-8">
+    <div class="container mx-auto px-6">
+      <div class="flex items-center justify-between mb-4">
+          <!-- Back to Main Page Button -->
+          <a href="/" class="bg-blue-500 hover:bg-blue-600 text-xs text-white font-bold py-2 px-4 rounded shadow-md">
+              Back to Main Page
+          </a>
+          <!-- Heading -->
+          <h2 class="text-2xl font-bold text-center flex-1 text-gray-700">PSSR Summary</h2>
+          <!-- View Records Button -->
+          <a href="{% url 'pssr_record_list' %}" class="text-xs bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded shadow-md">
+              View Records
+          </a>
+      </div>
+  </div>
+   
+  <!-- Date filter form -->
+  <form method="get" class="flex items-end space-x-4">
+    <div>
+      <label class="block text-sm font-medium">From</label>
+      <input
+        type="date"
+        name="from_date"
+        value="{{ from_date }}"
+        class="mt-1 p-2 border rounded-lg w-40"
+      />
+    </div>
+    <div>
+      <label class="block text-sm font-medium">To</label>
+      <input
+        type="date"
+        name="to_date"
+        value="{{ to_date }}"
+        class="mt-1 p-2 border rounded-lg w-40"
+      />
+    </div>
+    <button
+      type="submit"
+      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"><i class="fa-solid fa-filter"></i></button>
+    <a href="{% url 'pssr_chart_summary' %}"
+            class="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded" title="Clear filters" >
+          <i class="fa-solid fa-eraser"></i> </a>
+  </form>
+
+  <!-- Tailwind Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+    <div class="bg-white shadow rounded-lg p-5">
+      <h5 class="text-gray-500">Total Observations</h5>
+      <p class="mt-2 text-3xl font-bold">{{ total_obs }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+      <h5 class="text-gray-500">Completed</h5>
+      <p class="mt-2 text-3xl font-bold text-green-600">{{ total_completed }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+      <h5 class="text-gray-500">Pending</h5>
+      <p class="mt-2 text-3xl font-bold text-yellow-600">{{ total_pending }}</p>
+    </div>
+    <div class="bg-white shadow rounded-lg p-5">
+      <h5 class="text-gray-500">Omitted</h5>
+      <p class="mt-2 text-3xl font-bold text-red-600">{{ total_omitted }}</p>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div class="bg-white shadow rounded-lg p-5">
+        <h3 class="text-lg font-semibold mb-4">RPN Category Distribution</h3>
+        <!-- fixed 48×48 (192px) square box; adjust `w-48 h-48` as desired -->
+        <div class="relative w-64 h-64 mx-auto">
+          <canvas id="rpnPieChart" class="absolute inset-0"></canvas>
+        </div>
+      </div>
+
+    <div class="bg-white shadow rounded-lg p-5">
+      <h3 class="text-lg font-semibold mb-4">Compliance Status</h3>
+      <canvas id="compBarChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Pie for RPN
+  new Chart(document.getElementById('rpnPieChart'), {
+    type: 'pie',
+    data: {
+      labels: {{ rpn_labels|safe }},
+      datasets: [{
+        data: {{ rpn_counts|safe }},
+        backgroundColor: ['#38bdf8','#facc15']  // you can expand as needed
+      }]
+    },
+    options: { responsive:true, plugins:{ legend:{ position:'bottom' } } }
+  });
+
+  // Bar for Compliance
+  new Chart(document.getElementById('compBarChart'), {
+    type: 'bar',
+    data: {
+      labels: {{ comp_labels|safe }},
+      datasets: [{
+        label: 'Count',
+        data: {{ comp_counts|safe }},
+        backgroundColor: '#60a5fa'
+      }]
+    },
+    options: {
+      responsive:true,
+      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } },
+      plugins:{ legend:{ display:false } }
+    }
+  });
+</script>
+{% endblock %}

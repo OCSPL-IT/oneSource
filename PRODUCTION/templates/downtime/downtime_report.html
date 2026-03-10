@@ -1,0 +1,624 @@
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block title %}Downtime Report{% endblock %}
+
+{% block maincontent %}
+<div id="dt-root" class="p-3 sm:p-5">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+    <div>
+      <h1 class="text-xl font-semibold">Downtime Report</h1>
+      <p class="text-sm text-slate-500">Critical equipment loss only · others show DT</p>
+    </div>
+    <div class="flex gap-2">
+      <button id="btn-clear"  class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 hover:bg-slate-50" title="Clear filters" aria-label="Clear">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="btn-export" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 hover:bg-slate-50" title="Export CSV" aria-label="Export">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none">
+          <path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M5 17h14v3H5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-4">
+    <div>
+      <label class="text-xs text-slate-600">From</label>
+      <input id="f-from" type="date" class="w-full mt-1 rounded-md border border-slate-300 px-3 py-2">
+    </div>
+    <div>
+      <label class="text-xs text-slate-600">To</label>
+      <input id="f-to" type="date" class="w-full mt-1 rounded-md border border-slate-300 px-3 py-2">
+    </div>
+    <div>
+      <label class="text-xs text-slate-600">Product</label>
+      <div id="dd-product" class="relative mt-1"></div>
+    </div>
+    <div>
+      <label class="text-xs text-slate-600">Stage</label>
+      <div id="dd-stage" class="relative mt-1"></div>
+    </div>
+    <div>
+      <label class="text-xs text-slate-600">Equipment</label>
+      <div id="dd-eqpt" class="relative mt-1"></div>
+    </div>
+    <div class="flex items-end">
+      <button id="btn-apply" class="w-full rounded-md border border-slate-300 px-3 py-2 hover:bg-slate-50">Apply</button>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="mb-4">
+    <div class="flex items-center justify-between mb-2">
+      <h2 class="text-base font-semibold">Summary (Product → Stage → Equipment)</h2>
+      <div class="flex gap-2">
+        <button id="btn-expand"  class="px-2 py-1 text-xs rounded border border-slate-300 hover:bg-slate-50">Expand all</button>
+        <button id="btn-collapse" class="px-2 py-1 text-xs rounded border border-slate-300 hover:bg-slate-50">Collapse all</button>
+      </div>
+    </div>
+
+    <div class="rounded-lg border border-slate-200 overflow-hidden">
+      <div class="overflow-auto">
+        <table class="min-w-[1280px] w-full text-xs border-collapse">
+          <thead class="bg-slate-50">
+            <tr class="text-left">
+              <th class="px-3 py-2 border border-slate-200 w-[28%] align-top">
+                <span class="whitespace-normal break-words leading-tight text-[11px] sm:text-xs">
+                  Product / Stage / Eqpt ID
+                </span>
+              </th>
+              <th class="px-3 py-2 border border-slate-200 text-right">BCT</th>
+              <th class="px-3 py-2 border border-slate-200 text-right">O/P QTY</th>
+              <th class="px-3 py-2 border border-slate-200 text-right">Stage Loss /hr</th>
+              <th class="px-3 py-2 border border-slate-200 text-right">Total DT</th>
+              <th class="px-3 py-2 border border-slate-200 text-right">Total Loss (Kg)</th>
+              <th class="px-3 py-2 border border-slate-200 text-right">SFG Output</th>
+              <th class="px-3 py-2 border border-slate-200 text-right">Product loss /hr</th>
+              <th class="px-3 py-2 border border-slate-200 text-right">Total Product Loss (Kg)</th>
+            </tr>
+          </thead>
+          <tbody id="sum-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mt-3 hidden" id="no-crit-wrap">
+      <div class="rounded-lg border border-amber-300 bg-amber-50 p-3">
+        <div class="font-semibold text-amber-800 mb-1">FGs without critical equipment (in selected range)</div>
+        <ul id="no-crit-list" class="list-disc pl-6 text-amber-900 text-sm"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail table -->
+  <div class="rounded-lg border border-slate-200 overflow-hidden">
+    <div class="overflow-auto" style="max-height: calc(100vh - 16rem);">
+      <table class="min-w-[1200px] w-full text-sm">
+        <thead class="bg-slate-50 sticky top-0 z-10">
+          <tr class="text-left">
+            <th class="px-3 py-2 border-b">ID</th>
+            <th class="px-3 py-2 border-b">Date</th>
+            <th class="px-3 py-2 border-b">Block</th>
+            <th class="px-3 py-2 border-b">Product</th>
+            <th class="px-3 py-2 border-b">Stage</th>
+            <th class="px-3 py-2 border-b">Eqpt ID</th>
+            <th class="px-3 py-2 border-b">Eqpt Name</th>
+            <th class="px-3 py-2 border-b">Batch</th>
+            <th class="px-3 py-2 border-b">Dept</th>
+            <th class="px-3 py-2 border-b">Category</th>
+            <th class="px-3 py-2 border-b text-right">Duration (hrs)</th>
+            <th class="px-3 py-2 border-b text-right">Loss (Kg)</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const dataUrl = "{% url 'downtime_report' %}";
+
+  /* ---------- Excel-like multiselect ---------- */
+  function createExcelDropdown(rootEl, { placeholder='Select...', widthClass='w-full' } = {}){
+    const s = { open:false, all:[], filtered:[], selected:new Set(), query:'' };
+    rootEl.innerHTML = `
+      <button type="button" class="${widthClass} h-10 px-3 rounded-md border border-slate-300 flex items-center justify-between gap-2">
+        <span class="text-left truncate" data-role="label">${placeholder}</span>
+        <svg class="w-4 h-4 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M5.23 7.21a.75.75 0 011.06.02L10 11.187l3.71-3.957a.75.75 0 011.08 1.04l-4.24 4.52a.75.75 0 01-1.08 0L5.21 8.27a.75.75 0 01.02-1.06z"/>
+        </svg>
+      </button>
+      <div data-role="menu" class="hidden absolute z-30 mt-1 ${widthClass} rounded-lg border border-slate-300 bg-white shadow-lg">
+        <div class="p-2 border-b border-slate-200">
+          <input data-role="search" type="text" placeholder="Search..." class="w-full rounded-md border border-slate-300 px-2 py-1 text-sm">
+          <label class="mt-2 flex items-center gap-2 text-sm">
+            <input data-role="checkall" type="checkbox" class="h-4 w-4"><span>Select all</span>
+          </label>
+        </div>
+        <div data-role="list" class="max-h-56 overflow-auto p-1"></div>
+        <div class="flex justify-end gap-2 p-2 border-t border-slate-200">
+          <button data-role="clear" class="px-2 py-1 text-sm rounded border border-slate-300 hover:bg-slate-50">Clear</button>
+          <button data-role="close" class="px-2 py-1 text-sm rounded border border-slate-300 hover:bg-slate-50">Close</button>
+        </div>
+      </div>`;
+    const btn=rootEl.querySelector('button'), menu=rootEl.querySelector('[data-role="menu"]'),
+          lbl=rootEl.querySelector('[data-role="label"]'), search=rootEl.querySelector('[data-role="search"]'),
+          list=rootEl.querySelector('[data-role="list"]'), chkAll=rootEl.querySelector('[data-role="checkall"]'),
+          btnClear=rootEl.querySelector('[data-role="clear"]'), btnClose=rootEl.querySelector('[data-role="close"]');
+
+    function lblUpdate(){ const n=s.selected.size; lbl.textContent = n? (n===1? Array.from(s.selected)[0] : `${n} selected`) : placeholder; }
+    function renderList(){
+      const q=s.query.toLowerCase();
+      s.filtered = s.all.filter(v => String(v??'').toLowerCase().includes(q));
+      const frag=document.createDocumentFragment();
+      s.filtered.forEach(v=>{
+        const lab=document.createElement('label');
+        lab.className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-100 cursor-pointer text-sm";
+        lab.innerHTML=`<input type="checkbox" class="h-4 w-4" ${s.selected.has(v)?'checked':''}><span class="truncate" title="${v}">${v||'(blank)'}</span>`;
+        lab.querySelector('input').addEventListener('change',e=>{
+          e.target.checked? s.selected.add(v): s.selected.delete(v); syncAll(); lblUpdate();
+        });
+        frag.appendChild(lab);
+      });
+      list.innerHTML=''; list.appendChild(frag); syncAll();
+    }
+    function syncAll(){
+      if(!s.filtered.length){ chkAll.indeterminate=false; chkAll.checked=false; return; }
+      const selInView=s.filtered.filter(v=>s.selected.has(v)).length;
+      chkAll.checked = selInView===s.filtered.length;
+      chkAll.indeterminate = selInView>0 && selInView<s.filtered.length;
+    }
+    btn.addEventListener('click',e=>{ e.stopPropagation(); menu.classList.toggle('hidden'); if(!menu.classList.contains('hidden')) search.focus(); });
+    btnClose.addEventListener('click',()=>menu.classList.add('hidden'));
+    btnClear.addEventListener('click',()=>{ s.selected.clear(); lblUpdate(); renderList(); });
+    search.addEventListener('input',()=>{ s.query=search.value; renderList(); });
+    chkAll.addEventListener('change',()=>{ chkAll.checked? s.filtered.forEach(v=>s.selected.add(v)) : s.filtered.forEach(v=>s.selected.delete(v)); renderList(); lblUpdate(); });
+    document.addEventListener('click',e=>{ if(!rootEl.contains(e.target)) menu.classList.add('hidden'); });
+
+    return {
+      setOptions(values){ s.all=Array.from(new Set(values||[])); renderList(); lblUpdate(); },
+      getSelected(){ return Array.from(s.selected); },
+      clear(){ s.selected.clear(); lblUpdate(); renderList(); }
+    };
+  }
+
+  const ddProduct = createExcelDropdown(document.getElementById('dd-product'), { placeholder:'All products' });
+  const ddStage   = createExcelDropdown(document.getElementById('dd-stage'),   { placeholder:'All stages' });
+  const ddEqpt    = createExcelDropdown(document.getElementById('dd-eqpt'),    { placeholder:'All equipment' });
+
+  /* ---------- State ---------- */
+  const els = {
+    from: document.getElementById('f-from'),
+    to: document.getElementById('f-to'),
+    btnApply: document.getElementById('btn-apply'),
+    btnClear: document.getElementById('btn-clear'),
+    btnExport: document.getElementById('btn-export'),
+    sumBody: document.getElementById('sum-body'),
+    tblBody: document.getElementById('tbl-body'),
+    expand: document.getElementById('btn-expand'),
+    collapse: document.getElementById('btn-collapse'),
+    noCritWrap: document.getElementById('no-crit-wrap'),
+    noCritList: document.getElementById('no-crit-list'),
+  };
+
+  const state = {
+    rows: [],
+    critSet: new Set(),
+    noCritFGs: [],
+    tree: [],
+    equipIndex: new Map(),
+    fgSFGOutputMap: {}          // FG → SFG Output from backend
+  };
+
+  const n = x => (x==null || isNaN(+x)) ? 0 : +x;
+  const fmt2 = x => (x==null||x==='') ? '' : Number(x).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  /* ---------- Metrics per equipment ---------- */
+  function computeEqptMetrics(list, isCritical, fgKey, stageKey, eqpKey, productQtyForFG){
+    const totalDT = list.reduce((a,r)=>a+n(r.total_duration),0);
+
+    const stat = state.equipIndex.get(`${(fgKey||'').trim()}|${(stageKey||'').trim()}|${(eqpKey||'').trim()}`) || {};
+    const maxBCT = n(stat.bct);
+    const avgBOM = n(stat.op_qty);
+    const stageLossPerHr = n(stat.loss_per_hr) || (maxBCT>0 ? (avgBOM/maxBCT) : 0);
+
+    // Equipment-level total loss
+    const totalLoss = stageLossPerHr * totalDT;
+
+    return {
+      avgBCT: maxBCT,
+      avgBOM: avgBOM,
+      productQty: n(productQtyForFG),
+      stageLossPerHr,
+      totalDT,
+      totalLoss,
+      productLossPerHr: 0,
+      totalProductLoss: 0,
+      isCritical
+    };
+  }
+
+  /* ---------- Build tree (with stage + FG product loss) ---------- */
+  function buildTree(rows){
+    // Product(alpha or name) → Stage → Eqpt
+    const mapP=new Map();
+    for(const r of rows){
+      const p=(r.alpha_code||r.product_name||'').trim();
+      const s=(r.stage_name||'').trim();
+      const e=(r.eqpt_id||'').trim();
+      if(!mapP.has(p)) mapP.set(p,new Map());
+      const mapS=mapP.get(p);
+      if(!mapS.has(s)) mapS.set(s,new Map());
+      const mapE=mapS.get(s);
+      if(!mapE.has(e)) mapE.set(e,[]);
+      mapE.get(e).push(r);
+    }
+
+    const tree=[];
+
+    mapP.forEach((eMapByStage,p)=>{
+      const pNode={type:'P', key:p, children:[], open:false};
+
+      // SFG Output for this FG (backend map; fallback to equip stats SFG stage)
+      let fgSFGOutput = n(state.fgSFGOutputMap[p]) || 0;
+
+      if (!fgSFGOutput){
+        state.equipIndex.forEach((stat, key)=>{
+          const parts = key.split("|");
+          const fgKey   = (parts[0] || "").trim();
+          const stageKey= (parts[1] || "").trim();
+          if (fgKey !== p) return;
+          if (/sfg/i.test(stageKey || "")){
+            const val = n(stat.op_qty);
+            if (val > 0 && !fgSFGOutput){
+              fgSFGOutput = val;
+            }
+          }
+        });
+      }
+
+      // ---------- stages under this FG ----------
+      eMapByStage.forEach((eMap,s)=>{
+        const sNode={type:'S', key:s, children:[], open:false};
+
+        eMap.forEach((list,e)=>{
+          const isCritical = state.critSet.has(`${p}|${s}|${e}`);
+          const m = computeEqptMetrics(list, isCritical, p, s, e, fgSFGOutput || 0);
+          sNode.children.push({type:'E', key:e, rows:list, metrics:m});
+        });
+
+        // Stage rollup + stage-level stage loss + product loss
+        let totalDTSum        = 0;   // still used for product-level DT
+        let maxDTAny          = 0;   // NEW: max DT across all eqpts
+        let maxCritDT         = -1;
+        let stageMaxBCT       = 0;
+        let maxLossAny        = 0;   // max loss/hr across all eqpts
+        let maxLossCrit       = 0;   // max loss/hr across critical eqpts
+        let maxTotalLossAny   = 0;   // max TOTAL loss across all eqpts
+        let maxTotalLossCrit  = 0;   // max TOTAL loss across critical eqpts
+
+        sNode.children.forEach(ch=>{
+          const dt = n(ch.metrics.totalDT);
+          totalDTSum += dt;
+          if (dt > maxDTAny) maxDTAny = dt;
+
+          const lossHr      = n(ch.metrics.stageLossPerHr);
+          const eqTotalLoss = n(ch.metrics.totalLoss);
+
+          if (lossHr > maxLossAny) maxLossAny = lossHr;
+          if (ch.metrics.isCritical && lossHr > maxLossCrit) maxLossCrit = lossHr;
+
+          if (eqTotalLoss > maxTotalLossAny) maxTotalLossAny = eqTotalLoss;
+          if (ch.metrics.isCritical && eqTotalLoss > maxTotalLossCrit){
+            maxTotalLossCrit = eqTotalLoss;
+          }
+
+          if (ch.metrics.isCritical && dt > maxCritDT){
+            maxCritDT = dt;
+          }
+
+          const stat = state.equipIndex.get(`${p}|${s}|${ch.key}`) || {};
+          const bct  = n(stat.bct);
+          if (bct > stageMaxBCT) stageMaxBCT = bct;
+        });
+
+        const stageHasCritical = maxCritDT >= 0;
+        // ✅ Stage Total DT: max DT of critical eqpt (if any) else max DT of all, NOT sum
+        const totalDT  = stageHasCritical ? maxCritDT : maxDTAny;
+
+        // Stage Loss/hr: if any critical → max critical loss/hr, else max of all
+        const stageLossPerHrStage = stageHasCritical ? maxLossCrit : maxLossAny;
+
+        // Total Loss (Kg): use MAX equipment total loss (critical if exists else all)
+        const totalLoss = stageHasCritical ? maxTotalLossCrit : maxTotalLossAny;
+
+        // Stage-level product loss: use max BCT of that stage
+        const sfgOutput = fgSFGOutput || 0;
+        const productLossPerHrStage =
+          (stageMaxBCT > 0 && sfgOutput > 0) ? (sfgOutput / stageMaxBCT) : 0;
+        const totalProductLossStage = productLossPerHrStage * totalDT;
+
+        sNode.metrics = {
+          avgBCT: 0,
+          avgBOM: 0,
+          productQty: sfgOutput,
+          stageLossPerHr: stageLossPerHrStage,
+          totalDT,
+          totalLoss,
+          productLossPerHr: productLossPerHrStage,
+          totalProductLoss: totalProductLossStage,
+          isCriticalAggregate: stageHasCritical,
+          stageMaxBCT: stageMaxBCT
+        };
+
+        pNode.children.push(sNode);
+      });
+
+      // ---------- Product rollup (FG row) ----------
+      let pDTsum = 0;
+      let maxCritDT = -1;
+      let lossOfMaxCrit = 0;
+      let productLossPerHrFromCrit = 0;
+      let maxStageBCT = 0;
+
+      pNode.children.forEach(sn=>{
+        pDTsum += n(sn.metrics.totalDT);
+        maxStageBCT = Math.max(maxStageBCT, n(sn.metrics.stageMaxBCT || 0));
+
+        sn.children.forEach(eNode=>{
+          if (eNode.metrics.isCritical){
+            const dt = n(eNode.metrics.totalDT);
+            if (dt > maxCritDT){
+              maxCritDT = dt;
+              lossOfMaxCrit = n(eNode.metrics.totalLoss);
+
+              const stat = state.equipIndex.get(`${p}|${sn.key}|${eNode.key}`) || {};
+              const bct = n(stat.bct);
+              const sfgOutput = fgSFGOutput || 0;
+              productLossPerHrFromCrit = (bct > 0 && sfgOutput > 0) ? (sfgOutput / bct) : 0;
+            }
+          }
+        });
+      });
+
+      const productHasCritical = maxCritDT >= 0;
+
+      let totalDTForProduct;
+      let productLossPerHrFinal;
+      let totalProductLoss;
+      let totalLossFG;
+
+      if (productHasCritical){
+        totalDTForProduct   = maxCritDT;
+        productLossPerHrFinal = productLossPerHrFromCrit;
+        totalProductLoss    = productLossPerHrFinal * totalDTForProduct;
+        totalLossFG         = lossOfMaxCrit;
+      } else {
+        const bctFallback = maxStageBCT;
+        totalDTForProduct   = pDTsum;
+        productLossPerHrFinal =
+          (bctFallback > 0 && fgSFGOutput > 0) ? (fgSFGOutput / bctFallback) : 0;
+        totalProductLoss    = productLossPerHrFinal * totalDTForProduct;
+        totalLossFG         = 0;
+      }
+
+      pNode.metrics = {
+        avgBCT: 0,
+        avgBOM: 0,
+        productQty: fgSFGOutput || 0,
+        stageLossPerHr: 0,
+        totalDT: totalDTForProduct,
+        totalLoss: totalLossFG,
+        productLossPerHr: productLossPerHrFinal,
+        totalProductLoss: totalProductLoss
+      };
+
+      tree.push(pNode);
+    });
+
+    return tree;
+  }
+
+  /* ---------- Rendering ---------- */
+  function renderSummary(){
+    const tb=els.sumBody; tb.innerHTML='';
+    const frag=document.createDocumentFragment();
+
+    function row(label, depth, metrics, hasToggle, node, badge){
+      const tr=document.createElement('tr'); tr.className="odd:bg-white even:bg-slate-50";
+      const pad=depth*16, icon=hasToggle?(node.open?'▼':'▶'):(depth<2?'•':'');
+      const nameCell=document.createElement('td');
+      nameCell.className="px-3 py-1.5 border border-slate-200 align-top";
+      nameCell.innerHTML=`
+        <div class="flex items-start gap-2" style="padding-left:${pad}px">
+          <span class="w-3 mt-[2px] inline-block text-[9px]">${icon}</span>
+          <span class="whitespace-normal break-words leading-snug text-[11px]">
+            ${label || '(blank)'}
+          </span>
+          ${badge || ''}
+        </div>`;
+      if(hasToggle){ nameCell.style.cursor='pointer'; nameCell.onclick=()=>{ node.open=!node.open; renderSummary(); }; }
+      tr.appendChild(nameCell);
+
+      const cells=[
+        metrics.avgBCT,
+        metrics.avgBOM,
+        metrics.stageLossPerHr,
+        metrics.totalDT,
+        metrics.totalLoss,
+        metrics.productQty,
+        metrics.productLossPerHr,
+        metrics.totalProductLoss
+      ].map(fmt2);
+      cells.forEach(v=>{
+        const td=document.createElement('td');
+        td.className="px-3 py-1.5 border border-slate-200 text-right align-top";
+        td.textContent=v;
+        tr.appendChild(td);
+      });
+      frag.appendChild(tr);
+    }
+
+    for(const p of state.tree){
+      row(p.key,0,p.metrics,true,p);
+      if(p.open){
+        for(const s of p.children){
+          const stageBadge = s.metrics.isCriticalAggregate ? '' :
+            `<span class="px-2 py-0.5 rounded-full text-[10px] border border-amber-300 text-amber-700 bg-amber-50">no critical loss</span>`;
+          row(s.key,1,s.metrics,true,s,stageBadge);
+          if(s.open){
+            for(const e of s.children){
+              const badge = e.metrics.isCritical
+                ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-emerald-300 text-emerald-700 bg-emerald-50">critical</span>`
+                : `<span class="px-2 py-0.5 rounded-full text-[10px] border border-slate-300 text-slate-600 bg-slate-50">non-critical</span>`;
+              row(e.key,2,e.metrics,false,e,badge);
+            }
+          }
+        }
+      }
+    }
+    tb.appendChild(frag);
+
+    if (state.noCritFGs && state.noCritFGs.length){
+      els.noCritWrap.classList.remove('hidden');
+      els.noCritList.innerHTML = state.noCritFGs.map(fg=>`<li>${fg} — <em>no critical equipment selected</em></li>`).join('');
+    }else{
+      els.noCritWrap.classList.add('hidden');
+      els.noCritList.innerHTML = '';
+    }
+  }
+
+  function renderDetail(rows){
+    const tb=els.tblBody; tb.innerHTML='';
+    const frag=document.createDocumentFragment();
+    if(!rows.length){
+      const tr=document.createElement('tr'); const td=document.createElement('td');
+      td.colSpan=12; td.className="px-3 py-4 text-slate-500 italic"; td.textContent="No rows match the current filters.";
+      tr.appendChild(td); frag.appendChild(tr); tb.appendChild(frag); return;
+    }
+    for(const r of rows){
+      const tr=document.createElement('tr'); tr.className="odd:bg-white even:bg-slate-50";
+      const cells=[
+        r.id, r.date??'', r.block??'',
+        (r.alpha_code||r.product_name||''), r.stage_name??'', r.eqpt_id??'', r.eqpt_name??'',
+        r.batch_no??'', r.downtime_dept??'', r.downtime_category??'',
+        fmt2(r.total_duration), fmt2(r.loss)
+      ];
+      cells.forEach((c,idx)=>{
+        const td=document.createElement('td');
+        td.className="px-3 py-2 border-b"+([10,11].includes(idx)?" text-right":"");
+        td.textContent=c??'';
+        tr.appendChild(td);
+      });
+      frag.appendChild(tr);
+    }
+    tb.appendChild(frag);
+  }
+
+  /* ---------- Data fetch ---------- */
+  async function fetchData(){
+    const q=new URLSearchParams();
+    if(els.from.value) q.set('from',els.from.value);
+    if(els.to.value)   q.set('to',els.to.value);
+    for(const v of ddProduct.getSelected()) q.append('product',v);
+    for(const v of ddStage.getSelected())   q.append('stage',v);
+    for(const v of ddEqpt.getSelected())    q.append('eqpt',v);
+
+    const res=await fetch(`${dataUrl}?${q.toString()}`,{headers:{'Accept':'application/json'}});
+    if(!res.ok){
+      console.error('API failed',await res.text());
+      state.rows=[]; state.critSet=new Set(); state.noCritFGs=[]; state.tree=[]; state.equipIndex=new Map(); state.fgSFGOutputMap={};
+      renderSummary(); renderDetail([]); return;
+    }
+    const payload=await res.json();
+
+    state.rows = payload.rows || [];
+    const critTriples = (payload.critical || []).map(c => `${(c.fg||'').trim()}|${(c.stage||'').trim()}|${(c.eqp||'').trim()}`);
+    state.critSet = new Set(critTriples);
+    state.noCritFGs = payload.no_critical_fgs || [];
+
+    state.equipIndex = new Map();
+    (payload.equip_stats || []).forEach(s => {
+      const key = `${(s.fg||'').trim()}|${(s.stage||'').trim()}|${(s.eqp||'').trim()}`;
+      state.equipIndex.set(key, {
+        bct: +s.bct || 0,
+        op_qty: +s.op_qty || 0,
+        loss_per_hr: +s.loss_per_hr || 0
+      });
+    });
+
+    state.fgSFGOutputMap = payload.fg_sfg_output || {};
+
+    ddProduct.setOptions(payload.options?.products || []);
+    ddStage.setOptions(payload.options?.stages || []);
+    ddEqpt.setOptions(payload.options?.eqpts || []);
+
+    state.tree = buildTree(state.rows);
+    renderSummary();
+    renderDetail(state.rows);
+  }
+
+  function clearFilters(){
+    els.from.value='';
+    els.to.value='';
+    ddProduct.clear();
+    ddStage.clear();
+    ddEqpt.clear();
+    fetchData();
+  }
+
+  function exportCSV(){
+    const headers=[
+      'Product','Stage','Eqpt',
+      'BCT','O/P QTY','Stage Loss /hr',
+      'Total DT','Total Loss (Kg)',
+      'SFG Output','Product loss /hr','Total Product Loss (Kg)'
+    ];
+    const lines=[headers.join(',')];
+
+    state.tree.forEach(p=>{
+      // Export at product-level only (one line per product)
+      lines.push([
+        p.key, '', '',
+        fmt2(p.metrics.avgBCT),
+        fmt2(p.metrics.avgBOM),
+        fmt2(p.metrics.stageLossPerHr),
+        fmt2(p.metrics.totalDT),
+        fmt2(p.metrics.totalLoss),
+        fmt2(p.metrics.productQty),
+        fmt2(p.metrics.productLossPerHr),
+        fmt2(p.metrics.totalProductLoss)
+      ].join(','));
+    });
+
+    const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url;
+    a.download=`downtime-critical-only-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('btn-apply').addEventListener('click', fetchData);
+  document.getElementById('btn-clear').addEventListener('click', clearFilters);
+  document.getElementById('btn-export').addEventListener('click', exportCSV);
+  document.getElementById('btn-expand').addEventListener('click', ()=>{
+    state.tree.forEach(p=>{ p.open=true; p.children.forEach(s=>s.open=true); });
+    renderSummary();
+  });
+  document.getElementById('btn-collapse').addEventListener('click', ()=>{
+    state.tree.forEach(p=>{ p.open=false; p.children.forEach(s=>s.open=false); });
+    renderSummary();
+  });
+
+  fetchData();
+})();
+</script>
+{% endblock %}

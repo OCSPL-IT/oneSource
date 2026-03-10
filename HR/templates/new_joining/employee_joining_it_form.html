@@ -1,0 +1,273 @@
+{# templates/new_joining/employee_joining_it_form.html #}
+{% extends "main/index.html" %}
+{% load static %}
+
+{% block maincontent %}
+
+{% if messages %}
+  <div class="max-w-5xl mx-auto mt-4 space-y-2">
+    {% for message in messages %}
+      <div class="flex items-center justify-between px-4 py-2 rounded-md text-sm text-white
+                  {% if message.tags == 'success' %}bg-green-600{% else %}bg-red-600{% endif %}">
+        <span>{{ message }}</span>
+        <button type="button" onclick="this.parentElement.remove()">✖</button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<div class="min-h-screen bg-gray-50 py-6">
+  <div class="max-w-5xl mx-auto bg-white shadow rounded-xl p-6 sm:p-8">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div>
+        <h1 class="text-xl sm:text-2xl font-semibold text-gray-800">
+          IT Infra Update - Employee Joining
+        </h1>
+        <p class="text-xs text-gray-500 mt-1">
+          Review basic employee details and update IT / infra provisioning status.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{% url 'employee_joining_detail' object.pk %}"
+           class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                  border border-gray-300 text-gray-700 bg-white hover:bg-gray-50">
+          ← Back to Detail
+        </a>
+        <a href="{% url 'employee_joining_list' %}"
+           class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md
+                  border border-gray-300 text-gray-700 bg-white hover:bg-gray-50">
+          List
+        </a>
+      </div>
+    </div>
+
+    <!-- Basic Info Summary (read-only) -->
+    <div class="border border-gray-200 rounded-lg mb-6">
+      <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+          Basic Details (Read Only)
+        </h2>
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium
+                     {% if object.status == 'approved' %}
+                       bg-green-50 text-green-700 border border-green-200
+                     {% elif object.status == 'pending_approval' %}
+                       bg-amber-50 text-amber-700 border border-amber-200
+                     {% elif object.status == 'rejected' %}
+                       bg-red-50 text-red-700 border border-red-200
+                     {% else %}
+                       bg-slate-50 text-slate-700 border border-slate-200
+                     {% endif %}">
+          Status: {{ object.get_status_display }}
+        </span>
+      </div>
+      <div class="p-4 space-y-3 text-sm text-gray-700">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Employee Name</p>
+            <p class="font-semibold">{{ object.employee_name }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Employee ID</p>
+            <p class="font-semibold">{{ object.employee_id }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Designation</p>
+            <p>{{ object.designation|default:"-" }}</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Company</p>
+            <p>{{ object.company }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Location</p>
+            <p>{{ object.location }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Department</p>
+            <p>{{ object.department|default:"-" }}</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Date of Joining</p>
+            <p>{{ object.date_of_joining|date:"d-M-Y" }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Date of Confirmation</p>
+            <p>{{ object.date_of_confirmation|date:"d-M-Y" }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Requested Email ID</p>
+            <p>{{ object.email_id|default:"-" }}</p>
+          </div>
+          <div>
+            <p class="text-[11px] uppercase text-gray-500">Requested Device</p>
+            <p>{{ object.computer|default:"-" }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Non field errors -->
+    {% if form.non_field_errors %}
+      <div class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <!-- IT Update Form -->
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="border border-gray-200 rounded-lg mb-6">
+        <div class="px-4 py-2.5 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+          <h2 class="text-sm font-semibold text-gray-700 tracking-wide">
+            IT / Infra Provisioning (Update by IT User)
+          </h2>
+          <p class="text-[11px] text-gray-500 mt-1">
+            Update what has been arranged (Biometric, cards, laptop, email, access, etc.).
+          </p>
+        </div>
+        <div class="p-4 space-y-4">
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <p class="block text-sm font-medium text-gray-700 mb-1">
+                Biometric Enrollment
+              </p>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.Biomatric_enrollment|default:"-" }}
+              </p>
+            </div>
+            <div>
+              <p class="block text-sm font-medium text-gray-700 mb-1">
+                Attendance Card
+              </p>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.attendance_card|default:"-" }}
+              </p>
+            </div>
+            <div>
+              <p class="block text-sm font-medium text-gray-700 mb-1">
+                Smart Office Entry
+              </p>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.smart_office_entry|default:"-" }}
+              </p>
+            </div>
+            <div>
+              <p class="block text-sm font-medium text-gray-700 mb-1">
+                Mobile Phone
+              </p>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.mobile_phone|default:"-" }}
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <p class="block text-sm font-medium text-gray-700 mb-1">
+                SIM Card
+              </p>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.sim_card|default:"-" }}
+              </p>
+            </div>
+            <div>
+              <p class="block text-sm font-medium text-gray-700 mb-1">
+                Telephone Extension
+              </p>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.telephone_extension|default:"-" }}
+              </p>
+            </div>
+            <div>
+              <p class="block text-sm font-medium text-gray-700 mb-1">
+                Computer
+              </p>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.computer|default:"-" }}
+              </p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Email Id
+              </label>
+              <p class="text-sm text-gray-500 font-medium">
+                {{ object.email|default:"-" }}
+              </p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                ERP Login
+              </label>
+              {{ form.erp_login }}
+              {% if form.erp_login.errors %}
+                <p class="mt-1 text-xs text-red-500">{{ form.erp_login.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Office 365 ID
+              </label>
+              {{ form.office_365_id }}
+              {% if form.office_365_id.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ form.office_365_id.errors|striptags }}</p>
+              {% endif %}
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                SharePoint Site
+              </label>
+              {{ form.sharepoint_site }}
+              {% if form.sharepoint_site.errors %}
+                <p class="mt-1 text-xs text-red-600">{{ form.sharepoint_site.errors|striptags }}</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Specific Folder Rights
+            </label>
+            {{ form.specific_folder_rights }}
+            {% if form.specific_folder_rights.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ form.specific_folder_rights.errors|striptags }}</p>
+            {% endif %}
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Remark
+            </label>
+            {{ form.remark }}
+            {% if form.remark.errors %}
+              <p class="mt-1 text-xs text-red-600">{{ form.remark.errors|striptags }}</p>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="flex justify-end">
+        <button type="submit"
+                class="inline-flex items-center justify-center px-5 py-2.5 rounded-md text-sm font-semibold
+                       bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2
+                       focus:ring-offset-2 focus:ring-indigo-500">
+          Save & Send for Approval
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}

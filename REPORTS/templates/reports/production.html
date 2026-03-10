@@ -1,0 +1,468 @@
+{# templates/reports/production_plan_vs_actual.html #}
+{% load reports_dict %}
+{% load indnum %}
+
+<style>
+  /* Layout & chrome */
+  .wrap { max-height: calc(100vh - 16rem); overflow: auto; }
+  .th-sticky { position: sticky; top: 0; z-index: 10; background: #f8fafc; }
+  .first-sticky { position: sticky; left: 0; z-index: 20; background: #fff; }
+  .first-sticky-head { position: sticky; left: 0; z-index: 30; background: #f1f5f9; }
+  .section { border: 1px solid #e2e8f0; border-radius: .5rem; overflow: visible; background: #fff; }
+
+  .titlebar { display: flex; justify-content: space-between; align-items: center; padding: .75rem 1rem; border-bottom: 1px solid #e2e8f0; position: relative; }
+  .titlebar .stripe { position: absolute; inset-inline: 0; top: -1px; height: 4px; background: linear-gradient(90deg, #7dd3fc, #fcd34d, #86efac); }
+  .fw-semibold { font-weight: 600; }
+  .muted { color: #64748b; font-size: 12px; }
+
+  .controls { position: relative; z-index: 50; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: .5rem; padding: .75rem; margin: .75rem 1rem; }
+  .controls .row { display: grid; gap: .5rem; grid-template-columns: repeat(12, minmax(0,1fr)); align-items: end; }
+  .controls label { font-size: 12px; color: #334155; margin-bottom: .25rem; display: block; }
+  .controls input[type="date"], .controls select, .controls button, .controls a {
+    font-size: 14px; border: 1px solid #cbd5e1; border-radius: .375rem; padding: .4rem .5rem;
+  }
+  .btn-primary { background: #0284c7; color: #fff; border-color: #0284c7; }
+  .btn-primary:hover { background: #0369a1; border-color: #0369a1; }
+  .btn-ghost { background: #fff; color: #334155; }
+  .btn-ghost:hover { background: #f1f5f9; }
+
+  /* Table */
+  .table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .table th, .table td {
+    border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
+    padding: .5rem .6rem; white-space: nowrap;
+  }
+  .table th:last-child, .table td:last-child { border-right: none; }
+  .head-1 { text-transform: uppercase; font-size: 11px; letter-spacing: .02em; color: #475569; }
+
+  .w-260 { width: 260px; }
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .text-red { color: #dc2626; font-weight: 600; }
+  .text-green { color: #059669; font-weight: 600; }
+  .text-muted { color: #6b7280; }
+
+  /* Cell background colors */
+  .plan-bg { background: #e0f7fa; }   /* Plan */
+  .est-bg  { background: #fff7e6; }   /* EST */
+  .act-bg  { background: #e6ffed; }   /* Actual */
+
+  /* Batch counts */
+  .cell-sm {
+    font-size: .85em;
+    color: #64748b;
+    margin-left: 3px;
+    font-weight: normal;
+  }
+
+  /* Expand / Collapse */
+  .fg-head { display:flex; align-items:center; gap:.5rem; }
+  .expander {
+    display:inline-flex; align-items:center; justify-content:center;
+    width: 22px; height: 22px; border: 1px solid #cbd5e1; border-radius: 999px;
+    background:#f8fafc; cursor:pointer; user-select:none;
+    font-size: 14px; line-height: 1; color:#334155;
+  }
+  .expander:hover { background:#eef2f7; }
+  .stage-row { display:none; }
+  .stage-name { color:#475569; font-style:italic; padding-left: 2rem; }
+
+  /* --- Styles to support the new details/summary dropdown --- */
+  details.group { position: relative; }
+  details.group > summary {
+    list-style: none;
+    cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: .375rem;
+    padding: .4rem .5rem; background: #fff;
+    display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+    font-size: 14px; color: #334155;
+  }
+  details.group > summary::-webkit-details-marker { display:none; }
+  .popover {
+    position: absolute; z-index: 5000; margin-top: .25rem; inset-inline: 0;
+    border:1px solid #cbd5e1; border-radius:.375rem; background:#fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    max-height: 18rem; overflow: auto; padding: .5rem;
+  }
+  .popover .toolbar { display:flex; align-items:center; gap:.5rem; margin-bottom:.4rem; }
+  .popover .toolbar input[type="text"] {
+    flex:1; border:1px solid #cbd5e1; border-radius:.375rem; padding:.35rem .5rem; font-size: 14px;
+  }
+  .popover ul { list-style: none; margin: 0; padding: 0; }
+  .popover li { display:flex; align-items:center; gap:.5rem; padding:.25rem .35rem; border-radius:.35rem; }
+  .popover li:hover { background:#f8fafc; }
+</style>
+
+<div class="section">
+  <!-- Header -->
+  <div class="titlebar">
+    <div class="stripe"></div>
+    <div class="fw-semibold">Production · Plan vs Actual</div>
+    {% if period and from_date and to_date %}
+    <div class="muted">
+      {{ period }} • {{ from_date|date:"Y-m-d" }} → {{ to_date|date:"Y-m-d" }}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Filters -->
+  <form id="prod-filters" method="get" class="controls">
+    <div class="row">
+      <!-- FG multiselect (SAME UX AS ABOVE) -->
+      <div style="grid-column: span 4 / span 4; position:relative;">
+        <label>FG Name(s)</label>
+
+        <details class="group">
+          <summary>
+            <span id="fgSummaryTxt">
+              {% if selected_fgs and selected_fgs|length > 0 %}
+                {% if selected_fgs|length == 1 %}{{ selected_fgs.0 }}{% else %}{{ selected_fgs|length }} selected{% endif %}
+              {% else %}Select FG Name(s){% endif %}
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 9 6 6 6-6" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </summary>
+
+          <div class="popover" id="fgPopover">
+            <div class="toolbar">
+              <input type="text" id="fgFilterInput" placeholder="Search…">
+              <button type="button" id="fgSelectAll" class="btn-ghost" style="padding:.25rem .5rem;">All</button>
+              <button type="button" id="fgClearAll"  class="btn-ghost" style="padding:.25rem .5rem;">Clear</button>
+            </div>
+            <ul id="fgList">
+              {% with fg_opts=fg_available_alpha|default:all_fg_list %}
+                {% if fg_opts %}
+                  {% for fg in fg_opts %}
+                  <li>
+                    <input type="checkbox" name="fg_name" value="{{ fg }}"
+                      id="fg_{{ forloop.counter }}"
+                      {% if selected_fgs and fg in selected_fgs %}checked{% endif %}>
+                    <label for="fg_{{ forloop.counter }}">{{ fg }}</label>
+                  </li>
+                  {% endfor %}
+                {% else %}
+                  {% for r in prod_grid.rows %}
+                  <li>
+                    <input type="checkbox" name="fg_name" value="{{ r.fg }}"
+                      id="fg_{{ forloop.counter }}"
+                      {% if selected_fgs and r.fg in selected_fgs %}checked{% endif %}>
+                    <label for="fg_{{ forloop.counter }}">{{ r.alias|default:r.fg }}</label>
+                  </li>
+                  {% empty %}
+                    <li class="muted">No FG items.</li>
+                  {% endfor %}
+                {% endif %}
+              {% endwith %}
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div style="grid-column: span 2 / span 2;">
+        <label>From</label>
+        <input type="date" name="from" value="{{ from_date|default:range_from|date:'Y-m-d' }}">
+      </div>
+
+      <div style="grid-column: span 2 / span 2;">
+        <label>To</label>
+        <input type="date" name="to" value="{{ to_date|default:range_to|date:'Y-m-d' }}">
+      </div>
+
+      <div style="grid-column: span 2 / span 2;">
+        <label>Period</label>
+        <select name="period">
+          <option value="MTD"    {% if period == 'MTD' %}selected{% endif %}>MTD</option>
+          <option value="YTD"    {% if period == 'YTD' %}selected{% endif %}>YTD</option>
+          <option value="DAILY"  {% if period == 'DAILY' %}selected{% endif %}>Daily</option>
+          <option value="CUSTOM" {% if period == 'CUSTOM' %}selected{% endif %}>Custom</option>
+        </select>
+      </div>
+
+      <div style="grid-column: span 2 / span 2; display:flex; gap:.5rem; justify-content:flex-end;">
+        <button class="btn-primary" type="submit">Apply</button>
+        <a class="btn-ghost" href="{{ request.path }}">Clear</a>
+      </div>
+    </div>
+  </form>
+
+  <!-- Table -->
+  {% if prod_grid and prod_grid.rows %}
+  <div class="wrap">
+    <table class="table">
+      <thead class="head-1">
+        <tr>
+          <th class="th-sticky first-sticky-head w-260 text-left">FG / Stage</th>
+          {% for month in prod_grid.months %}
+            {# DAILY: Plan + Actual + WIP = 3; non-DAILY: Plan + Est + Actual + Var% + WIP = 5 #}
+            <th class="text-center"
+                colspan="{% if prod_grid.period|upper == 'DAILY' %}3{% else %}5{% endif %}">{{ month }}</th>
+          {% endfor %}
+          <th class="text-center">Stock</th>
+        </tr>
+        <tr>
+          <th class="th-sticky first-sticky-head"></th>
+          {% for _ in prod_grid.months %}
+            <th class="plan-bg text-center">Plan</th>
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <th class="est-bg  text-center">Est.</th>
+            {% endif %}
+            <th class="act-bg  text-center">Actual</th>
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <th class="text-center">Variance %</th>
+            {% endif %}
+            <th class="text-center">Stock(Block)</th>
+          {% endfor %}
+          <th class="text-center">Qty</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in prod_grid.rows %}
+        <!-- FG Row -->
+        <tr>
+          <td class="first-sticky fw-semibold" title="{{ row.alias|default:row.fg }}">
+            <div class="fg-head">
+              <button type="button"
+                      class="expander js-toggle-stages"
+                      aria-expanded="false"
+                      aria-controls="st-rows-{{ forloop.counter0 }}"
+                      data-group="{{ forloop.counter0 }}">+</button>
+              {{ row.alias|default:row.fg }}
+            </div>
+          </td>
+          {% for m in row.months %}
+            <td class="plan-bg text-right">
+              {{ m.plan|default:0|indnum }} <span class="cell-sm">({{ m.plan_ct|default:0 }})</span>
+            </td>
+
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <td class="est-bg text-right">
+                {{ m.est|default:0|indnum }} <span class="cell-sm">({{ m.est_ct|default:0 }})</span>
+              </td>
+            {% endif %}
+
+            <td class="act-bg text-right">
+              <span class="{% if m.act < m.plan %}text-red{% else %}text-green{% endif %}">
+                {{ m.act|default:0|indnum }}
+              </span>
+              <span class="cell-sm">({{ m.act_ct|default:0 }})</span>
+            </td>
+
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <td class="text-right">
+                {% if m.var_pct is None %}
+                  <span class="text-muted">—</span>
+                {% else %}
+                  <span class="{% if m.var_pct > 0 %}text-green{% elif m.var_pct < 0 %}text-red{% else %}text-muted{% endif %}">
+                    {{ m.var_pct|floatformat:1 }}%
+                  </span>
+                {% endif %}
+              </td>
+            {% endif %}
+
+            <td class="text-right">{{ m.wip|default:0|indnum }}</td>
+          {% endfor %}
+          <td class="text-right">{{ row.stock_close|default:0|indnum }}</td>
+        </tr>
+
+        {# Stage rows (collapsed by default) #}
+        {% for st in row.stages %}
+        <tr id="st-rows-{{ forloop.parentloop.counter0 }}"
+            class="stage-row js-stage-row-{{ forloop.parentloop.counter0 }}">
+          <td class="first-sticky stage-name">{{ st.stage }}</td>
+
+          {% for sm in st.months %}
+            <td class="plan-bg text-right">
+              {{ sm.plan|default:0|indnum }} <span class="cell-sm">({{ sm.plan_ct|default:0 }})</span>
+            </td>
+
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <td class="est-bg text-right">
+                {{ sm.est|default:0|indnum }} <span class="cell-sm">({{ sm.est_ct|default:0 }})</span>
+              </td>
+            {% endif %}
+
+            <td class="act-bg text-right">
+              <span class="{% if sm.act < sm.plan %}text-red{% else %}text-green{% endif %}">
+                {{ sm.act|default:0|indnum }}
+              </span>
+              <span class="cell-sm">({{ sm.act_ct|default:0 }})</span>
+            </td>
+
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <td class="text-right">
+                {% if sm.var_pct is None %}
+                  <span class="text-muted">—</span>
+                {% else %}
+                  <span class="{% if sm.var_pct > 0 %}text-green{% elif sm.var_pct < 0 %}text-red{% else %}text-muted{% endif %}">
+                    {{ sm.var_pct|floatformat:1 }}%
+                  </span>
+                {% endif %}
+              </td>
+            {% endif %}
+
+            <td class="text-right">{{ sm.wip|default:0|indnum }}</td>
+          {% endfor %}
+          <td class="text-right">{{ st.stock_close|default:0|indnum }}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+
+      <tfoot>
+        <tr>
+          <td class="first-sticky fw-semibold text-right">Grand Total</td>
+          {% for f in prod_grid.grand.per_month %}
+            <td class="plan-bg text-right fw-semibold">
+              {{ f.plan|default:0|indnum }} <span class="cell-sm">({{ f.plan_ct|default:0 }})</span>
+            </td>
+
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <td class="est-bg text-right fw-semibold">
+                {{ f.est|default:0|indnum }} <span class="cell-sm">({{ f.est_ct|default:0 }})</span>
+              </td>
+            {% endif %}
+
+            <td class="act-bg text-right fw-semibold">
+              <span class="{% if f.act < f.plan %}text-red{% else %}text-green{% endif %}">
+                {{ f.act|default:0|indnum }}
+              </span>
+              <span class="cell-sm">({{ f.act_ct|default:0 }})</span>
+            </td>
+
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <td class="text-right fw-semibold">
+                {% if f.var_pct is None %}
+                  <span class="text-muted">—</span>
+                {% else %}
+                  <span class="{% if f.var_pct > 0 %}text-green{% elif f.var_pct < 0 %}text-red{% else %}text-muted{% endif %}">
+                    {{ f.var_pct|floatformat:1 }}%
+                  </span>
+                {% endif %}
+              </td>
+            {% endif %}
+
+            <td class="text-right fw-semibold">{{ f.wip|default:0|indnum }}</td>
+          {% endfor %}
+          <td class="text-right fw-semibold">{{ prod_grid.grand.stock_total|default:0|indnum }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="wrap">
+    <table class="table">
+      <thead class="head-1">
+        <tr>
+          <th class="th-sticky first-sticky-head w-260 text-left">FG / Stage</th>
+          {% for month in prod_grid.months %}
+            <th class="text-center"
+                colspan="{% if prod_grid.period|upper == 'DAILY' %}3{% else %}5{% endif %}">{{ month }}</th>
+          {% endfor %}
+          <th class="text-center">Stock</th>
+        </tr>
+        <tr>
+          <th class="th-sticky first-sticky-head"></th>
+          {% for _ in prod_grid.months %}
+            <th class="plan-bg text-center">Plan</th>
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <th class="est-bg  text-center">Est.</th>
+            {% endif %}
+            <th class="act-bg  text-center">Actual</th>
+            {% if prod_grid.period|upper != 'DAILY' %}
+              <th class="text-center">Variance %</th>
+            {% endif %}
+            <th class="text-center">WIP</th>
+          {% endfor %}
+          <th class="text-center">Qty</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if prod_grid.period|upper == 'DAILY' %}
+          {% widthratio prod_grid.months|length 1 3 as pmcols %}
+        {% else %}
+          {% widthratio prod_grid.months|length 1 5 as pmcols %}
+        {% endif %}
+        {% with totalcols=pmcols|add:"2" %}
+        <tr>
+          <td class="text-center" colspan="{{ totalcols }}">
+            No production data in this range.
+          </td>
+        </tr>
+        {% endwith %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // --- FG dropdown (match other page) ---
+  const form          = document.getElementById('prod-filters');
+  const detailsEl     = document.querySelector('details.group');
+  const fgSummaryTxt  = document.getElementById('fgSummaryTxt');
+  const fgList        = document.getElementById('fgList');
+  const fgFilterInput = document.getElementById('fgFilterInput');
+
+  const updateFGSummary = () => {
+    if (!fgList || !fgSummaryTxt) return;
+    const checked = fgList.querySelectorAll('input[name="fg_name"]:checked');
+    if (checked.length === 0) {
+      fgSummaryTxt.textContent = 'Select FG Name(s)';
+    } else if (checked.length === 1) {
+      const lbl = checked[0].nextElementSibling?.textContent?.trim();
+      fgSummaryTxt.textContent = lbl || '1 selected';
+    } else {
+      fgSummaryTxt.textContent = `${checked.length} selected`;
+    }
+  };
+
+  const filterFGList = (e) => {
+    const val = (e.target.value || '').toLowerCase();
+    fgList.querySelectorAll('li').forEach(li => {
+      const label = li.querySelector('label');
+      const match = label?.textContent?.toLowerCase().includes(val);
+      li.style.display = match ? '' : 'none';
+    });
+  };
+
+  // Select/Clear all via event delegation
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'fgSelectAll' || e.target.id === 'fgClearAll') {
+      const check = e.target.id === 'fgSelectAll';
+      fgList.querySelectorAll('input[name="fg_name"]').forEach(cb => cb.checked = check);
+      updateFGSummary();
+    }
+  });
+
+  // Close details when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!detailsEl) return;
+    if (!detailsEl.contains(e.target)) detailsEl.removeAttribute('open');
+  });
+
+  // Wire up listeners
+  fgList?.addEventListener('change', (e) => {
+    if (e.target.matches('input[name="fg_name"]')) updateFGSummary();
+  });
+  fgFilterInput?.addEventListener('input', filterFGList);
+
+  // --- Expand / collapse stages per FG (kept as-is) ---
+  document.querySelectorAll('.js-toggle-stages').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const gid  = btn.getAttribute('data-group');
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      const rows = document.querySelectorAll('.js-stage-row-' + gid);
+      rows.forEach(r => r.style.display = open ? 'none' : 'table-row');
+      btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+      btn.textContent = open ? '+' : '–';
+    });
+  });
+
+  // Initial summary text
+  updateFGSummary();
+});
+</script>

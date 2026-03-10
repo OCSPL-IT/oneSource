@@ -1,0 +1,224 @@
+<!-- templates/QC/analytical_mistake_form.html -->
+{% extends "main/index.html" %}
+{% block title %}{% if edit_mode %}Edit{% else %}New{% endif %} Analytical Mistake – QC Project{% endblock %}
+{% block maincontent %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--brand:#3b82f6;--brand-dark:#1e40af;--bg:#f5f7fb;--surface:#fff;--border:#e5e7eb;--text:#374151}
+  .wrap{max-width:1100px;margin:32px auto;padding:0 24px;font-family:Inter,sans-serif}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.06);padding:20px}
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .btn{border:1px solid var(--brand);color:var(--brand-dark);padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;background:#fff}
+  .btn:hover{background:var(--brand);color:#fff}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  label{font-weight:600;margin-bottom:6px;display:block}
+  input,textarea,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:14px}
+  textarea{min-height:90px}
+  #id_product{color:#dc2626;font-weight:600}
+  .picker{display:flex;gap:6px;align-items:center}
+  .picker .picker-btn{border:1px solid var(--border);padding:6px 10px;border-radius:8px;background:#f9fafb;cursor:pointer}
+  .picker-menu{position:absolute;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:6px 0;margin-top:6px;display:none;max-height:280px;overflow:auto;min-width:320px;z-index:50}
+  .picker-menu.show{display:block}
+  .picker-item{padding:8px 12px;cursor:pointer}
+  .picker-item:hover{background:#f3f4f6}
+</style>
+
+<div class="wrap">
+  <div class="toolbar">
+    <h2>{% if edit_mode %}Edit{% else %}New{% endif %} Analytical Mistake</h2>
+    <div>
+      <a class="btn" href="{% url 'qc:analytical_mistake_list' %}">Back to Register</a>
+      <a class="btn" href="{% url 'qc:qc_home' %}">Home</a>
+    </div>
+  </div>
+
+  <form method="post" class="card" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <ul class="errorlist">{{ form.non_field_errors }}</ul>
+    {% endif %}
+
+    <!-- AM No. (FY-wise auto number) -->
+    <div class="grid">
+      <div>
+        <label>AM No.</label>
+        {% if form.instance.pk and form.instance.am_no %}
+          <input type="text" value="{{ form.instance.am_no }}" readonly>
+          <div class="hint">Auto-generated; financial yearwise.</div>
+        {% else %}
+          <input type="text" value="(auto on save: AM/YY-YY/00001)" readonly>
+          <div class="hint">Financial year Apr–Mar.</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="{{ form.date.id_for_label }}">Date</label>
+        {{ form.date }}
+        {{ form.date.errors }}
+      </div>
+
+      <div>
+        <label for="{{ form.plant.id_for_label }}">Plant</label>
+        {{ form.plant }}
+        {{ form.plant.errors }}
+      </div>
+
+      <!-- Product (Alfa) with datalist -->
+      <div>
+        <label for="{{ form.product.id_for_label }}">Product (Alfa)</label>
+        {{ form.product }}
+        {{ form.product.errors }}
+        <datalist id="alfa-options">
+          {% for name in alfa_options|default:form.alfa_options %}
+            <option value="{{ name }}"></option>
+          {% endfor %}
+        </datalist>
+        <div class="hint">Start typing to search Alfa product.</div>
+      </div>
+
+      <!-- Finished Product (auto-filled) -->
+      <div>
+        <label for="{{ form.finished_product.id_for_label }}">Finished Product</label>
+        {{ form.finished_product }}
+        {{ form.finished_product.errors }}
+        <div class="hint">Auto-filled from Alfa Product Master.</div>
+      </div>
+
+      <!-- Batch No. picker (recent 30 days; all stages) -->
+      <div style="position:relative">
+        <label for="{{ form.batch_no.id_for_label }}">Batch No</label>
+        <div class="picker">
+          {{ form.batch_no }}
+          <button type="button" class="picker-btn" title="Show recent batches">▾</button>
+        </div>
+        <datalist id="batch-options"></datalist>
+        <div id="batch-menu" class="picker-menu"></div>
+        {{ form.batch_no.errors }}
+        <div class="hint">Type to filter or click ▾ to see recent related batches.</div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr;">
+      <div>
+        <label for="{{ form.description.id_for_label }}">Description of Analytical Mistake</label>
+        {{ form.description }}
+        {{ form.description.errors }}
+      </div>
+      <div>
+        <label for="{{ form.root_cause.id_for_label }}">Root Cause</label>
+        {{ form.root_cause }}
+        {{ form.root_cause.errors }}
+      </div>
+      <div>
+        <label for="{{ form.corrective_action.id_for_label }}">Corrective Action</label>
+        {{ form.corrective_action }}
+        {{ form.corrective_action.errors }}
+      </div>
+      <div>
+        <label for="{{ form.preventive_action.id_for_label }}">Preventive Action</label>
+        {{ form.preventive_action }}
+        {{ form.preventive_action.errors }}
+      </div>
+    </div>
+
+    <div style="margin-top:14px">
+      <button class="btn" type="submit">{% if edit_mode %}Update{% else %}Save{% endif %}</button>
+    </div>
+  </form>
+</div>
+
+<!-- Alfa master map for auto-fill -->
+<script id="alfa-map" type="application/json">
+  {{ alfa_map_json|default:'{}'|safe }}
+</script>
+
+<script>
+(function(){
+  const script        = document.getElementById('alfa-map');
+  const productInput  = document.getElementById('id_product');
+  const finishedInput = document.getElementById('id_finished_product');
+  const batchInput    = document.getElementById('id_batch_no');
+  const batchList     = document.getElementById('batch-options');
+  const batchMenu     = document.getElementById('batch-menu');
+
+  // Alfa -> Finished auto-fill
+  let MAP = {};
+  try { MAP = script ? JSON.parse(script.textContent || '{}') : {}; } catch(e){ MAP = {}; }
+
+  if (productInput && !productInput.getAttribute('list')) productInput.setAttribute('list','alfa-options');
+  if (batchInput && !batchInput.getAttribute('list')) batchInput.setAttribute('list','batch-options');
+
+  function fillFinished(){
+    const key = (productInput?.value || '').trim();
+    if (!key) { if (finishedInput) finishedInput.value=''; return; }
+    let hit = MAP[key] || '';
+    if (!hit) {
+      const lower = key.toLowerCase();
+      const keys = Object.keys(MAP);
+      const k = keys.find(x => x.toLowerCase() === lower)
+           || keys.find(x => x.toLowerCase().startsWith(lower))
+           || keys.find(x => x.toLowerCase().includes(lower));
+      if (k) hit = MAP[k];
+    }
+    if (finishedInput) finishedInput.value = hit || '';
+  }
+
+  // Batches by FINISHED product only (last 30 days; all stages) – reuses your existing API
+  async function fetchBatches(){
+    const finished = (finishedInput?.value || '').trim();
+    if (!finished) { clearBatches(); return; }
+    try {
+      const url = "{% url 'qc:api_batches_for_product' %}?product=" + encodeURIComponent(finished);
+      const resp = await fetch(url, {headers: {"X-Requested-With":"XMLHttpRequest"}});
+      const data = await resp.json();
+      const items = Array.isArray(data?.items) ? data.items
+                   : Array.isArray(data?.batches) ? data.batches.map(b => ({batch:b,stage:'',date:''}))
+                   : [];
+      renderBatches(items);
+    } catch(e){ clearBatches(); }
+  }
+  function clearBatches(){ if (batchList) batchList.innerHTML=''; if (batchMenu){ batchMenu.innerHTML=''; batchMenu.classList.remove('show'); } }
+  function renderBatches(items){
+    if (batchList){
+      batchList.innerHTML='';
+      const seen = new Set();
+      items.forEach(({batch})=>{
+        if (!batch || seen.has(batch)) return;
+        seen.add(batch);
+        const opt = document.createElement('option'); opt.value = batch; batchList.appendChild(opt);
+      });
+    }
+    if (batchMenu){
+      batchMenu.innerHTML='';
+      if (!items.length) return;
+      const frag = document.createDocumentFragment();
+      items.forEach(({batch,stage,date})=>{
+        if (!batch) return;
+        const div = document.createElement('div');
+        div.className = 'picker-item';
+        div.innerHTML = `<strong>${batch}</strong> <span style="color:#6b7280;">· ${stage||''}</span> <span style="color:#9ca3af;">${date?`(${date})`:''}</span>`;
+        div.addEventListener('click', ()=>{ batchInput.value = batch; batchMenu.classList.remove('show'); });
+        frag.appendChild(div);
+      });
+      batchMenu.appendChild(frag);
+    }
+  }
+
+  // Events
+  productInput?.addEventListener('input', ()=>{ fillFinished(); fetchBatches(); });
+  productInput?.addEventListener('change', ()=>{ fillFinished(); fetchBatches(); });
+  finishedInput?.addEventListener('input', fetchBatches);
+  finishedInput?.addEventListener('change', fetchBatches);
+  batchInput?.addEventListener('focus', fetchBatches);
+
+  const toggleBtn = document.querySelector('.picker .picker-btn');
+  toggleBtn?.addEventListener('click', ()=>{ if (!batchMenu.classList.contains('show')) fetchBatches(); batchMenu.classList.toggle('show'); });
+
+  document.addEventListener('click', (e)=>{ if (batchMenu && !batchMenu.contains(e.target) && e.target !== toggleBtn && e.target !== batchInput){ batchMenu.classList.remove('show'); } });
+
+  // Prefill on edit
+  fillFinished(); fetchBatches();
+})();
+</script>
+{% endblock maincontent %}

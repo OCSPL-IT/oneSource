@@ -1,0 +1,106 @@
+{# Topic: Production vs Dispatch & Stock #}
+{% load static %}
+{% load indnum %}
+<style>
+  /* Table container: vertical scroll only here */
+  .prod-table-container { max-height: calc(100vh - 16rem); overflow-y: auto; overflow-x: hidden; }
+  .prod-table-container table th, .prod-table-container table td { white-space: normal; word-break: break-word; }
+  /* Sticky header/first column/footer */
+  .prod-table-container thead th { position: sticky; top: 0; background: #fff; z-index: 30; }
+  .prod-table-container th:first-child, .prod-table-container td:first-child { position: sticky; left: 0; background: #fff; z-index: 20; }
+  .prod-table-container thead th:first-child { z-index: 40; }
+  .prod-table-container tfoot td { position: sticky; bottom: 0; background: #f1f5f9; z-index: 25; }
+  .prod-table-container tfoot tr { border-top: 2px solid #cbd5e1; }
+  .prod-table-container tfoot td:first-child { left: 0; z-index: 35; }
+  /* UX */
+  .expand-toggle { cursor: pointer; }
+  .expand-toggle svg { transition: transform .2s ease; }
+</style>
+
+<div class="relative rounded-xl border border-slate-200 bg-white shadow-sm">
+  <div class="relative px-4 py-3 border-b border-slate-200">
+    <div class="absolute inset-x-0 -top-px h-1 bg-gradient-to-r from-sky-300 via-amber-300 to-emerald-300"></div>
+    <h2 class="text-sm font-semibold text-slate-900">Production · Dispatch · Stock</h2>
+  </div>
+
+  <div class="prod-table-container">
+    <table class="w-full table-fixed text-[13px] leading-5">
+      <thead class="text-[11px] uppercase tracking-wide text-slate-600 bg-slate-50">
+        <tr>
+          <th rowspan="2" class="px-3 py-2 text-left font-semibold border-r w-[120px]">FG <span class="font-normal lowercase text-slate-500">(alpha)</span></th>
+          <th colspan="3" class="px-3 py-2 text-center font-semibold text-sky-800 bg-sky-50 border-x border-sky-100">Production</th>
+          <th colspan="3" class="px-3 py-2 text-center font-semibold text-amber-800 bg-amber-50 border-x border-amber-100">Dispatch</th>
+          <th class="px-3 py-2 text-center font-semibold text-emerald-800 bg-emerald-50 border-x border-emerald-100">Stock</th>
+        </tr>
+        <tr class="border-b border-slate-200/80">
+          <th class="px-2 py-1 text-center border-x border-slate-200">MTD (P/A)</th>
+          <th class="px-2 py-1 text-center">Plan</th>
+          <th class="px-2 py-1 text-center border-r border-slate-200">Actual</th>
+          <th class="px-2 py-1 text-center border-l border-slate-200">MTD (P/A)</th>
+          <th class="px-2 py-1 text-center">Plan</th>
+          <th class="px-2 py-1 text-center border-r border-slate-200">Actual</th>
+          <th class="px-2 py-1 text-center">Closing</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200/70">
+        {% for r in rows %}
+        <tr class="group hover:bg-slate-50 transition-colors">
+          <td class="px-3 py-2 border-r bg-white group-hover:bg-slate-50">
+            <div class="flex items-center gap-2">
+              <button type="button" class="expand-toggle flex items-center justify-center w-5 h-5 rounded text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                      data-target="stg{{ forloop.counter }}"
+                      {% if r.has_stages %}aria-expanded="false"{% else %}disabled{% endif %}>
+                {% if r.has_stages %}
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                {% endif %}
+              </button>
+              <span class="font-semibold truncate" title="{{ r.fg }}">{{ r.alias }}</span>
+            </div>
+          </td>
+          <td class="px-2 py-2 text-center"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-slate-100 font-mono text-slate-700">{{ r.prod_mtd.plan|indnum }}/{{ r.prod_mtd.actual|indnum }}</span></td>
+          <td class="px-2 py-2 text-right font-mono text-slate-600">{{ r.prod_day.plan|indnum }}</td>
+          <td class="px-2 py-2 text-right font-mono">
+            {% with plan=r.prod_day.plan actual=r.prod_day.actual %}
+              <span class="{% if plan and actual != plan %}{% if actual < plan %}text-red-600{% else %}text-green-600{% endif %}{% endif %}">{{ actual|indnum }}</span>
+            {% endwith %}
+          </td>
+          <td class="px-2 py-2 text-center border-l border-slate-200"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-slate-100 font-mono text-slate-700">{{ r.disp_mtd.plan|indnum }}/{{ r.disp_mtd.actual|indnum }}</span></td>
+          <td class="px-2 py-2 text-right font-mono text-slate-600">{{ r.disp_day.plan|indnum }}</td>
+          <td class="px-2 py-2 text-right font-mono">
+            {% with plan=r.disp_day.plan actual=r.disp_day.actual %}
+              <span class="{% if plan and actual != plan %}{% if actual < plan %}text-red-600{% else %}text-green-600{% endif %}{% endif %}">{{ actual|indnum }}</span>
+            {% endwith %}
+          </td>
+          <td class="px-2 py-2 text-right font-mono border-l border-slate-200">{{ r.stock_close|indnum }}</td>
+        </tr>
+        {% for st in r.stages %}
+        <tr class="stage-row hidden bg-slate-50/60" data-parent="stg{{ forloop.parentloop.counter }}">
+          <td class="pl-10 pr-3 py-2 italic text-slate-600 bg-slate-50 border-r border-slate-200">{{ st.stage }}</td>
+          <td class="px-2 py-2 text-center"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-white font-mono text-slate-600">{{ st.prod_mtd.plan|indnum }}/{{ st.prod_mtd.actual|indnum }}</span></td>
+          <td class="px-2 py-2 text-right font-mono text-slate-500">{{ st.prod_day.plan|indnum }}</td>
+          <td class="px-2 py-2 text-right font-mono {% if st.prod_day.plan and st.prod_day.actual < st.prod_day.plan %}text-red-500{% elif st.prod_day.plan and st.prod_day.actual > st.prod_day.plan %}text-green-600{% else %}text-slate-700{% endif %}">{{ st.prod_day.actual|indnum }}</td>
+          <td colspan="3" class="px-2 py-2 text-center text-slate-300 border-l border-slate-200">—</td>
+          <td class="px-2 py-2 text-right font-mono border-l border-slate-200">{{ st.stock_close|indnum }}</td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+/* expand/collapse rows for this topic only */
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.expand-toggle');
+  if (!btn || !btn.closest('#tab-main')) return;
+  if (btn.disabled) return;
+  const target = btn.dataset.target;
+  const open = btn.getAttribute('aria-expanded') === 'true';
+  btn.setAttribute('aria-expanded', (!open).toString());
+  btn.querySelector('svg')?.classList.toggle('rotate-90', !open);
+  btn.closest('#tab-main').querySelectorAll(`.stage-row[data-parent="${target}"]`).forEach(r => r.classList.toggle('hidden', open));
+});
+</script>

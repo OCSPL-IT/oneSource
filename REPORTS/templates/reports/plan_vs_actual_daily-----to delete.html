@@ -1,0 +1,952 @@
+{# templates/reports/plan_vs_actual_daily.html #}
+{% extends "main/index.html" %}
+{% load static %}
+{% load reports_dict %}
+
+{% block maincontent %}
+  <style>
+    /* Default: vertical scrolling only; no horizontal bars */
+    .table-container {
+      max-height: calc(100vh - 16rem);
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    /* Wrap in all tables to avoid horizontal overflow (except HR Details) */
+    .table-container table th,
+    .table-container table td {
+      white-space: normal;
+      word-break: break-word;
+    }
+    /* Sticky header/first-col/footer */
+    .table-container thead th { position: sticky; top: 0; background: #fff; z-index: 30; }
+    .table-container th:first-child, .table-container td:first-child { position: sticky; left: 0; background: #fff; z-index: 20; }
+    .table-container thead th:first-child { z-index: 40; }
+    .table-container tfoot td { position: sticky; bottom: 0; background: #f1f5f9; z-index: 25; }
+    .table-container tfoot tr { border-top: 2px solid #cbd5e1; }
+    .table-container tfoot td:first-child { left: 0; z-index: 35; }
+
+    /* Only HR Details table: allow horizontal scroll + do not wrap */
+    #hrDetailCard .table-container { overflow-x: auto; }
+    #hrDetailCard table th, #hrDetailCard table td { white-space: nowrap; }
+
+    .row-click { cursor: pointer; }
+    .row-click:hover { background: #f8fafc; }
+    .status-badge { display:inline-flex; align-items:center; gap:.35rem; padding:.125rem .5rem; border-radius:.5rem; background:#eef2ff; color:#3730a3; font-weight:600; font-size:.75rem; }
+
+    /* HSE sub-tabs & pills */
+    .subtabs .sub-btn{
+      display:inline-flex; align-items:center; gap:.4rem;
+      border:1px solid transparent; padding:.35rem .75rem; border-radius:.5rem;
+      font-size:.85rem; font-weight:600; color:#475569; background:transparent;
+      transition:.15s;
+    }
+    .subtabs .sub-btn[data-active="true"]{ background:#ffffff; color:#0f172a; border-color:#e2e8f0; box-shadow:0 1px 2px rgba(0,0,0,.04); }
+    .subtabs .sub-btn[data-active="false"]:hover{ background:#ffffff; border-color:#e2e8f0; }
+    .pill{padding:.25rem .6rem; border-radius:999px; border:1px solid #e2e8f0; background:#fff; font-size:.75rem; font-weight:600; color:#475569}
+    .pill[data-active="true"]{border-color:#0ea5e9; color:#0c4a6e; background:#f0f9ff}
+    .subpane.hidden{ display:none; }
+    .badge-open{background:#fef3c7; color:#92400e; border:1px solid #fde68a}
+    .badge-closed{background:#dcfce7; color:#065f46; border:1px solid #86efac}
+  </style>
+
+  <div class="p-4 sm:p-6 bg-slate-100 min-h-screen" id="dashRoot" data-active-tab="{{ active_tab|default:'main' }}">
+    <div class="max-w-screen-2xl mx-auto">
+
+      <!-- HEADER / APP BAR -->
+      <header class="mb-4 sm:mb-6">
+        <div class="flex items-start justify-between">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Daily Operations Dashboard</h1>
+            <p class="text-sm text-slate-500 mt-1">
+              Yesterday ({{ y_label }}) · MTD {{ mtd_label }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Tabs (render each button only if allowed) -->
+        <nav class="mt-4 flex flex-wrap gap-2">
+          {% if is_superuser or 'PRODUCTION' in user_groups %}
+          <button id="tabBtn-main" data-tab="main" type="button"
+                  class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                         data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                         data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                         shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            <svg class="h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path d="M4 3a2 2 0 00-2 2v1h16V5a2 2 0 00-2-2H4z"/><path fill-rule="evenodd" d="M18 9H2v6a2 2 0 002 2h12a2 2 0 002-2V9zM6 11h8v2H6v-2z" clip-rule="evenodd"/></svg>
+            Production vs Dispatch
+          </button>
+          {% endif %}
+
+          {% if is_superuser or 'UTILITY' in user_groups %}
+          <button id="tabBtn-support" data-tab="support" type="button"
+                  class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                         data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                         data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                         shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            <svg class="h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm7-3h2v6H9V7zm0 8h2v2H9v-2z"/></svg>
+            Utilities KPIs
+          </button>
+          {% endif %}
+
+          {% if is_superuser or 'ETP' in user_groups %}
+          <button id="tabBtn-eff" data-tab="eff" type="button"
+                  class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                         data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                         data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                         shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            <svg class="h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 1116 0 8 8 0 01-16 0zm7-3h2v6H9V7zm0 8h2v2H9v-2z"/></svg>
+            Effluent (kg)
+          </button>
+          {% endif %}
+
+          {% if is_superuser or 'QC' in user_groups %}
+          <button id="tabBtn-qc" data-tab="qc" type="button"
+                  class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                         data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                         data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                         shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            <svg class="h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 00-.894.553L5.382 7H3a1 1 0 000 2h2l2.724 4.447A1 1 0 009 14h2a1 1 0 00.894-.553L14.618 9H17a1 1 0 000-2h-2l-2.724-4.447A1 1 0 0011 2H9z"/></svg>
+            QC Status
+          </button>
+          {% endif %}
+
+          {% if is_superuser or 'HR' in user_groups %}
+          <button id="tabBtn-hr" data-tab="hr" type="button"
+                  class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                         data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                         data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                         shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            <svg class="h-4 w-4 opacity-70" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M3 7a4 4 0 118 0v1h2a2 2 0 012 2v5H1v-5a2 2 0 012-2h2V7zM7 7a2 2 0 10-4 0v1h4V7z"/>
+            </svg>
+            HR Attendance
+          </button>
+          {% endif %}
+
+          {% if is_superuser or 'EHS' in user_groups %}
+          <button id="tabBtn-hse" data-tab="hse" type="button"
+                  class="tab-btn inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border transition
+                         data-[active=true]:bg-white data-[active=true]:text-slate-900 data-[active=true]:border-slate-200
+                         data-[active=false]:bg-transparent data-[active=false]:text-slate-600 data-[active=false]:border-transparent
+                         shadow-sm data-[active=false]:hover:bg-white data-[active=false]:hover:border-slate-200">
+            <svg class="h-4 w-4 opacity-70" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2l9 4-9 4-9-4 9-4zm0 6l9 4-9 4-9-4 9-4zm0 8l9 4-9 4-9-4 9-4z"/>
+            </svg>
+            HSE
+          </button>
+          {% endif %}
+        </nav>
+
+        {% if not is_superuser and 'PRODUCTION' not in user_groups and 'UTILITY' not in user_groups and 'ETP' not in user_groups and 'QC' not in user_groups and 'HR' not in user_groups and 'EHS' not in user_groups %}
+          <div class="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+            You don’t have access to any dashboard sections. Please contact an administrator.
+          </div>
+        {% endif %}
+      </header>
+
+      {# ───────── Sections (each gated individually) ───────── #}
+
+      {% if is_superuser or 'PRODUCTION' in user_groups %}
+      <section id="tab-main" class="tab-pane">
+        <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div class="relative px-4 py-3 border-b border-slate-200">
+            <div class="absolute inset-x-0 -top-px h-1 bg-gradient-to-r from-sky-300 via-amber-300 to-emerald-300"></div>
+            <h2 class="text-sm font-semibold text-slate-900">Production · Dispatch · Stock</h2>
+          </div>
+          <div class="table-container">
+            <table class="w-full table-fixed text-[13px] leading-5">
+              <thead class="text-[11px] uppercase tracking-wide text-slate-600 bg-slate-50">
+                <tr>
+                  <th rowspan="2" class="px-3 py-2 text-left font-semibold border-r w-[120px]">FG <span class="font-normal lowercase text-slate-500">(alpha)</span></th>
+                  <th colspan="3" class="px-3 py-2 text-center font-semibold text-sky-800 bg-sky-50 border-x border-sky-100">Production</th>
+                  <th colspan="3" class="px-3 py-2 text-center font-semibold text-amber-800 bg-amber-50 border-x border-amber-100">Dispatch</th>
+                  <th class="px-3 py-2 text-center font-semibold text-emerald-800 bg-emerald-50 border-x border-emerald-100">Stock</th>
+                </tr>
+                <tr class="border-b border-slate-200/80">
+                  <th class="px-2 py-1 text-center border-x border-slate-200">MTD (P/A)</th>
+                  <th class="px-2 py-1 text-center">Plan</th>
+                  <th class="px-2 py-1 text-center border-r border-slate-200">Actual</th>
+                  <th class="px-2 py-1 text-center border-l border-slate-200">MTD (P/A)</th>
+                  <th class="px-2 py-1 text-center">Plan</th>
+                  <th class="px-2 py-1 text-center border-r border-slate-200">Actual</th>
+                  <th class="px-2 py-1 text-center">Closing</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200/70">
+                {% for r in rows %}
+                <tr class="group hover:bg-slate-50 transition-colors">
+                  <td class="px-3 py-2 border-r bg-white group-hover:bg-slate-50">
+                    <div class="flex items-center gap-2">
+                      <button type="button"
+                              class="expand-toggle flex items-center justify-center w-5 h-5 rounded text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                              data-target="stg{{ forloop.counter }}"
+                              {% if r.has_stages %}aria-expanded="false"{% else %}disabled{% endif %}>
+                        {% if r.has_stages %}
+                        <svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        {% endif %}
+                      </button>
+                      <span class="font-semibold truncate" title="{{ r.fg }}">{{ r.alias }}</span>
+                    </div>
+                  </td>
+                  <td class="px-2 py-2 text-center"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-slate-100 font-mono text-slate-700">{{ r.prod_mtd.plan|indnum }}/{{ r.prod_mtd.actual|indnum }}</span></td>
+                  <td class="px-2 py-2 text-right font-mono text-slate-600">{{ r.prod_day.plan|indnum }}</td>
+                  <td class="px-2 py-2 text-right font-mono">
+                    {% with plan=r.prod_day.plan actual=r.prod_day.actual %}<span class="{% if plan and actual != plan %}{% if actual < plan %}text-red-600{% else %}text-green-600{% endif %}{% endif %}">{{ actual|indnum }}</span>{% endwith %}
+                  </td>
+                  <td class="px-2 py-2 text-center border-l border-slate-200"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-slate-100 font-mono text-slate-700">{{ r.disp_mtd.plan|indnum }}/{{ r.disp_mtd.actual|indnum }}</span></td>
+                  <td class="px-2 py-2 text-right font-mono text-slate-600">{{ r.disp_day.plan|indnum }}</td>
+                  <td class="px-2 py-2 text-right font-mono">
+                    {% with plan=r.disp_day.plan actual=r.disp_day.actual %}<span class="{% if plan and actual != plan %}{% if actual < plan %}text-red-600{% else %}text-green-600{% endif %}{% endif %}">{{ actual|indnum }}</span>{% endwith %}
+                  </td>
+                  <td class="px-2 py-2 text-right font-mono border-l border-slate-200">{{ r.stock_close|indnum }}</td>
+                </tr>
+                {% for st in r.stages %}
+                <tr class="stage-row hidden bg-slate-50/60" data-parent="stg{{ forloop.parentloop.counter }}">
+                  <td class="pl-10 pr-3 py-2 italic text-slate-600 bg-slate-50 border-r border-slate-200">{{ st.stage }}</td>
+                  <td class="px-2 py-2 text-center"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-white font-mono text-slate-600">{{ st.prod_mtd.plan|indnum }}/{{ st.prod_mtd.actual|indnum }}</span></td>
+                  <td class="px-2 py-2 text-right font-mono text-slate-500">{{ st.prod_day.plan|indnum }}</td>
+                  <td class="px-2 py-2 text-right font-mono {% if st.prod_day.plan and st.prod_day.actual < st.prod_day.plan %}text-red-500{% elif st.prod_day.plan and st.prod_day.actual > st.prod_day.plan %}text-green-600{% else %}text-slate-700{% endif %}">{{ st.prod_day.actual|indnum }}</td>
+                  <td colspan="3" class="px-2 py-2 text-center text-slate-300 border-l border-slate-200">—</td>
+                  <td class="px-2 py-2 text-right font-mono border-l border-slate-200">{{ st.stock_close|indnum }}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if is_superuser or 'UTILITY' in user_groups %}
+      <section id="tab-support" class="tab-pane hidden">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {% if power_values %}<div class="rounded-xl border border-slate-200 bg-white shadow-sm"><div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-sky-50 to-sky-100"><h3 class="text-sm font-semibold text-slate-900">Power Consumption (kWh)</h3><p class="text-xs text-slate-500">Last {{ power_values|length }} readings</p></div><div class="p-4"><canvas id="powerChart"></canvas></div></div>{% endif %}
+          {% if briq_values %}<div class="rounded-xl border border-slate-200 bg-white shadow-sm"><div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-amber-50 to-amber-100"><h3 class="text-sm font-semibold text-slate-900">Briquette Consumption</h3><p class="text-xs text-slate-500">Last {{ briq_values|length }} readings</p></div><div class="p-4"><canvas id="briqChart"></canvas></div></div>{% endif %}
+          {% if water_values %}<div class="rounded-xl border border-slate-200 bg-white shadow-sm"><div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-cyan-50 to-cyan-100"><h3 class="text-sm font-semibold text-slate-900">Water Consumption (Total)</h3><p class="text-xs text-slate-500">Last {{ water_values|length }} readings</p></div><div class="p-4"><canvas id="waterChart"></canvas></div></div>{% endif %}
+          {% if sfr_values %}<div class="rounded-xl border border-slate-200 bg-white shadow-sm"><div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-emerald-100"><h3 class="text-sm font-semibold text-slate-900">Steam-to-Fuel Ratio (SFR)</h3><p class="text-xs text-slate-500">Last {{ sfr_values|length }} readings</p></div><div class="p-4"><canvas id="sfrChart"></canvas></div></div>{% endif %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if is_superuser or 'ETP' in user_groups %}
+      <section id="tab-eff" class="tab-pane hidden">
+        <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div class="relative px-4 py-3 border-b border-slate-200"><div class="absolute inset-x-0 -top-px h-1 bg-gradient-to-r from-indigo-300 via-sky-300 to-emerald-300"></div><h2 class="text-sm font-semibold text-slate-900">Effluent Plan vs Actual <span class="text-slate-500 font-normal">(kg)</span></h2></div>
+          <div class="table-container">
+            <table class="w-full table-fixed text-[13px] leading-5">
+              <thead class="text-[11px] uppercase tracking-wide text-slate-600 bg-slate-50">
+                <tr>
+                  <th rowspan="2" class="px-3 py-2 text-left font-semibold border-r w-[160px]">FG <span class="font-normal lowercase text-slate-500">(alpha)</span></th>
+                  <th colspan="3" class="px-3 py-2 text-center font-semibold text-indigo-800 bg-indigo-50 border-x border-indigo-100">Effluent</th>
+                </tr>
+                <tr class="border-b border-slate-200/80">
+                  <th class="px-2 py-1 text-center border-x border-slate-200">MTD (P/A)</th>
+                  <th class="px-2 py-1 text-center">Plan (Y-day)</th>
+                  <th class="px-2 py-1 text-center border-r border-slate-200">Actual (Y-day)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200/70">
+                {% for r in eff_rows %}
+                <tr class="group hover:bg-slate-50 transition-colors">
+                  <td class="px-3 py-2 border-r bg-white group-hover:bg-slate-50">
+                    <div class="flex items-center gap-2">
+                      <button type="button" class="expand-toggle flex items-center justify-center w-5 h-5 rounded text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:cursor-not-allowed" data-target="eff{{ forloop.counter }}" {% if r.has_stages %}aria-expanded="false{% else %}disabled{% endif %}">
+                        {% if r.has_stages %}<svg class="h-4 w-4 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>{% endif %}
+                      </button>
+                      <span class="font-semibold truncate" title="{{ r.fg }}">{{ r.alias }}</span>
+                    </div>
+                  </td>
+                  <td class="px-2 py-2 text-center"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-slate-100 font-mono text-slate-700">{{ r.prod_mtd.plan|indnum }}/{{ r.prod_mtd.actual|indnum }}</span></td>
+                  <td class="px-2 py-2 text-right font-mono text-slate-600">{{ r.prod_day.plan|indnum }}</td>
+                  <td class="px-2 py-2 text-right font-mono">{% with plan=r.prod_day.plan actual=r.prod_day.actual %}<span class="{% if plan and actual != plan %}{% if actual < plan %}text-red-600{% else %}text-green-600{% endif %}{% endif %}">{{ actual|indnum }}</span>{% endwith %}</td>
+                </tr>
+                {% for st in r.stages %}
+                <tr class="stage-row hidden bg-slate-50/60" data-parent="eff{{ forloop.parentloop.counter }}">
+                  <td class="pl-10 pr-3 py-2 italic text-slate-600 bg-slate-50 border-r">{{ st.stage }}</td>
+                  <td class="px-2 py-2 text-center"><span class="inline-flex items-center rounded-md px-1.5 py-0.5 bg-white font-mono text-slate-600">{{ st.prod_mtd.plan|indnum }}/{{ st.prod_mtd.actual|indnum }}</span></td>
+                  <td class="px-2 py-2 text-right font-mono text-slate-500">{{ st.prod_day.plan|indnum }}</td>
+                  <td class="px-2 py-2 text-right font-mono {% if st.prod_day.plan and st.prod_day.actual < st.prod_day.plan %}text-red-500{% elif st.prod_day.plan and st.prod_day.actual > st.prod_day.plan %}text-green-600{% else %}text-slate-700{% endif %}">{{ st.prod_day.actual|indnum }}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if is_superuser or 'QC' in user_groups %}
+      <section id="tab-qc" class="tab-pane hidden">
+        <div class="relative rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div class="relative px-4 py-3 border-b border-slate-200">
+            <div class="absolute inset-x-0 -top-px h-1 bg-gradient-to-r from-purple-300 via-sky-300 to-teal-300"></div>
+            <h2 class="text-sm font-semibold text-slate-900">QC Stages by Product</h2>
+          </div>
+          <div class="table-container">
+            <table class="w-full text-sm leading-5">
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold border-r w-[240px]">Product</th>
+                  <th class="px-4 py-3 text-left font-semibold border-r w-[240px]">Stage</th>
+                  <th class="px-3 py-2 text-center font-semibold">Approved</th>
+                  <th class="px-3 py-2 text-center font-semibold">Under Deviation</th>
+                  <th class="px-3 py-2 text-center font-semibold">Rejected</th>
+                  <th class="px-3 py-2 text-center font-semibold border-l">Total</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200/70">
+                {% regroup qc_stage_status by product__name as products %}
+                {% for product in products %}
+                  {% for row in product.list %}
+                  <tr class="group hover:bg-slate-50 transition-colors">
+                    {% if forloop.first %}
+                    <td class="px-4 py-2.5 font-bold text-slate-700 align-top bg-white group-hover:bg-slate-50 border-r" rowspan="{{ product.list|length }}">
+                      {{ product.grouper }}
+                    </td>
+                    {% endif %}
+                    <td class="px-4 py-2.5 text-slate-600 border-r">{{ row.stage|default:"—" }}</td>
+                    <td class="px-3 py-2.5 text-center font-mono font-semibold">
+                      <span class="{% if row.approved > 0 %}text-green-600{% else %}text-slate-400{% endif %}">{{ row.approved }}</span>
+                    </td>
+                    <td class="px-3 py-2.5 text-center font-mono font-semibold">
+                      <span class="{% if row.variation > 0 %}text-amber-600{% else %}text-slate-400{% endif %}">{{ row.variation }}</span>
+                    </td>
+                    <td class="px-3 py-2.5 text-center font-mono font-semibold">
+                       <span class="{% if row.rejected > 0 %}text-red-600{% else %}text-slate-400{% endif %}">{{ row.rejected }}</span>
+                    </td>
+                    {% with total=row.approved|add:row.variation|add:row.rejected %}
+                    <td class="px-3 py-2.5 text-center font-mono font-bold text-slate-800 border-l">{{ total }}</td>
+                    {% endwith %}
+                  </tr>
+                  {% endfor %}
+                {% empty %}
+                  <tr><td colspan="6" class="p-4 text-center text-slate-500">No QC data available for this period.</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot class="font-bold text-slate-900">
+                <tr>
+                  <td class="px-4 py-3 text-right" colspan="2">Grand Total</td>
+                  <td class="px-3 py-2.5 text-center font-mono">{{ qc_grand_total.approved }}</td>
+                  <td class="px-3 py-2.5 text-center font-mono">{{ qc_grand_total.variation }}</td>
+                  <td class="px-3 py-2.5 text-center font-mono">{{ qc_grand_total.rejected }}</td>
+                  <td class="px-3 py-2.5 text-center font-mono border-l">{{ qc_grand_total.total }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      {% if is_superuser or 'HR' in user_groups %}
+      <section id="tab-hr" class="tab-pane hidden">
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-5 py-3 border-b border-slate-200 bg-gradient-to-r from-fuchsia-50 to-fuchsia-100 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-900">Attendance Status ({{ y_label }})</h3>
+              <p class="text-xs text-slate-500">Click a status row to view employee details below.</p>
+            </div>
+          </div>
+
+          <!-- KPI CARDS -->
+          <div class="px-5 py-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="rounded-lg border border-emerald-200 p-3 shadow-sm bg-emerald-50/40">
+                <div class="text-[11px] uppercase tracking-wide text-emerald-700">Present</div>
+                <div id="kpiPresent" class="mt-1 text-2xl font-bold text-emerald-900 font-mono">{{ hr_dash.kpis.present|default:"0" }}</div>
+              </div>
+              <div class="rounded-lg border border-rose-200 p-3 shadow-sm bg-rose-50/40">
+                <div class="text-[11px] uppercase tracking-wide text-rose-700">Absent</div>
+                <div id="kpiAbsent" class="mt-1 text-2xl font-bold text-rose-900 font-mono">{{ hr_dash.kpis.absent|default:"0" }}</div>
+              </div>
+              <div class="rounded-lg border border-sky-200 p-3 shadow-sm bg-sky-50/40">
+                <div class="text-[11px] uppercase tracking-wide text-sky-700">Contract Labour</div>
+                <div id="kpiContract" class="mt-1 text-2xl font-bold text-sky-900 font-mono">{{ hr_dash.contract_count|default:"0" }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="w-full text-sm" id="hrStatusTable">
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr><th class="px-4 py-2 text-left">Status</th><th class="px-3 py-2 text-right">Count</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200/70">
+                {% for r in hr_att.status_rows %}
+                <tr class="row-click" data-status="{{ r.label|default_if_none:'' }}">
+                  <td class="px-4 py-2"><span class="status-badge">{{ r.label }}</span></td>
+                  <td class="px-3 py-2 text-right font-mono">{{ r.count }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2" class="p-4 text-center text-slate-500">No data.</td></tr>
+                {% endfor %}
+              </tbody>
+              <tfoot>
+                <tr><td class="px-4 py-2 text-right font-semibold" colspan="2">Total: {{ hr_att.total }}</td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- DETAILS TABLE -->
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6" id="hrDetailCard">
+          <div class="px-5 py-3 border-b border-slate-200 bg-gradient-to-r from-sky-50 to-sky-100 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-semibold text-slate-900">
+                Details: <span id="hrDetailTitle" class="text-slate-600">Select a status above</span>
+              </h3>
+              <p class="text-xs text-slate-500">Showing <span id="hrDetailCount">0</span> employees</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="clearFilterBtn" type="button"
+                      class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50">
+                Clear
+              </button>
+              <button id="downloadCsvBtn" type="button"
+                      class="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium border border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+                Download CSV
+              </button>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="w-full text-sm" id="hrDetailTable">
+              <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                <tr>
+                  <th class="px-3 py-2 text-left">Emp Code</th>
+                  <th class="px-3 py-2 text-left">Name</th>
+                  <th class="px-3 py-2 text-left">Department</th>
+                  <th class="px-3 py-2 text-left">Shift</th>
+                  <th class="px-3 py-2 text-left">Branch</th>
+                  <th class="px-3 py-2 text-left">Status</th>
+                  <th class="px-3 py-2 text-left">Punch In/Out</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200/70" id="hrDetailBody">
+                <tr><td colspan="7" class="p-4 text-center text-slate-500">No status selected.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <script id="hrDailyData" type="application/json">{{ hr_daily_rows_json|default:"[]"|safe }}</script>
+      </section>
+      {% endif %}
+
+      {% if is_superuser or 'EHS' in user_groups %}
+      <section id="tab-hse" class="tab-pane hidden">
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-5 py-3 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-emerald-100">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-semibold text-slate-900">HSE – Health, Safety & Environment</h3>
+                <p class="text-xs text-slate-500">Fiscal period: {{ hse_kpis.fy_label }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- HSE Sub-tabs -->
+          <div class="px-5 pt-4 subtabs">
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="sub-btn" data-hse-sub="lagging" data-active="true">
+                <svg class="h-4 w-4 opacity-70" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3h4v18H3zM10 13h4v8h-4zM17 7h4v14h-4z"/></svg>
+                Lagging
+              </button>
+              <button type="button" class="sub-btn" data-hse-sub="leading" data-active="false">
+                <svg class="h-4 w-4 opacity-70" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.39 7.36H22l-6.19 4.49L18.2 22 12 17.77 5.8 22l2.39-8.15L2 9.36h7.61z"/></svg>
+                Leading
+              </button>
+            </div>
+          </div>
+
+          <!-- Lagging Pane -->
+          <div id="hse-pane-lagging" class="subpane px-5 pb-5">
+            <!-- FY KPI cards -->
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center shadow-sm">
+                <div class="text-[10px] uppercase tracking-wide text-slate-500">Total Incidents</div>
+                <div class="text-xl font-bold text-slate-900 font-mono">{{ hse_kpis.fy_total|default:"0" }}</div>
+              </div>
+              <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center shadow-sm">
+                <div class="text-[10px] uppercase tracking-wide text-amber-700">Open</div>
+                <div class="text-xl font-bold text-amber-900 font-mono">{{ hse_kpis.open|default:"0" }}</div>
+              </div>
+              <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-center shadow-sm">
+                <div class="text-[10px] uppercase tracking-wide text-emerald-700">Closed</div>
+                <div class="text-xl font-bold text-emerald-900 font-mono">{{ hse_kpis.closed|default:"0" }}</div>
+              </div>
+            </div>
+
+            <!-- Filters + CSV -->
+            <div class="flex items-center justify-between mt-4">
+              <div class="flex gap-2">
+                <button class="pill" data-lag-filter="all"   data-active="true">All</button>
+                <button class="pill" data-lag-filter="open"  data-active="false">Open</button>
+                <button class="pill" data-lag-filter="closed" data-active="false">Closed</button>
+              </div>
+              <button id="hseLagCsv" class="pill">Download CSV</button>
+            </div>
+
+            <div class="table-container mt-3">
+              <table class="w-full text-sm" id="hseLagTable">
+                <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left w-[110px]">Incident Date</th>
+                    <th class="px-3 py-2 text-left">Department</th>
+                    <th class="px-3 py-2 text-left">Lag Indicator</th>
+                    <th class="px-3 py-2 text-left">Injury Type</th>
+                    <th class="px-3 py-2 text-left">Body Part</th>
+                    <th class="px-3 py-2 text-left">Injured Person</th>
+                    <th class="px-3 py-2 text-left">Risk</th>
+                    <th class="px-3 py-2 text-left">Man-days</th>
+                    <th class="px-3 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/70" id="hseLagBody">
+                  <tr><td colspan="9" class="p-4 text-center text-slate-500">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Leading Pane (yesterday-only details) -->
+          <div id="hse-pane-leading" class="subpane px-5 pb-5 hidden">
+            <!-- Yesterday KPI cards -->
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="rounded-lg border border-emerald-200 p-3 shadow-sm bg-emerald-50/40">
+                <div class="text-[11px] uppercase tracking-wide text-emerald-700">Yesterday Observations</div>
+                <div id="kpiLeadTotalYday" class="mt-1 text-2xl font-bold text-emerald-900 font-mono">0</div>
+              </div>
+              <div class="rounded-lg border border-amber-200 p-3 shadow-sm bg-amber-50/40">
+                <div class="text-[11px] uppercase tracking-wide text-amber-700">Open (Y-day)</div>
+                <div id="kpiLeadOpenYday" class="mt-1 text-2xl font-bold text-amber-900 font-mono">0</div>
+              </div>
+              <div class="rounded-lg border border-slate-200 p-3 shadow-sm bg-white">
+                <div class="text-[11px] uppercase tracking-wide text-slate-600">Closed (Y-day)</div>
+                <div id="kpiLeadClosedYday" class="mt-1 text-2xl font-bold text-slate-900 font-mono">0</div>
+              </div>
+            </div>
+
+            <!-- Matrices -->
+            <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Department-wise (Y-day)</h4></div>
+                <div class="table-container">
+                  <table class="w-full text-sm">
+                    <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                      <tr><th class="px-3 py-2 text-left">Department</th><th class="px-3 py-2 text-right">Open</th><th class="px-3 py-2 text-right">Closed</th><th class="px-3 py-2 text-right">Total</th></tr>
+                    </thead>
+                    <tbody id="leadDeptBody" class="divide-y divide-slate-200/70">
+                      <tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Location-wise (Y-day)</h4></div>
+                <div class="table-container">
+                  <table class="w-full text-sm">
+                    <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                      <tr><th class="px-3 py-2 text-left">Location</th><th class="px-3 py-2 text-right">Open</th><th class="px-3 py-2 text-right">Closed</th><th class="px-3 py-2 text-right">Total</th></tr>
+                    </thead>
+                    <tbody id="leadLocBody" class="divide-y divide-slate-200/70">
+                      <tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <div class="px-4 py-2 border-b bg-slate-50"><h4 class="text-sm font-semibold text-slate-800">Status-wise (Y-day)</h4></div>
+                <div class="table-container">
+                  <table class="w-full text-sm">
+                    <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                      <tr><th class="px-3 py-2 text-left">Status</th><th class="px-3 py-2 text-right">Count</th></tr>
+                    </thead>
+                    <tbody id="leadStatusBody" class="divide-y divide-slate-200/70">
+                      <tr><td colspan="2" class="p-3 text-center text-slate-500">No records.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 flex items-center justify-end">
+              <button id="hseLeadCsv" class="pill">Download CSV (Y-day)</button>
+            </div>
+            <div class="table-container mt-3">
+              <table class="w-full text-sm" id="hseLeadTable">
+                <thead class="text-xs uppercase tracking-wider text-slate-500 bg-slate-50">
+                  <tr>
+                    <th class="px-3 py-2 text-left w-[130px]">Observation Date</th>
+                    <th class="px-3 py-2 text-left">Department</th>
+                    <th class="px-3 py-2 text-left">Location</th>
+                    <th class="px-3 py-2 text-left">Abnormality</th>
+                    <th class="px-3 py-2 text-left">Initiated By</th>
+                    <th class="px-3 py-2 text-left">Risk</th>
+                    <th class="px-3 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200/70" id="hseLeadBody">
+                  <tr><td colspan="7" class="p-4 text-center text-slate-500">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {# JSON payloads for JS rendering #}
+          <script id="hseLagAll"    type="application/json">{{ hse_lag_all_json|safe }}</script>
+          <script id="hseLagOpen"   type="application/json">{{ hse_lag_open_json|safe }}</script>
+          <script id="hseLagClosed" type="application/json">{{ hse_lag_closed_json|safe }}</script>
+          <script id="hseLead"      type="application/json">{{ hse_leading_json|safe }}</script>
+        </div>
+      </section>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- INTERACTIONS & CHARTS -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    // Expand/collapse rows
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('.expand-toggle');
+      if (!btn || btn.disabled) return;
+      const target = btn.dataset.target;
+      const open = btn.getAttribute('aria-expanded') === 'true';
+      btn.setAttribute('aria-expanded', (!open).toString());
+      btn.querySelector('svg')?.classList.toggle('rotate-90', !open);
+      document.querySelectorAll(`.stage-row[data-parent="${target}"]`).forEach(r => r.classList.toggle('hidden', open));
+    });
+
+    // Tabs logic (top-level)
+    (function(){
+      const btnEls = Array.from(document.querySelectorAll('.tab-btn'));
+      const panes  = Array.from(document.querySelectorAll('.tab-pane'));
+      const btns = btnEls.reduce((m,b)=> (m[b.dataset.tab]=b,m), {});
+      const panesMap = panes.reduce((m,p)=> (m[p.id.replace('tab-','')]=p,m), {});
+      const available = Object.keys(btns);
+      function activate(tab){
+        if (!btns[tab]) tab = available[0];
+        if (!tab) return;
+        Object.keys(panesMap).forEach(k => panesMap[k].classList.toggle('hidden', k !== tab));
+        available.forEach(k => btns[k].setAttribute('data-active', String(k===tab)));
+        if (tab==='support') initCharts();
+        if (tab==='hr') initHR();
+        if (tab==='hse') initHSE();
+      }
+      available.forEach(k => btns[k].onclick = () => activate(k));
+      const initial = document.getElementById('dashRoot').dataset.activeTab || available[0];
+      activate(initial);
+    })();
+
+    // Chart.js area charts
+    let chartsDone=false;
+    function initCharts(){
+      if (chartsDone) return;
+      function makeArea(id, labels, data, stroke, gradFrom){
+        const ctx = document.getElementById(id)?.getContext('2d');
+        if (!ctx) return;
+        const grad = ctx.createLinearGradient(0,0,0,160);
+        grad.addColorStop(0, gradFrom);
+        grad.addColorStop(1, gradFrom.replace(/[\d.]+\)$/,'0)'));
+        new Chart(ctx, { type:'line', data:{ labels, datasets:[{ data, borderColor:stroke, backgroundColor:grad, fill:true, tension:.25, borderWidth:2, pointRadius:0, pointHitRadius:10 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }}, scales:{ x:{ ticks:{ color:'#64748b', font:{ size:11 }}, grid:{ display:false }}, y:{ ticks:{ color:'#64748b', font:{ size:11 }, padding:6 }, grid:{ color:'#f1f5f9' }} } }, plugins:[{ id:'fixH', beforeInit:chart=>{ chart.canvas.parentNode.style.height='200px'; }}] });
+      }
+      {% if power_values %}makeArea('powerChart', {{ power_labels|safe }}, {{ power_values|safe }}, '#0ea5e9','rgba(14,165,233,.45)');{% endif %}
+      {% if briq_values %}makeArea('briqChart', {{ briq_labels|safe }}, {{ briq_values|safe }}, '#ea580c','rgba(234,88,12,.45)');{% endif %}
+      {% if water_values %}makeArea('waterChart', {{ water_labels|safe }}, {{ water_values|safe }}, '#06b6d4','rgba(6,182,212,.35)');{% endif %}
+      {% if sfr_values %}makeArea('sfrChart', {{ sfr_labels|safe }}, {{ sfr_values|safe }}, '#10b981','rgba(16,185,129,.35)');{% endif %}
+      chartsDone = true;
+    }
+
+    // HR logic
+    let hrInitDone = false;
+    function initHR(){
+      if (hrInitDone) return;
+      hrInitDone = true;
+
+      const raw = document.getElementById('hrDailyData')?.textContent || '[]';
+      let DATA = [];
+      try { DATA = JSON.parse(raw) || []; } catch(e){ DATA = []; }
+
+      const tbody = document.querySelector('#hrStatusTable tbody');
+      const detailBody = document.getElementById('hrDetailBody');
+      const detailTitle = document.getElementById('hrDetailTitle');
+      const detailCount = document.getElementById('hrDetailCount');
+      const clearBtn = document.getElementById('clearFilterBtn');
+      const dlBtn = document.getElementById('downloadCsvBtn');
+
+      function norm(s){ return (s||'').toString().trim().toUpperCase(); }
+
+      const PRESENT = new Set(['P|P','PRESENT']);
+      const ABSENT  = new Set(['A|A','ABSENT']);
+      let present = 0, absent = 0;
+      for (const r of DATA){
+        const code = norm(r.status_in_out);
+        if (PRESENT.has(code)) present++;
+        else if (ABSENT.has(code)) absent++;
+      }
+      document.getElementById('kpiPresent').textContent = String(present);
+      document.getElementById('kpiAbsent').textContent  = String(absent);
+
+      function renderDetail(rows, statusLabel){
+        detailTitle.textContent = statusLabel || 'All';
+        detailCount.textContent = rows.length.toString();
+        if (!rows.length){
+          detailBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">No records.</td></tr>';
+          return;
+        }
+        const html = rows.map(r => `
+          <tr>
+            <td class="px-3 py-2 font-mono">${r.employee_code || ''}</td>
+            <td class="px-3 py-2">${r.full_name || ''}</td>
+            <td class="px-3 py-2">${r.department || ''}</td>
+            <td class="px-3 py-2">${r.shift_code || ''}</td>
+            <td class="px-3 py-2">${r.branch || ''}</td>
+            <td class="px-3 py-2">${r.status_in_out || ''}</td>
+            <td class="px-3 py-2">${r.punch_in_punch_out_time || ''}</td>
+          </tr>
+        `).join('');
+        detailBody.innerHTML = html;
+      }
+
+      function toCSV(rows){
+        const headers = ['employee_code','full_name','department','shift_code','branch','status_in_out','punch_in_punch_out_time'];
+        const esc = v => `"${(v??'').toString().replace(/"/g,'""')}"`;
+        const lines = [headers.join(',')].concat(rows.map(r => headers.map(h => esc(r[h])).join(',')));
+        return lines.join('\r\n');
+      }
+
+      tbody.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr[data-status]');
+        if (!tr) return;
+        const code = tr.getAttribute('data-status');
+        const codeN = norm(code);
+        tbody.querySelectorAll('tr[data-status]').forEach(r => r.classList.remove('bg-slate-50'));
+        tr.classList.add('bg-slate-50');
+
+        const filtered = DATA.filter(r => norm(r.status_in_out) === codeN);
+        renderDetail(filtered, code);
+        dlBtn.onclick = () => {
+          const csv = toCSV(filtered);
+          const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `attendance_${codeN.replace(/\s+/g,'_')}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        };
+      });
+
+      clearBtn.addEventListener('click', () => {
+        tbody.querySelectorAll('tr[data-status]').forEach(r => r.classList.remove('bg-slate-50'));
+        renderDetail([], 'Select a status above');
+        dlBtn.onclick = () => {};
+      });
+    }
+
+    // HSE sub-tab + data rendering
+    let hseInitDone = false;
+    function initHSE(){
+      if (hseInitDone) return;
+      hseInitDone = true;
+
+      const subBtns = Array.from(document.querySelectorAll('[data-hse-sub]'));
+      const panes = { lagging: document.getElementById('hse-pane-lagging'), leading: document.getElementById('hse-pane-leading') };
+      function show(which){
+        Object.keys(panes).forEach(k => panes[k]?.classList.toggle('hidden', k !== which));
+        subBtns.forEach(b => b.setAttribute('data-active', String(b.dataset.hseSub === which)));
+      }
+      subBtns.forEach(b => b.addEventListener('click', () => show(b.dataset.hseSub)));
+      show('lagging');
+
+      // JSON payloads
+      function getJSON(id){
+        try{ return JSON.parse(document.getElementById(id)?.textContent || '[]') || []; }
+        catch(e){ return []; }
+      }
+      const LAG = { all: getJSON('hseLagAll'), open: getJSON('hseLagOpen'), closed: getJSON('hseLagClosed') };
+      const LEAD_ALL = getJSON('hseLead');
+
+      // ---- Date formatter dd-mm-yy ----
+      function fmtDate(d){
+        const s = (d||'').toString().slice(0,10); // 'YYYY-MM-DD'
+        const [y,m,day] = s.split('-');
+        if (!y || !m || !day) return s;
+        return `${day}-${m}-${y.slice(2)}`;
+      }
+      const esc = v => (v ?? '').toString().replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+      // ---- Lagging table rendering ----
+      const lagBody = document.getElementById('hseLagBody');
+      const lagPills = Array.from(document.querySelectorAll('[data-lag-filter]'));
+      const lagCsvBtn = document.getElementById('hseLagCsv');
+
+      function renderLag(list){
+        if (!list || list.length===0){
+          lagBody.innerHTML = '<tr><td colspan="9" class="p-4 text-center text-slate-500">No records.</td></tr>';
+          return;
+        }
+        lagBody.innerHTML = list.map(r => {
+          const status = (r.complience_status || '').toString().trim();
+          const badge = status.toLowerCase()==='closed' ? 'badge-closed' : 'badge-open';
+          return `
+            <tr>
+              <td class="px-3 py-2">${esc(fmtDate(r.incident_date))}</td>
+              <td class="px-3 py-2">${esc(r.department)}</td>
+              <td class="px-3 py-2">${esc(r.hse_lag_indicator)}</td>
+              <td class="px-3 py-2">${esc(r.type_of_injury)}</td>
+              <td class="px-3 py-2">${esc(r.injured_body_part)}</td>
+              <td class="px-3 py-2">${esc(r.name_of_injured_person)}</td>
+              <td class="px-3 py-2 font-mono">${esc(r.risk_factor)}</td>
+              <td class="px-3 py-2 text-center">${r.mandays_lost ?? ''}</td>
+              <td class="px-3 py-2"><span class="pill ${badge}">${esc(status||'Open')}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function jsonToCsv(rows, headers){
+        const escv = v => `"${(v??'').toString().replace(/"/g,'""')}"`;
+        const head = headers.map(h => h[1]).join(',');
+        const lines = rows.map(r => headers.map(h => escv(r[h[0]])).join(','));
+        return [head].concat(lines).join('\r\n');
+      }
+
+      function bindLagging(filter){
+        lagPills.forEach(p => p.setAttribute('data-active', String(p.dataset.lagFilter===filter)));
+        const data = LAG[filter] || [];
+        renderLag(data);
+        lagCsvBtn.onclick = () => {
+          const headers = [
+            ['record_date','Record Date'],['incident_date','Incident Date'],['incident_time','Incident Time'],
+            ['employee_type','Employee Type'],['department','Department'],['hse_lag_indicator','Lag Indicator'],
+            ['type_of_injury','Injury Type'],['injured_body_part','Body Part'],['name_of_injured_person','Injured Person'],
+            ['severity','Severity'],['likelihood','Likelihood'],['risk_factor','Risk Factor'],
+            ['incident','Incident'],['immediate_action','Immediate Action'],['investigation_method','Investigation Method'],
+            ['mandays_lost','Man-days Lost'],['complience_status','Compliance Status'],['complience_status_date','Compliance Date'],
+            ['physical_location__name','Location'],['Contractor_name','Contractor']
+          ];
+          const csv = jsonToCsv(data, headers);
+          const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = `hse_lagging_${filter}.csv`; a.click();
+          URL.revokeObjectURL(url);
+        };
+      }
+
+      lagPills.forEach(p => p.addEventListener('click', () => bindLagging(p.dataset.lagFilter)));
+      bindLagging('all');
+
+      // ---- Leading (YESTERDAY ONLY) ----
+      const leadBody   = document.getElementById('hseLeadBody');
+      const leadCsvBtn = document.getElementById('hseLeadCsv');
+
+      const kpiLeadTotalYday  = document.getElementById('kpiLeadTotalYday');
+      const kpiLeadOpenYday   = document.getElementById('kpiLeadOpenYday');
+      const kpiLeadClosedYday = document.getElementById('kpiLeadClosedYday');
+
+      const leadDeptBody   = document.getElementById('leadDeptBody');
+      const leadLocBody    = document.getElementById('leadLocBody');
+      const leadStatusBody = document.getElementById('leadStatusBody');
+
+      const t = new Date(); t.setHours(12,0,0,0);
+      const y = new Date(t); y.setDate(t.getDate() - 1);
+      const YDAY_ISO = new Date(y.getTime() - y.getTimezoneOffset()*60000).toISOString().slice(0,10);
+
+      const LEAD_YDAY = (LEAD_ALL || []).filter(r => (r.observation_date||'').slice(0,10) === YDAY_ISO);
+
+      function renderLeadRows(list){
+        if (!list.length){
+          leadBody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-500">No records for yesterday.</td></tr>';
+          return;
+        }
+        leadBody.innerHTML = list.map(r => `
+          <tr>
+            <td class="px-3 py-2">${fmtDate(r.observation_date)}</td>
+            <td class="px-3 py-2">${esc(r.department)}</td>
+            <td class="px-3 py-2">${esc(r.physical_location__name)}</td>
+            <td class="px-3 py-2">${esc(r.leading_abnormality)}</td>
+            <td class="px-3 py-2">${esc(r.initiated_by)}</td>
+            <td class="px-3 py-2 font-mono">${esc(r.risk_factor)}</td>
+            <td class="px-3 py-2">${esc(r.status)}</td>
+          </tr>
+        `).join('');
+      }
+
+      function aggMatrix(list, keyFn){
+        const out = {};
+        for (const r of list){
+          const k = (keyFn(r) || '—').toString();
+          const st = (r.status||'').toString().trim().toLowerCase();
+          const isClosed = st === 'closed';
+          const bucket = out[k] = out[k] || {open:0, closed:0, total:0};
+          if (isClosed) bucket.closed++; else bucket.open++;
+          bucket.total++;
+        }
+        return Object.entries(out).sort((a,b)=>b[1].total - a[1].total);
+      }
+
+      function renderMatrix(tbody, rows){
+        if (!rows.length){
+          tbody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-slate-500">No records.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = rows.map(([label, v]) => `
+          <tr>
+            <td class="px-3 py-2">${label}</td>
+            <td class="px-3 py-2 text-right font-mono">${v.open}</td>
+            <td class="px-3 py-2 text-right font-mono">${v.closed}</td>
+            <td class="px-3 py-2 text-right font-mono font-semibold">${v.total}</td>
+          </tr>
+        `).join('');
+      }
+
+      const openCount   = LEAD_YDAY.filter(r => (r.status||'').toString().trim().toLowerCase() !== 'closed').length;
+      const closedCount = LEAD_YDAY.filter(r => (r.status||'').toString().trim().toLowerCase() === 'closed').length;
+      kpiLeadTotalYday.textContent  = String(LEAD_YDAY.length);
+      kpiLeadOpenYday.textContent   = String(openCount);
+      kpiLeadClosedYday.textContent = String(closedCount);
+
+      renderMatrix(leadDeptBody, aggMatrix(LEAD_YDAY, r => r.department));
+      renderMatrix(leadLocBody,  aggMatrix(LEAD_YDAY, r => r.physical_location__name));
+
+      if (LEAD_YDAY.length === 0){
+        leadStatusBody.innerHTML = '<tr><td colspan="2" class="p-3 text-center text-slate-500">No records.</td></tr>';
+      } else {
+        leadStatusBody.innerHTML = [
+          ['Open',   {total: openCount}],
+          ['Closed', {total: closedCount}],
+        ].map(([label, v]) => `
+          <tr><td class="px-3 py-2">${label}</td><td class="px-3 py-2 text-right font-mono font-semibold">${v.total}</td></tr>
+        `).join('');
+      }
+
+      renderLeadRows(LEAD_YDAY);
+
+      leadCsvBtn.onclick = () => {
+        const headers = [
+          ['observation_date','Observation Date'],['department','Department'],['physical_location__name','Location'],
+          ['leading_abnormality','Abnormality'],['initiated_by','Initiated By'],
+          ['severity','Severity'],['likelihood','Likelihood'],['risk_factor','Risk Factor'],
+          ['corrective_action','Corrective Action'],['psl_member_name','PSL Member'],['responsible_person','Responsible'],
+          ['root_cause','Root Cause'],['preventive_action','Preventive Action'],['target_date','Target Date'],
+          ['status','Status'],['remark','Remark']
+        ];
+        const escv = v => `"${(v??'').toString().replace(/"/g,'""')}"`;
+        const head = headers.map(h => h[1]).join(',');
+        const lines = LEAD_YDAY.map(r => headers.map(h => escv(r[h[0]])).join(','));
+        const csv = [head].concat(lines).join('\r\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `hse_leading_yesterday.csv`; a.click();
+        URL.revokeObjectURL(url);
+      };
+    }
+  </script>
+{% endblock %}

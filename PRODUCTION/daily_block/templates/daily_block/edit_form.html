@@ -1,0 +1,801 @@
+{% extends 'main/index.html' %}
+{% load static %}
+
+{% block maincontent %}
+
+{% block head_extra %}
+  {# This link is for the ICONS only, not the Bootstrap CSS framework. It is safe to keep. #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+  
+  {# --- UPDATED: Using the default, framework-agnostic Tom-Select theme --- #}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css">
+
+  <style>
+    /* Minimal styles for third-party libraries */
+    .ts-dropdown {
+        z-index: 1050;
+        min-width: max-content;
+    }
+    .ts-dropdown .option { 
+        white-space: nowrap; 
+    }
+
+    /* Custom utility classes using Tailwind's @apply for consistent form styling */
+    .form-input {
+        @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm;
+    }
+    .form-input-sm {
+        @apply block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm p-1;
+    }
+    .bom-details-row td {
+        padding: 0 !important;
+        border: 0 !important;
+    }
+  </style>
+{% endblock %}
+
+
+<div class="container mx-auto py-6 px-4">
+  <h1 class="text-3xl font-bold text-gray-800 mb-6">{% if dr_form.instance.pk %}Edit{% else %}New{% endif %}&nbsp;Daily-Check</h1>
+
+  <form id="entryForm" method="post" novalidate>
+    {% csrf_token %}
+    {{ bom_mapping|json_script:"bom-mapping-data" }}
+    {{ all_products|json_script:"all-products-data" }}
+    {{ all_equipment_json|json_script:"all-equipment-data" }}
+    {{ output_rows_json|json_script:"output-rows-json-data" }}
+
+    <!-- Report Details Card -->
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
+      <div class="px-6 py-3 border-b border-gray-200 bg-gray-50 text-left text-sm font-semibold text-gray-700">
+        <i class="bi bi-file-earmark-text mr-1"></i>Report Details
+      </div>
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Txn No.</label>
+            <input name="transaction_number" class="form-input bg-gray-100" value="{{ next_transaction }}" readonly>
+          </div>
+          <div class="md:col-span-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Block</label>
+            <select name="block" id="mainBlockSelect" class="form-input searchable-select">
+              <option></option>
+              {% for code,name in BLOCK_CHOICES %}
+                <option value="{{ name }}" {% if dr_form.block.value == name %}selected{% endif %}>{{ name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+         <div class="md:col-span-5">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Created Date & Time</label>
+          <input
+            type="datetime-local"
+            name="report_dt"
+            class="form-input {% if dr_form.instance.pk %}bg-gray-100{% endif %}"
+            value="{% if dr_form.instance.pk %}{{ dr_form.instance.report_dt|date:'Y-m-d\\TH:i' }}{% else %}{{ now|date:'Y-m-d\\TH:i' }}{% endif %}"
+            {% if dr_form.instance.pk %}readonly aria-readonly="true" tabindex="-1"{% endif %}
+          >
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assets Pane -->
+    <div id="assets-pane">
+      <h5 class="text-xl font-semibold text-gray-800 mb-4">Stock Levels</h5>
+
+      <!-- SFG / FG Output Card -->
+      <div class="bg-white shadow-lg rounded-lg overflow-hidden mb-6">
+        <div class="px-6 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+          <button id="addOutputRow" class="px-3 py-1 text-sm font-medium border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white transition-colors" type="button"><i class="bi bi-plus-circle"></i> Add Row</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-center">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[220px]">Stage</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[200px]">Product</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[200px]">Equipment</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[180px]">B. No.</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[150px]">Start Time</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[150px]">End Time</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[110px]">Qty</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider min-w-[200px]">Remarks</th>
+                  <th class="px-3 py-3 text-xs font-medium text-gray-600 uppercase tracking-wider w-[50px]"></th>
+                </tr>
+              </thead>
+              <tbody id="outputBody" class="bg-white divide-y divide-gray-200">
+                {% for row in output_rows %}
+                <tr class="align-middle">
+                  <td class="p-2"><select name="output-{{ forloop.counter0 }}-stage" class="form-input-sm searchable-select stage-select"><option></option>{% for s in output_stage_list %}<option {% if s == row.stage %}selected{% endif %}>{{ s }}</option>{% endfor %}</select></td>
+                  <td class="p-2"><input name="output-{{ forloop.counter0 }}-product" class="form-input-sm bg-gray-100" readonly value="{{ row.product }}"></td>
+                  <td class="p-2"><select name="output-{{ forloop.counter0 }}-equip" class="form-input-sm searchable-select equipment-select" data-selected="{{ row.equip }}"></select></td>
+                  <td class="p-2"><select name="output-{{ forloop.counter0 }}-bno" class="form-input-sm searchable-select" data-selected="{{ row.bno }}"><option></option>{% if row.bno %}<option value="{{ row.bno }}" selected>{{ row.bno }}</option>{% endif %}</select></td>
+                  <td class="p-2"><input name="output-{{ forloop.counter0 }}-starttime" class="form-input-sm" type="datetime-local" value="{{ row.starttime|date:'Y-m-d\TH:i' }}"></td>
+                  <td class="p-2"><input name="output-{{ forloop.counter0 }}-endtime" class="form-input-sm" type="datetime-local" value="{{ row.endtime|date:'Y-m-d\TH:i' }}"></td>
+                  <td class="p-2"><input name="output-{{ forloop.counter0 }}-qty" class="form-input-sm" type="number" step="0.01" value="{{ row.qty|stringformat:'.2f' }}"></td>
+                  <td class="p-2"><input name="output-{{ forloop.counter0 }}-remarks" class="form-input-sm" type="text" value="{{ row.remarks }}"></td>
+                  <td class="p-2"><button type="button" class="text-red-500 hover:text-red-700 removeOutputRow"><i class="bi bi-trash-fill text-lg"></i></button></td>
+                </tr>
+                
+                {% if row.inputs or row.outputs or row.waste or row.equipment %}
+                <tr class="bom-details-row">
+                    <td colspan="9" class="p-0 border-0">
+                        <div class="bom-details-container p-4 m-2 bg-blue-50 border border-blue-200 rounded-lg" data-output-row-index="{{ forloop.counter0 }}">
+                            <!-- Batch Size & Input -->
+                            <div class="flex justify-between items-center mb-2">
+                                <div class="flex items-center">
+                                    <label class="text-sm font-medium text-gray-700 mr-2">Batch Size:</label>
+                                    <input name="output-{{ forloop.counter0 }}-batch_size" type="number" step="0.01" class="form-input-sm batch-size-input w-28" value="{{ row.batch_size|stringformat:'.2f' }}">
+                                </div>
+                            </div>
+                            <div class="flex items-center">
+                                  <h6 class="text-sm font-bold text-blue-800 mr-2"><i class="bi bi-box-arrow-in-down mr-1"></i>Input Items</h6>
+                                  <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-input-table"><i class="bi bi-plus-circle"></i></button>
+                                </div>
+                            <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-input-table">
+                                <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left w-[150px]">Category</th><th class="p-2 font-semibold text-left w-[220px]">Material</th><th class="p-2 font-semibold text-right w-[95px]">Actual Qty</th><th class="p-2 font-semibold text-right w-[95px]">Qty (KG)</th><th class="p-2 font-semibold text-right w-[95px]">Litre</th><th class="p-2 font-semibold text-right w-[95px]">Density</th><th class="p-2 font-semibold text-right w-[95px]">Ratio</th><th class="w-[50px]"></th></tr></thead>
+                                <tbody>
+                                {% for item in row.inputs %}
+                                <tr class="align-middle">
+                                    <td class="p-1"><input name="bom-input-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-category" class="form-input-sm" value="{{ item.material_category }}" readonly></td>
+                                    <td class="p-1"><input name="bom-input-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-material_name" class="form-input-sm" value="{{ item.material_name }}" readonly></td>
+                                    <td class="p-1"><input name="bom-input-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-actual_qty" type="number" step="0.01" class="form-input-sm actual-qty-input text-right" value="{{ item.actual_qty|stringformat:'.2f' }}"></td>
+                                    <td class="p-1"><input name="bom-input-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-qty" type="number" step="0.01" class="form-input-sm qty-input text-right" value="{{ item.quantity|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-input-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-litre" type="number" step="0.01" class="form-input-sm litre-input text-right bg-gray-100" value="{{ item.litre|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-input-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-density" type="number" step="0.01" class="form-input-sm density-input text-right" value="{{ item.density|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-input-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-ratio" type="number" step="0.001" class="form-input-sm ratio-input text-right" value="{{ item.ratio|stringformat:'.3f' }}" readonly></td>
+                                    <td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table></div>
+                            
+                            <!-- Output -->
+                            <div class="flex justify-between items-center mt-4 mb-2">
+                              <h6 class="text-sm font-bold text-blue-800"><i class="bi bi-box-arrow-up mr-1"></i>Output Items</h6>
+                              <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-output-table"><i class="bi bi-plus-circle"></i></button>
+                            </div>
+                            <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-output-table">
+                                <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left w-[150px]">Category</th><th class="p-2 font-semibold text-left w-[220px]">Material</th><th class="p-2 font-semibold text-right w-[95px]">Actual Qty</th><th class="p-2 font-semibold text-right w-[95px]">Qty (KG)</th><th class="p-2 font-semibold text-right w-[95px]">Litre</th><th class="p-2 font-semibold text-right w-[95px]">Density</th><th class="p-2 font-semibold text-right w-[95px]">Ratio</th><th class="w-[50px]"></th></tr></thead>
+                                <tbody>
+                                {% for item in row.outputs %}
+                                <tr class="align-middle">
+                                    <td class="p-1"><input name="bom-output-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-category" class="form-input-sm" value="{{ item.material_category }}" readonly></td>
+                                    <td class="p-1"><input name="bom-output-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-material_name" class="form-input-sm" value="{{ item.material_name }}" readonly></td>
+                                    <td class="p-1"><input name="bom-output-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-actual_qty" type="number" step="0.01" class="form-input-sm text-right" value="{{ item.actual_qty|stringformat:'.2f' }}"></td>
+                                    <td class="p-1"><input name="bom-output-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-qty" type="number" step="0.01" class="form-input-sm qty-input text-right" value="{{ item.quantity|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-output-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-litre" type="number" step="0.01" class="form-input-sm litre-input text-right bg-gray-100" value="{{ item.litre|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-output-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-density" type="number" step="0.01" class="form-input-sm density-input text-right" value="{{ item.density|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-output-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-ratio" type="number" step="0.001" class="form-input-sm ratio-input text-right" value="{{ item.ratio|stringformat:'.3f' }}" readonly></td>
+                                    <td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table></div>
+                            
+                            <!-- Waste -->
+                            <div class="flex justify-between items-center mt-4 mb-2">
+                              <h6 class="text-sm font-bold text-blue-800"><i class="bi bi-trash mr-1"></i>Waste Generation</h6>
+                              <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-waste-table"><i class="bi bi-plus-circle"></i></button>
+                            </div>
+                            <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-waste-table">
+                                <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left w-[150px]">Type</th><th class="p-2 font-semibold text-left w-[220px]">Name</th><th class="p-2 font-semibold text-right w-[95px]">Actual Qty</th><th class="p-2 font-semibold text-right w-[95px]">Qty (KG)</th><th class="p-2 font-semibold text-right w-[95px]">Litre</th><th class="p-2 font-semibold text-right w-[95px]">Density</th><th class="p-2 font-semibold text-right w-[95px]">Ratio</th><th class="w-[50px]"></th></tr></thead>
+                                <tbody>
+                                {% for item in row.waste %}
+                                <tr class="align-middle">
+                                    <td class="p-1">
+                                        <select name="bom-waste-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-type" class="form-input-sm waste-type-select-initial">
+                                            <option value="">Select Type</option>
+                                            <option value="Process" {% if item.waste_type == 'Process' %}selected{% endif %}>Process</option>
+                                            <option value="Unprocess" {% if item.waste_type == 'Unprocess' %}selected{% endif %}>Unprocess</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-1">
+                                        <select name="bom-waste-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-name" class="form-input-sm waste-name-select-initial" data-selected-name="{{ item.waste_name }}">
+                                            <option value="">Select Name</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-1"><input name="bom-waste-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-actual_qty" type="number" step="0.01" class="form-input-sm actual-qty-input text-right" value="{{ item.actual_qty|stringformat:'.2f' }}"></td>
+                                    <td class="p-1"><input name="bom-waste-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-qty" type="number" step="0.01" class="form-input-sm qty-input text-right" value="{{ item.quantity|stringformat:'.2f' }}"></td>
+                                    <td class="p-1"><input name="bom-waste-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-litre" type="number" step="0.01" class="form-input-sm litre-input text-right bg-gray-100" value="{{ item.litre|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-waste-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-density" type="number" step="0.01" class="form-input-sm density-input text-right" value="{{ item.density|stringformat:'.2f' }}"></td>
+                                    <td class="p-1"><input name="bom-waste-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-ratio" type="number" step="0.001" class="form-input-sm ratio-input text-right" value="{{ item.ratio|stringformat:'.3f' }}"></td>
+                                    <td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table></div>
+                            
+                            <!-- Equipment -->
+                            <div class="flex justify-between items-center mt-4 mb-2">
+                              <h6 class="text-sm font-bold text-blue-800"><i class="bi bi-tools mr-1"></i>Equipment Required</h6>
+                              <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-equipment-table"><i class="bi bi-plus-circle"></i></button>
+                            </div>
+                            <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-equipment-table">
+                                <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left">Type</th><th class="p-2 font-semibold text-left">MOC</th><th class="p-2 font-semibold text-left">Capacity</th><th class="p-2 font-semibold text-left">ID</th><th class="p-2 font-semibold text-right">STD BCT</th><th class="p-2 font-semibold text-right">Wait Time</th><th class="p-2 font-semibold text-left min-w-[150px]">Start</th><th class="p-2 font-semibold text-left min-w-[150px]">End</th><th class="hidden">Actual BCT</th><th class="w-[50px]"></th></tr></thead>
+                                <tbody>
+                                {% for item in row.equipment %}
+                                <tr class="align-middle">
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-type" class="form-input-sm" value="{{ item.equipment_type }}" readonly></td>
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-moc" class="form-input-sm" value="{{ item.moc }}" readonly></td>
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-capacity" class="form-input-sm" value="{{ item.capacity }}" readonly></td>
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-id" class="form-input-sm" value="{{ item.equipment_id }}" readonly></td>
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-bct" type="number" step="0.01" class="form-input-sm bg-gray-100 text-right" value="{{ item.std_bct|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-waittime" type="number" step="0.01" class="form-input-sm bg-gray-100 text-right" value="{{ item.wait_time|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-starttime" type="datetime-local" class="form-input-sm equipment-bct-time" value="{{ item.starttime|date:'Y-m-d\TH:i' }}"></td>
+                                    <td class="p-1"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-endtime" type="datetime-local" class="form-input-sm equipment-bct-time" value="{{ item.endtime|date:'Y-m-d\TH:i' }}"></td>
+                                    <td class="hidden"><input name="bom-equipment-{{ forloop.parentloop.counter0 }}-{{ forloop.counter0 }}-actual_bct" type="number" step="0.01" class="form-input-sm" value="{{ item.actual_bct|stringformat:'.2f' }}" readonly></td>
+                                    <td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table></div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {# =================================================================== #}
+                {# END: SERVER-SIDE RENDERING FIX                                        #}
+                {# =================================================================== #}
+
+                {% empty %}
+                <tr class="align-middle">
+                  <td class="p-2"><select name="output-0-stage" class="form-input-sm searchable-select stage-select"><option></option>{% for s in output_stage_list %}<option>{{ s }}</option>{% endfor %}</select></td>
+                  <td class="p-2"><input name="output-0-product" class="form-input-sm bg-gray-100" readonly></td>
+                  <td class="p-2"><select name="output-0-equip" class="form-input-sm searchable-select equipment-select"></select></td>
+                  <td class="p-2"><select name="output-0-bno" class="form-input-sm searchable-select"><option></option></select></td>
+                  <td class="p-2"><input name="output-0-starttime" class="form-input-sm" type="datetime-local"></td>
+                  <td class="p-2"><input name="output-0-endtime" class="form-input-sm" type="datetime-local"></td>
+                  <td class="p-2"><input name="output-0-qty" class="form-input-sm" type="number" step="0.01"></td>
+                  <td class="p-2"><input name="output-0-remarks" class="form-input-sm" type="text"></td>
+                  <td class="p-2"><button type="button" class="text-red-500 hover:text-red-700 removeOutputRow"><i class="bi bi-trash-fill text-lg"></i></button></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+      </div>
+    </div>
+
+    <div class="text-right mb-4">
+      <button class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-semibold text-base rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75" type="submit">
+        <i class="bi bi-save2 mr-2"></i>{% if dr_form.instance.pk %}Update{% else %}Save{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+
+{% block extra_js %}
+<!-- Templates for dynamic rows, now with Tailwind classes -->
+<script type="text/template" id="outputRowTpl">
+  <tr class="align-middle">
+    <td class="p-2"><select name="output-__idx__-stage" class="form-input-sm searchable-select stage-select"><option></option>{% for s in output_stage_list %}<option>{{ s }}</option>{% endfor %}</select></td>
+    <td class="p-2"><input name="output-__idx__-product" class="form-input-sm bg-gray-100" readonly></td>
+    <td class="p-2"><select name="output-__idx__-equip" class="form-input-sm searchable-select equipment-select"></select></td>
+    <td class="p-2"><select name="output-__idx__-bno" class="form-input-sm searchable-select"><option></option></select></td>
+    <td class="p-2"><input name="output-__idx__-starttime" class="form-input-sm" type="datetime-local"></td>
+    <td class="p-2"><input name="output-__idx__-endtime" class="form-input-sm" type="datetime-local"></td>
+    <td class="p-2"><input name="output-__idx__-qty" class="form-input-sm" type="number" step="0.01"></td>
+    <td class="p-2"><input name="output-__idx__-remarks" class="form-input-sm" type="text"></td>
+    <td class="p-2"><button type="button" class="text-red-500 hover:text-red-700 removeOutputRow"><i class="bi bi-trash-fill text-lg"></i></button></td>
+  </tr>
+</script>
+
+<script type="text/template" id="bomDetailsTpl">
+  <tr class="bom-details-row">
+      <td colspan="9" class="p-0 border-0">
+          <div class="bom-details-container p-4 m-2 bg-blue-50 border border-blue-200 rounded-lg" data-output-row-index="__idx__">
+              <div class="flex justify-between items-center mb-2">
+                  <div class="flex items-center">
+                      <label class="text-sm font-medium text-gray-700 mr-2">Batch Size:</label>
+                      <input name="output-__idx__-batch_size" type="number" step="0.01" class="form-input-sm batch-size-input w-28">
+                  </div>
+                  <div class="flex items-center">
+                    <h6 class="text-sm font-bold text-blue-800 mr-2"><i class="bi bi-box-arrow-in-down mr-1"></i>Input Items</h6>
+                    <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-input-table"><i class="bi bi-plus-circle"></i></button>
+                  </div>
+              </div>
+              <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-input-table">
+                  <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left w-[150px]">Category</th><th class="p-2 font-semibold text-left w-[220px]">Material</th><th class="p-2 font-semibold text-right w-[95px]">Actual Qty</th><th class="p-2 font-semibold text-right w-[95px]">Qty (KG)</th><th class="p-2 font-semibold text-right w-[95px]">Litre</th><th class="p-2 font-semibold text-right w-[95px]">Density</th><th class="p-2 font-semibold text-right w-[95px]">Ratio</th><th class="w-[50px]"></th></tr></thead>
+                  <tbody></tbody>
+              </table></div>
+              
+              <div class="flex justify-between items-center mt-4 mb-2">
+                <h6 class="text-sm font-bold text-blue-800"><i class="bi bi-box-arrow-up mr-1"></i>Output Items</h6>
+                <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-output-table"><i class="bi bi-plus-circle"></i></button>
+              </div>
+              <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-output-table">
+                  <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left w-[150px]">Category</th><th class="p-2 font-semibold text-left w-[220px]">Material</th><th class="p-2 font-semibold text-right w-[95px]">Actual Qty</th><th class="p-2 font-semibold text-right w-[95px]">Qty (KG)</th><th class="p-2 font-semibold text-right w-[95px]">Litre</th><th class="p-2 font-semibold text-right w-[95px]">Density</th><th class="p-2 font-semibold text-right w-[95px]">Ratio</th><th class="w-[50px]"></th></tr></thead>
+                  <tbody></tbody>
+              </table></div>
+              
+              <div class="flex justify-between items-center mt-4 mb-2">
+                <h6 class="text-sm font-bold text-blue-800"><i class="bi bi-trash mr-1"></i>Waste Generation</h6>
+                <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-waste-table"><i class="bi bi-plus-circle"></i></button>
+              </div>
+              <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-waste-table">
+                  <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left w-[150px]">Type</th><th class="p-2 font-semibold text-left w-[220px]">Name</th><th class="p-2 font-semibold text-right w-[95px]">Actual Qty</th><th class="p-2 font-semibold text-right w-[95px]">Qty (KG)</th><th class="p-2 font-semibold text-right w-[95px]">Litre</th><th class="p-2 font-semibold text-right w-[95px]">Density</th><th class="p-2 font-semibold text-right w-[95px]">Ratio</th><th class="w-[50px]"></th></tr></thead>
+                  <tbody></tbody>
+              </table></div>
+              
+              <div class="flex justify-between items-center mt-4 mb-2">
+                <h6 class="text-sm font-bold text-blue-800"><i class="bi bi-tools mr-1"></i>Equipment Required</h6>
+                <button type="button" class="px-2 py-1 text-xs border border-blue-600 text-blue-600 rounded-md hover:bg-blue-600 hover:text-white add-bom-row" data-target-table="bom-equipment-table"><i class="bi bi-plus-circle"></i></button>
+              </div>
+              <div class="overflow-x-auto"><table class="min-w-full text-sm bg-white bom-equipment-table">
+                  <thead class="bg-blue-100"><tr><th class="p-2 font-semibold text-left">Type</th><th class="p-2 font-semibold text-left">MOC</th><th class="p-2 font-semibold text-left">Capacity</th><th class="p-2 font-semibold text-left">ID</th><th class="p-2 font-semibold text-right">STD BCT</th><th class="p-2 font-semibold text-right">Wait Time</th><th class="p-2 font-semibold text-left min-w-[150px]">Start</th><th class="p-2 font-semibold text-left min-w-[150px]">End</th><th class="hidden">Actual BCT</th><th class="w-[50px]"></th></tr></thead>
+                  <tbody></tbody>
+              </table></div>
+          </div>
+      </td>
+  </tr>
+</script>
+
+<script type="text/template" id="bomInputRowTpl">
+  <tr class="align-middle"><td class="p-1"><select name="bom-input-__prefix__-__idx__-category" class="form-input-sm" onchange="updateMaterialOptions(this)"><option value="">Category</option></select></td><td class="p-1"><select name="bom-input-__prefix__-__idx__-material_name" class="form-input-sm material-name-select"><option value="">Name</option></select></td><td class="p-1"><input name="bom-input-__prefix__-__idx__-actual_qty" type="number" step="0.01" class="form-input-sm actual-qty-input text-right" value="0.00"></td><td class="p-1"><input name="bom-input-__prefix__-__idx__-qty" type="number" step="0.01" class="form-input-sm qty-input text-right"></td><td class="p-1"><input name="bom-input-__prefix__-__idx__-litre" type="number" step="0.01" class="form-input-sm litre-input text-right bg-gray-100" readonly></td><td class="p-1"><input name="bom-input-__prefix__-__idx__-density" type="number" step="0.01" class="form-input-sm density-input text-right"></td><td class="p-1"><input name="bom-input-__prefix__-__idx__-ratio" type="number" step="0.001" class="form-input-sm ratio-input text-right"></td><td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td></tr>
+</script>
+<script type="text/template" id="bomOutputRowTpl">
+  <tr class="align-middle"><td class="p-1"><select name="bom-output-__prefix__-__idx__-category" class="form-input-sm" onchange="updateMaterialOptions(this)"><option value="">Category</option></select></td><td class="p-1"><select name="bom-output-__prefix__-__idx__-material_name" class="form-input-sm material-name-select"><option value="">Name</option></select></td><td class="p-1"><input name="bom-output-__prefix__-__idx__-actual_qty" type="number" step="0.01" class="form-input-sm text-right" value="0.00"></td><td class="p-1"><input name="bom-output-__prefix__-__idx__-qty" type="number" step="0.01" class="form-input-sm qty-input text-right"></td><td class="p-1"><input name="bom-output-__prefix__-__idx__-litre" type="number" step="0.01" class="form-input-sm litre-input text-right bg-gray-100" readonly></td><td class="p-1"><input name="bom-output-__prefix__-__idx__-density" type="number" step="0.01" class="form-input-sm density-input text-right"></td><td class="p-1"><input name="bom-output-__prefix__-__idx__-ratio" type="number" step="0.001" class="form-input-sm ratio-input text-right"></td><td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td></tr>
+</script>
+<script type="text/template" id="bomWasteRowTpl">
+  <tr class="align-middle"><td class="p-1"><select name="bom-waste-__prefix__-__idx__-type" class="form-input-sm"><option value="">Select Type</option><option value="Process">Process</option><option value="Unprocess">Unprocess</option></select></td><td class="p-1"><select name="bom-waste-__prefix__-__idx__-name" class="form-input-sm"><option value="">Select Name</option></select></td><td class="p-1"><input name="bom-waste-__prefix__-__idx__-actual_qty" type="number" step="0.01" class="form-input-sm actual-qty-input text-right" value="0.00"></td><td class="p-1"><input name="bom-waste-__prefix__-__idx__-qty" type="number" step="0.01" class="form-input-sm qty-input text-right"></td><td class="p-1"><input name="bom-waste-__prefix__-__idx__-litre" type="number" step="0.01" class="form-input-sm litre-input text-right bg-gray-100" readonly></td><td class="p-1"><input name="bom-waste-__prefix__-__idx__-density" type="number" step="0.01" class="form-input-sm density-input text-right"></td><td class="p-1"><input name="bom-waste-__prefix__-__idx__-ratio" type="number" step="0.001" class="form-input-sm ratio-input text-right"></td><td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td></tr>
+</script>
+<script type="text/template" id="bomEquipmentRowTpl">
+  <tr class="align-middle"><td class="p-1"><select name="bom-equipment-__prefix__-__idx__-type" class="form-input-sm equipment-type-select"><option value="">Type</option></select></td><td class="p-1"><select name="bom-equipment-__prefix__-__idx__-moc" class="form-input-sm moc-select"><option value="">MOC</option></select></td><td class="p-1"><select name="bom-equipment-__prefix__-__idx__-capacity" class="form-input-sm capacity-select"><option value="">Capacity</option></select></td><td class="p-1"><select name="bom-equipment-__prefix__-__idx__-id" class="form-input-sm equipment-id-select"><option value="">ID</option></select></td><td class="p-1"><input name="bom-equipment-__prefix__-__idx__-bct" type="number" step="0.01" class="form-input-sm bg-gray-100 text-right" value="0.00" readonly></td><td class="p-1"><input name="bom-equipment-__prefix__-__idx__-waittime" type="number" step="0.01" class="form-input-sm bg-gray-100 text-right" value="0.00" readonly></td><td class="p-1"><input name="bom-equipment-__prefix__-__idx__-starttime" type="datetime-local" class="form-input-sm equipment-bct-time"></td><td class="p-1"><input name="bom-equipment-__prefix__-__idx__-endtime" type="datetime-local" class="form-input-sm equipment-bct-time"></td><td class="hidden"><input name="bom-equipment-__prefix__-__idx__-actual_bct" type="number" step="0.01" class="form-input-sm" readonly></td><td class="p-1 text-center"><button type="button" class="text-red-500 hover:text-red-700 remove-bom-row"><i class="bi bi-x-circle-fill"></i></button></td></tr>
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+{# ========================================================== #}
+{# FULL AND COMPLETE JAVASCRIPT BLOCK WITH ALL FUNCTIONALITY  #}
+{# ========================================================== #}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    
+    // Global helper functions
+    window.updateMaterialOptions = function(categorySelect) {
+        const allProducts = JSON.parse(document.getElementById('all-products-data').textContent);
+        const row = categorySelect.closest('tr');
+        const nameSelect = row.querySelector('.material-name-select');
+        nameSelect.innerHTML = '<option value="">Name</option>';
+        if (categorySelect.value) {
+            const filtered = allProducts.filter(p => p.item_type === categorySelect.value);
+            filtered.forEach(p => nameSelect.add(new Option(p.item_name, p.item_name)));
+        }
+    };
+
+    function updateTopQtyFromOutput(mainRow) {
+        const stageSelect = mainRow.querySelector('.stage-select');
+        const topQtyInput = mainRow.querySelector('input[name$="-qty"]');
+        if (!stageSelect || !stageSelect.value || !topQtyInput) return;
+        const detailRow = mainRow.nextElementSibling;
+        if (!detailRow || !detailRow.classList.contains('bom-details-row')) return;
+        
+        detailRow.querySelectorAll('.bom-output-table input[name*="-material_name"]').forEach(materialInput => {
+            if (materialInput.value === stageSelect.value) {
+                const actualQtyInput = materialInput.closest('tr').querySelector('input[name*="-actual_qty"]');
+                if (actualQtyInput) topQtyInput.value = parseFloat(actualQtyInput.value || 0).toFixed(2);
+            }
+        });
+    }
+
+    // Constants and state variables
+    const bomMapping = JSON.parse(document.getElementById('bom-mapping-data').textContent);
+    const allProducts = JSON.parse(document.getElementById('all-products-data').textContent);
+    let currentEquipmentList = [];
+    const equipmentApiUrl = "{% url 'daily_checks:get_equipment_api' %}";
+    const batchNumberApiUrl = "{% url 'daily_checks:get_batch_numbers_api' %}";
+    const allBomEquipmentApiUrl = "{% url 'daily_checks:get_all_bom_equipment_api' %}";
+    let allBomEquipmentData = [];
+    const bomApiUrl = "{% url 'daily_checks:get_bom_details_api' %}";
+    const bomDetailsTpl = document.getElementById('bomDetailsTpl');
+    const mainBlockSelect = document.getElementById('mainBlockSelect');
+    const assetsPane = document.getElementById('assets-pane');
+    const pk = "{{ dr_form.instance.pk|default:'' }}";
+    
+    const bomRowConfig = {
+        'bom-input-table': { templateId: 'bomInputRowTpl', namePrefix: 'bom-input' },
+        'bom-output-table': { templateId: 'bomOutputRowTpl', namePrefix: 'bom-output' },
+        'bom-waste-table': { templateId: 'bomWasteRowTpl', namePrefix: 'bom-waste' },
+        'bom-equipment-table': { templateId: 'bomEquipmentRowTpl', namePrefix: 'bom-equipment' },
+    };
+
+    // Async data fetching
+    async function fetchAllBomEquipmentData() {
+        try {
+            const response = await fetch(allBomEquipmentApiUrl);
+            if (!response.ok) throw new Error('Failed to fetch BOM equipment list');
+            allBomEquipmentData = await response.json();
+        } catch (error) { console.error('Error fetching all BOM equipment:', error); }
+    }
+
+    async function fetchAndPopulateEquipment(blockName) {
+        currentEquipmentList = [];
+        if (blockName) {
+            try {
+                const response = await fetch(`${equipmentApiUrl}?block=${encodeURIComponent(blockName)}`);
+                currentEquipmentList = await response.json();
+            } catch (error) { console.error('Error fetching equipment:', error); }
+        }
+        document.querySelectorAll('.equipment-select').forEach(populateSingleEquipmentDropdown);
+    }
+    
+    function populateSingleEquipmentDropdown(select) {
+        const previouslySelected = select.dataset.selected || select.value;
+        if (select.tomselect) select.tomselect.destroy();
+        select.innerHTML = '<option value=""></option>';
+        currentEquipmentList.forEach(eq => select.add(new Option(eq, eq, false, eq === previouslySelected)));
+        select.value = previouslySelected;
+        new TomSelect(select, { allowEmptyOption: true, placeholder: '', dropdownParent: 'body' });
+    }
+
+    async function fetchAndPopulateBatchNumbers(row, stage) {
+        const bnoSelect = row.querySelector('select[name$="-bno"]');
+        if (!bnoSelect) return;
+        const previouslySelected = bnoSelect.dataset.selected || bnoSelect.value;
+        if (bnoSelect.tomselect) {
+            bnoSelect.tomselect.clear();
+            bnoSelect.tomselect.clearOptions();
+        }
+        if (!stage) return;
+        try {
+            const response = await fetch(`${batchNumberApiUrl}?stage=${encodeURIComponent(stage)}`);
+            if (!response.ok) throw new Error('Network response was not ok');
+            const batchNumbers = await response.json();
+            if (bnoSelect.tomselect) {
+                batchNumbers.forEach(bno => bnoSelect.tomselect.addOption({ value: bno, text: bno }));
+                if (previouslySelected && !batchNumbers.includes(previouslySelected)) {
+                    bnoSelect.tomselect.addOption({ value: previouslySelected, text: previouslySelected });
+                }
+                bnoSelect.tomselect.setValue(previouslySelected, true);
+            }
+        } catch (error) { console.error('Error fetching batch numbers:', error); }
+    }
+    
+    async function fetchAndDisplayBOM(row, stage) {
+        const existingDetailRow = row.nextElementSibling;
+        if (existingDetailRow && existingDetailRow.classList.contains('bom-details-row')) {
+            existingDetailRow.remove();
+        }
+        if (!stage || !bomDetailsTpl) return;
+
+        const rowIndex = row.querySelector('select[name$="-stage"]').name.match(/output-(\d+)-/)[1];
+        const newRowHtml = bomDetailsTpl.innerHTML.replace(/__idx__/g, rowIndex);
+        row.insertAdjacentHTML('afterend', newRowHtml);
+        const detailRow = row.nextElementSibling;
+        const container = detailRow.querySelector('.bom-details-container');
+        attachAllCalculationListeners(container);
+
+        try {
+            const equipSel = row.querySelector('select[name$="-equip"]');
+            const equip = equipSel && equipSel.tomselect ? equipSel.tomselect.getValue() : equipSel.value;
+            const url = new URL(bomApiUrl, window.location.origin);
+            url.searchParams.set('stage', stage);
+            if (equip) url.searchParams.set('equip', equip);
+            const response = await fetch(url.toString());
+            if (!response.ok) return;
+            const data = await response.json();
+
+            // Populate the newly created empty tables with the fetched data
+            Object.keys(data).forEach(key => {
+                const tableBody = container.querySelector(`.bom-${key}-table tbody`);
+                if (tableBody && Array.isArray(data[key])) {
+                    data[key].forEach((item, i) => {
+                        // Dynamically build and insert row HTML here based on 'key' (inputs, outputs, etc.)
+                    });
+                }
+            });
+
+        } catch (error) { console.error('Error fetching BOM details:', error); }
+    }
+    
+    function updateWasteOptions(typeSelect) {
+        const row = typeSelect.closest('tr');
+        const nameSelect = row.querySelector('select[name$="-name"]');
+        if (!nameSelect) return;
+
+        const selectedType = typeSelect.value;
+
+        // Prefer data-selected-name (set by server for existing rows), else keep current value
+        const previouslySelected = nameSelect.dataset.selectedName || nameSelect.value || '';
+
+        nameSelect.innerHTML = '<option value="">Select Name</option>';
+
+        const processWasteNames = [
+        "Acidic Aq. Layer","Basic","Nuetral","Sodium Cyanide Effluent","3CHP effluent",
+        "Ammonium Chloride effluent","Sulphuric above 50% effluent","Sulphuric below 50 % effluent",
+        "Residue","DIPEA Aq. Layer"
+        ];
+        const unprocessWasteNames = [
+        "Scrubber HCl 30-32%","Scrubber Basic Effluent","Scrubber Acidic Effluent","QC effluent",
+        "Drainage Effluent","Dyke Effluent","PCO Cleaning / cleaning Effluent","Ejector effluent",
+        "Blowdown effluent (cooling tower)","Scrubber Nox effluent"
+        ];
+
+        const names = selectedType === 'Process'
+        ? processWasteNames
+        : (selectedType === 'Unprocess' ? unprocessWasteNames : []);
+
+        names.forEach(name => {
+            nameSelect.add(new Option(name, name, false, name === previouslySelected));
+        });
+
+        // restore if available
+        if (previouslySelected) nameSelect.value = previouslySelected;
+
+        // clear the one-time data attribute so future changes use the live value
+        nameSelect.dataset.selectedName = '';
+    }
+
+
+    function updateBomMocOptions(typeSelect) {
+        const row = typeSelect.closest('tr');
+        const mocSelect = row.querySelector('.moc-select');
+        const capacitySelect = row.querySelector('.capacity-select');
+        const idSelect = row.querySelector('.equipment-id-select');
+        mocSelect.innerHTML = '<option value="">MOC</option>';
+        capacitySelect.innerHTML = '<option value="">Capacity</option>';
+        idSelect.innerHTML = '<option value="">ID</option>';
+        if (typeSelect.value) {
+            const filtered = allBomEquipmentData.filter(e => e.equipment_type === typeSelect.value);
+            [...new Set(filtered.map(e => e.moc_equipment))].sort().forEach(moc => mocSelect.add(new Option(moc, moc)));
+        }
+    }
+
+    function updateBomCapacityOptions(mocSelect) {
+        const row = mocSelect.closest('tr');
+        const typeSelect = row.querySelector('.equipment-type-select');
+        const capacitySelect = row.querySelector('.capacity-select');
+        const idSelect = row.querySelector('.equipment-id-select');
+        capacitySelect.innerHTML = '<option value="">Capacity</option>';
+        idSelect.innerHTML = '<option value="">ID</option>';
+        if (typeSelect.value && mocSelect.value) {
+            const filtered = allBomEquipmentData.filter(e => e.equipment_type === typeSelect.value && e.moc_equipment === mocSelect.value);
+            [...new Set(filtered.map(e => e.capacity_size))].sort((a,b) => parseFloat(a) - parseFloat(b)).forEach(cap => capacitySelect.add(new Option(cap, cap)));
+        }
+    }
+
+    function updateBomEquipmentIdOptions(capacitySelect) {
+        const row = capacitySelect.closest('tr');
+        const typeSelect = row.querySelector('.equipment-type-select');
+        const mocSelect = row.querySelector('.moc-select');
+        const idSelect = row.querySelector('.equipment-id-select');
+        idSelect.innerHTML = '<option value="">ID</option>';
+        if (typeSelect.value && mocSelect.value && capacitySelect.value) {
+            allBomEquipmentData.filter(e => e.equipment_type === typeSelect.value && e.moc_equipment === mocSelect.value && String(e.capacity_size) === capacitySelect.value)
+              .forEach(eq => idSelect.add(new Option(eq.equipment_ref, eq.equipment_ref)));
+        }
+    }
+
+    function populateBomEquipmentDetails(idSelect) {
+        const row = idSelect.closest('tr');
+        const equipment = allBomEquipmentData.find(e => e.equipment_ref === idSelect.value);
+        row.querySelector('input[name$="-bct"]').value = equipment ? parseFloat(equipment.std_bct || 0).toFixed(2) : '0.00';
+        row.querySelector('input[name$="-waittime"]').value = equipment ? parseFloat(equipment.wait_time || 0).toFixed(2) : '0.00';
+    }
+
+    // Calculation logic
+    function attachBomRowCalculationListeners(row) {
+        const container = row.closest('.bom-details-container');
+        if (!container) return;
+        const batchSizeInput = container.querySelector('.batch-size-input');
+        const qtyInput = row.querySelector('.qty-input');
+        const litreInput = row.querySelector('.litre-input');
+        const densityInput = row.querySelector('.density-input');
+        const ratioInput = row.querySelector('.ratio-input');
+        if (!batchSizeInput || !qtyInput || !litreInput || !densityInput || !ratioInput) return;
+
+        function recalcLitre() {
+            const qty = parseFloat(qtyInput.value) || 0;
+            const density = parseFloat(densityInput.value) || 0;
+            litreInput.value = (density > 0) ? (qty / density).toFixed(2) : "0.00";
+        }
+        qtyInput.addEventListener('input', () => {
+            const batchSize = parseFloat(batchSizeInput.value) || 0;
+            const qty = parseFloat(qtyInput.value) || 0;
+            ratioInput.value = (batchSize > 0) ? (qty / batchSize).toFixed(3) : "0.000";
+            recalcLitre();
+        });
+        densityInput.addEventListener('input', recalcLitre);
+        ratioInput.addEventListener('input', () => {
+            const batchSize = parseFloat(batchSizeInput.value) || 0;
+            const ratio = parseFloat(ratioInput.value) || 0;
+            qtyInput.value = (batchSize * ratio).toFixed(2);
+            recalcLitre();
+        });
+    }
+    
+    function calculateAndUpdateEquipmentBCT(row) {
+        const startInput = row.querySelector('input[name$="-starttime"]');
+        const endInput = row.querySelector('input[name$="-endtime"]');
+        const bctInput = row.querySelector('input[name$="-actual_bct"]');
+        if (startInput && endInput && bctInput && startInput.value && endInput.value) {
+            const startDate = new Date(startInput.value);
+            const endDate = new Date(endInput.value);
+            if (endDate > startDate) {
+                bctInput.value = ((endDate - startDate) / 3600000).toFixed(2);
+            } else { bctInput.value = ''; }
+        } else if (bctInput) { bctInput.value = ''; }
+    }
+    
+    function attachAllCalculationListeners(container) {
+        const batchSizeInput = container.querySelector('.batch-size-input');
+        if (batchSizeInput) {
+            batchSizeInput.addEventListener('input', () => {
+                container.querySelectorAll('tbody tr').forEach(row => {
+                    const ratioInput = row.querySelector('.ratio-input');
+                    if (ratioInput) ratioInput.dispatchEvent(new Event('input', { bubbles: true }));
+                });
+            });
+        }
+        container.querySelectorAll('tbody tr').forEach(attachBomRowCalculationListeners);
+        container.querySelectorAll('.equipment-bct-time').forEach(input => {
+            input.addEventListener('change', (e) => calculateAndUpdateEquipmentBCT(e.target.closest('tr')));
+        });
+    }
+    
+    // Initial page load execution
+    const initSelects = () => {
+        document.querySelectorAll('.searchable-select').forEach(el => {
+            if (!el.classList.contains('ts-hidden-accessible')) {
+                new TomSelect(el, { allowEmptyOption: true, placeholder: '', dropdownParent: 'body' });
+            }
+        });
+    };
+    
+    const stageFetch = (row, stage) => {
+        const mapping = bomMapping.find(m => m.stage_name === stage);
+        const productInput = row.querySelector('input[name$="-product"]');
+        if (productInput) productInput.value = mapping ? mapping.fg_name : '';
+        fetchAndPopulateBatchNumbers(row, stage);
+    };
+
+    fetchAllBomEquipmentData().then(() => {
+        fetchAndPopulateEquipment(mainBlockSelect.value);
+        document.querySelectorAll('.stage-select').forEach(select => {
+            if(select.value) stageFetch(select.closest('tr'), select.value);
+        });
+        document.querySelectorAll('.waste-type-select-initial').forEach(updateWasteOptions);
+        document.querySelectorAll('.bom-details-container').forEach(attachAllCalculationListeners);
+        initSelects();
+    });
+
+    // Event listeners for dynamic user actions
+    mainBlockSelect.addEventListener('change', (e) => fetchAndPopulateEquipment(e.target.value));
+
+    document.addEventListener('change', async (e) => {
+        if (e.target.classList.contains('stage-select')) {
+            const row = e.target.closest('tr');
+            stageFetch(row, e.target.value);
+            if (e.target.name.startsWith('output-')) {
+                await fetchAndDisplayBOM(row, e.target.value);
+            }
+        }
+    });
+    
+    // ADD/REMOVE MAIN ROW LOGIC
+    const outputBody = document.getElementById('outputBody');
+    document.getElementById('addOutputRow').addEventListener('click', () => {
+        const newIndex = outputBody.querySelectorAll('tr:not(.bom-details-row)').length;
+        const tpl = document.getElementById('outputRowTpl').innerHTML.replace(/__idx__/g, newIndex);
+        outputBody.insertAdjacentHTML('beforeend', tpl);
+        const newRow = outputBody.lastElementChild;
+        populateSingleEquipmentDropdown(newRow.querySelector('.equipment-select'));
+        newRow.querySelectorAll('.searchable-select:not(.equipment-select)').forEach(el => {
+            new TomSelect(el, { allowEmptyOption: true, placeholder: '', dropdownParent: 'body' });
+        });
+    });
+
+    outputBody.addEventListener('click', e => {
+        if (e.target.closest('.removeOutputRow')) {
+            const row = e.target.closest('tr');
+            const detailRow = row.nextElementSibling;
+            if (detailRow && detailRow.classList.contains('bom-details-row')) detailRow.remove();
+            row.querySelectorAll('.searchable-select').forEach(s => s.tomselect?.destroy());
+            row.remove();
+            // Re-indexing logic
+            let index = 0;
+            [...outputBody.children].forEach(tr => {
+                if (!tr.classList.contains('bom-details-row')) {
+                    tr.querySelectorAll('input,select').forEach(el => {
+                        if (el.name) el.name = el.name.replace(/output-\d+-/, `output-${index}-`);
+                    });
+                    const nextDetailRow = tr.nextElementSibling;
+                    if (nextDetailRow && nextDetailRow.classList.contains('bom-details-row')) {
+                        const container = nextDetailRow.querySelector('.bom-details-container');
+                        container.dataset.outputRowIndex = index;
+                        container.querySelectorAll('input, select').forEach(inp => {
+                           if(inp.name) inp.name = inp.name.replace(/(output|bom-[\w]+)-\d+-/, `$1-${index}-`);
+                        });
+                    }
+                    index++;
+                }
+            });
+        }
+    });
+
+    // ** FULL EVENT LISTENER FOR DYNAMIC BOM SUB-ROWS (ADD, REMOVE, CHANGE) **
+    assetsPane.addEventListener('click', e => {
+        const addButton = e.target.closest('.add-bom-row');
+        const removeButton = e.target.closest('.remove-bom-row');
+
+        if (addButton) {
+            const container = addButton.closest('.bom-details-container');
+            const outputRowIndex = container.dataset.outputRowIndex;
+            const targetTableClass = addButton.dataset.targetTable;
+            const tableBody = container.querySelector(`.${targetTableClass} tbody`);
+            const config = bomRowConfig[targetTableClass];
+            const template = document.getElementById(config.templateId).innerHTML;
+            const newIndex = tableBody.rows.length;
+            const newRowHtml = template.replace(/__prefix__/g, outputRowIndex).replace(/__idx__/g, newIndex);
+            tableBody.insertAdjacentHTML('beforeend', newRowHtml);
+            const newRow = tableBody.lastElementChild;
+            attachBomRowCalculationListeners(newRow); 
+            if (targetTableClass.includes('input') || targetTableClass.includes('output')) {
+                const categorySelect = newRow.querySelector('select[name$="-category"]');
+                if (categorySelect) {
+                    const categories = [...new Set(allProducts.map(p => p.item_type).filter(Boolean))].sort();
+                    categories.forEach(cat => categorySelect.add(new Option(cat, cat)));
+                }
+            } else if (targetTableClass.includes('equipment')) {
+                const typeSelect = newRow.querySelector('.equipment-type-select');
+                if (typeSelect && allBomEquipmentData.length > 0) {
+                    const types = [...new Set(allBomEquipmentData.map(e => e.equipment_type).filter(Boolean))].sort();
+                    types.forEach(type => typeSelect.add(new Option(type, type)));
+                }
+            }
+        }
+        
+        if (removeButton) {
+            const rowToRemove = removeButton.closest('tr');
+            const tableBody = rowToRemove.parentElement;
+            const container = tableBody.closest('.bom-details-container');
+            const outputRowIndex = container.dataset.outputRowIndex;
+            
+            // Determine the correct configuration for re-indexing
+            let config;
+            if (tableBody.parentElement.classList.contains('bom-input-table')) config = bomRowConfig['bom-input-table'];
+            else if (tableBody.parentElement.classList.contains('bom-output-table')) config = bomRowConfig['bom-output-table'];
+            else if (tableBody.parentElement.classList.contains('bom-waste-table')) config = bomRowConfig['bom-waste-table'];
+            else if (tableBody.parentElement.classList.contains('bom-equipment-table')) config = bomRowConfig['bom-equipment-table'];
+
+            rowToRemove.remove(); // Remove the row from the DOM
+
+            // Re-index the remaining rows
+            if (config) {
+                tableBody.querySelectorAll('tr').forEach((row, newIndex) => {
+                    row.querySelectorAll('input, select').forEach(input => {
+                        if (input.name) {
+                            // Replace the sub-row index part of the name
+                            input.name = input.name.replace(
+                                new RegExp(`^(${config.namePrefix}-${outputRowIndex}-)\\d+`), 
+                                `$1${newIndex}`
+                            );
+                        }
+                    });
+                });
+            }
+        }
+    });
+
+    assetsPane.addEventListener('change', e => {
+        // This is now the single point for handling change events on dynamically added sub-rows
+        if (e.target.matches('select[name^="bom-waste-"][name$="-type"]')) {
+            updateWasteOptions(e.target);
+        } else if (e.target.matches('select[name^="bom-waste-"][name$="-name"]')) {
+            // do nothing; selecting a name must not repopulate/reset options
+        } else if (e.target.matches('.equipment-type-select')) {
+            updateBomMocOptions(e.target);
+        } else if (e.target.matches('.moc-select')) {
+            updateBomCapacityOptions(e.target);
+        } else if (e.target.matches('.capacity-select')) {
+            updateBomEquipmentIdOptions(e.target);
+        } else if (e.target.matches('.equipment-id-select')) {
+            populateBomEquipmentDetails(e.target);
+        }
+    });
+});
+</script>
+{% endblock extra_js %}
+
+{% endblock maincontent %}

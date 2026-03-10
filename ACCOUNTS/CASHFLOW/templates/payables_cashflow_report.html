@@ -1,0 +1,734 @@
+{% extends "main/index.html" %}
+{% load static indnum %}
+
+{% block maincontent %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root { --font-sans: 'Inter', system-ui, -apple-system, sans-serif; }
+  body { font-family: var(--font-sans); }
+
+  /* Smooth Scrolling */
+  html { scroll-behavior: smooth; }
+  
+  /* Scroll Margin: Ensures the target isn't flush with the top of the viewport */
+  .scroll-target { scroll-margin-top: 20px; }
+
+  /* Scrollbars */
+  .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; border: 2px solid transparent; background-clip: content-box; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+
+  .financial-num { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+
+  /* Tabs */
+  .tab-btn {
+    display:inline-flex; align-items:center; gap:.5rem;
+    padding: .5rem .75rem; border-radius: 9999px;
+    font-size: 12px; font-weight: 800; border: 1px solid #e2e8f0;
+    color: #334155; background: #ffffff; transition: all .15s ease;
+    user-select:none; white-space:nowrap; cursor: pointer;
+  }
+  .tab-btn:hover { background:#f8fafc; border-color:#cbd5e1; }
+  .tab-btn-active {
+    background:#0f172a; border-color:#0f172a; color:#ffffff;
+    box-shadow: 0 8px 18px -10px rgba(15,23,42,.45);
+  }
+  .tab-pill {
+    display:inline-flex; align-items:center; justify-content:center;
+    padding: 2px 8px; border-radius: 9999px; font-weight: 800; font-size: 10px;
+    background: rgba(148,163,184,.22); color: rgba(148,163,184,1);
+  }
+  .tab-btn-active .tab-pill { background: rgba(255,255,255,.18); color: rgba(255,255,255,.95); }
+  
+  /* Matrix Interactions */
+  .week-header-active { background-color: #4f46e5 !important; color: white !important; border-color: #4338ca !important; }
+  .cell-active { background-color: #e0e7ff !important; color: #4338ca; font-weight: bold; box-shadow: inset 0 0 0 2px #6366f1; }
+
+  .summary-card { transition: all 0.2s ease; border: 1px solid #e2e8f0; }
+  .summary-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 12px -2px rgba(0,0,0,0.05); }
+
+  /* Sorting Header Styles */
+  th.sortable { cursor: pointer; user-select: none; transition: background-color 0.15s; }
+  th.sortable:hover { background-color: #f1f5f9; }
+  th.sortable::after { content: ' \2195'; opacity: 0.2; font-size: 0.8em; margin-left: 4px; }
+  th.sortable.asc::after { content: ' \2191'; opacity: 1; color: #4f46e5; }
+  th.sortable.desc::after { content: ' \2193'; opacity: 1; color: #4f46e5; }
+
+  /* Sticky Columns */
+  .sticky-col { position: sticky; left: 0; z-index: 10; background: white; border-right: 1px solid #f1f5f9 !important; }
+  th.sticky-col { z-index: 30; background: #f8fafc; }
+</style>
+
+<div class="bg-slate-50/50 min-h-screen font-sans text-slate-600 pb-12">
+  <div class="max-w-[1920px] mx-auto px-4 sm:px-6 py-4 space-y-4">
+
+    <header class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 grid grid-cols-1 xl:grid-cols-[auto_1fr_auto] gap-4 items-center">
+      <div>
+        <h1 class="text-xl font-bold text-slate-900 tracking-tight leading-none">Cashflow Report</h1>
+        <p class="text-xs text-slate-500 mt-1.5 font-medium">Financial Overview & Analysis</p>
+      </div>
+
+      <div class="flex justify-center gap-2">
+        <button type="button" class="tab-btn tab-btn-active" data-tab-btn="main">Main View <span class="tab-pill">Matrix + Summary</span></button>
+        <button type="button" class="tab-btn" data-tab-btn="excluded">Excluded View <span class="tab-pill">Excluded Parties</span></button>
+      </div>
+
+      <form method="get" class="flex flex-wrap items-end gap-2 justify-end">
+        <div class="flex flex-col">
+          <label class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">From</label>
+          <input type="date" name="from" id="date-from" class="rounded-lg border-slate-300 text-xs py-1.5 px-2 h-[34px]" />
+        </div>
+        <div class="flex flex-col">
+          <label class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">To</label>
+          <input type="date" name="to" id="date-to" class="rounded-lg border-slate-300 text-xs py-1.5 px-2 h-[34px]" />
+        </div>
+        <div class="flex flex-col">
+          <label for="company" class="text-[9px] font-bold text-slate-400 uppercase mb-0.5">Company</label>
+          <select id="company" name="company" class="rounded-lg border-slate-300 text-xs py-1.5 px-2 h-[34px] min-w-[160px]">
+            <option value="">All Companies</option>
+            {% for key, label in company_groups %}
+              <option value="{{ key }}" {% if company_selected == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="bg-slate-900 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 h-[34px] mb-[1px]">Apply</button>
+      </form>
+    </header>
+
+    <div id="tab-panel-main" class="space-y-6">
+      
+      <section id="section-matrix" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="px-5 py-3 border-b flex justify-between items-center bg-slate-50/50">
+          <h2 class="text-sm font-bold text-slate-800">Weekly Matrix</h2>
+          <button type="button" id="cf-clear-filters" class="text-[11px] font-semibold text-indigo-600 hover:underline">Reset Selection</button>
+        </div>
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="min-w-full text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-50">
+                <th class="sticky left-0 z-20 bg-slate-50/95 border-b border-r px-4 py-3 text-left font-bold min-w-[180px] whitespace-nowrap">Particulars</th>
+                {% for wk in cashflow_weeks %}
+                  <th class="border-b border-r px-3 py-3 text-center font-semibold cursor-pointer hover:bg-indigo-50 transition-colors whitespace-nowrap" 
+                      data-week-label="{{ wk }}" data-week-col="true">
+                    {{ wk }}
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              {% for row in cashflow_rows %}
+                {% if row.key == "recv_financing" or row.key == "recv_gst" %}
+                  {% elif row.is_section %}
+                  {% if row.label == "Receipts" %}
+                    <tr class="bg-emerald-50/30 group" data-section-header="receipts">
+                      <td class="sticky left-0 z-10 bg-emerald-50/90 border-b border-r border-emerald-100 px-4 py-2.5 text-[11px] font-bold text-emerald-800 whitespace-nowrap">
+                        <button type="button" class="inline-flex items-center gap-2 focus:outline-none" data-toggle-section="receipts">
+                          <span class="inline-flex items-center justify-center w-4 h-4 rounded bg-emerald-200 text-emerald-800 text-[10px] shadow-sm" data-section-icon="receipts">−</span>
+                          RECEIPTS
+                        </button>
+                      </td>
+                      {% for wk in cashflow_weeks %}<td class="border-b border-r border-emerald-100/50 bg-emerald-50/20"></td>{% endfor %}
+                    </tr>
+                  {% elif row.label == "Payments" %}
+                    <tr class="bg-rose-50/30 group" data-section-header="payments">
+                      <td class="sticky left-0 z-10 bg-rose-50/90 border-b border-r border-rose-100 px-4 py-2.5 text-[11px] font-bold text-rose-800 whitespace-nowrap">
+                        <button type="button" class="inline-flex items-center gap-2 focus:outline-none" data-toggle-section="payments">
+                          <span class="inline-flex items-center justify-center w-4 h-4 rounded bg-rose-200 text-rose-800 text-[10px] shadow-sm" data-section-icon="payments">−</span>
+                          PAYMENTS
+                        </button>
+                      </td>
+                      {% for wk in cashflow_weeks %}<td class="border-b border-r border-rose-100/50 bg-rose-50/20"></td>{% endfor %}
+                    </tr>
+                  {% else %}
+                    <tr class="bg-slate-50">
+                      <td class="sticky left-0 z-10 bg-slate-100 border-b border-r px-4 py-2 font-bold whitespace-nowrap">{{ row.label }}</td>
+                      {% for wk in cashflow_weeks %}<td class="border-b border-r bg-slate-50"></td>{% endfor %}
+                    </tr>
+                  {% endif %}
+                {% elif row.kind == "pay_group_header" %}
+                  <tr class="bg-slate-50/30" data-section="payments">
+                    <td class="sticky left-0 z-10 bg-slate-50 border-b border-r px-4 py-2 text-[10px] font-bold text-slate-400 pl-8 whitespace-nowrap">{{ row.label }}</td>
+                    {% for wk in cashflow_weeks %}<td class="border-b border-r bg-slate-50/20"></td>{% endfor %}
+                  </tr>
+                {% else %}
+                  <tr class="hover:bg-slate-50 transition-colors {% if row.is_net %}bg-indigo-50/60 font-bold border-t-2 border-indigo-100{% endif %}"
+                      {% if row.kind == 'receivable' or row.kind == 'receivable_extra' %}data-section="receipts"
+                      {% elif row.kind == 'payable' or row.kind == 'payable_tax' or row.kind == 'payable_fin' %}data-section="payments"
+                      {% endif %}>
+                    <td class="sticky left-0 z-10 border-b border-r px-4 py-2 text-[11px] whitespace-nowrap {% if row.is_net %}bg-indigo-50 text-indigo-900{% else %}bg-white pl-8{% endif %}">
+                      {{ row.label }}
+                    </td>
+                    {% for v in row.values %}
+                      <td class="border-r px-2 py-2 text-right financial-num cursor-pointer hover:font-bold hover:text-indigo-600 transition-all duration-75"
+                          {% if row.kind == "receivable" %} data-cf-kind="recv" data-type="{{ row.filter_type }}" data-week="{{ v.week }}"
+                          {% elif row.kind == "payable" %} data-cf-kind="pay" data-nature="{{ row.filter_nature }}" data-week="{{ v.week }}"
+                          {% elif row.kind == "payable_tax" or row.kind == "payable_fin" %} data-cf-kind="pay" data-nature="{{ row.filter_nature }}" data-week="{{ v.week }}" data-cumulative="1"
+                          {% endif %}>
+                        {% if v.value %}{{ v.value|floatformat:0|indian_comma }}{% else %}-{% endif %}
+                      </td>
+                    {% endfor %}
+                  </tr>
+                {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div id="target-summary" class="grid grid-cols-1 xl:grid-cols-2 gap-6 scroll-target">
+        <section class="bg-white rounded-xl shadow-sm border summary-card overflow-hidden">
+          <div class="px-5 py-3 border-b border-rose-100 bg-rose-50/40 flex justify-between items-center">
+            <h2 class="text-sm font-bold text-rose-900 flex items-center gap-2"><div class="w-1.5 h-4 bg-rose-500 rounded-full"></div>Payable Summary</h2>
+            <button id="clear-pay-party" class="text-[10px] font-bold text-rose-600 hover:underline">Show All</button>
+          </div>
+          <div class="max-h-[300px] overflow-auto custom-scrollbar">
+            <table class="min-w-full text-[11px]" id="tbl-sum-pay">
+              <thead class="bg-slate-50 sticky top-0">
+                <tr>
+                  <th class="text-left p-3 sortable" data-sort="text" data-col="0">Party Name</th>
+                  <th class="text-right p-3 sortable" data-sort="num" data-col="1">O/S Amount</th>
+                </tr>
+              </thead>
+              <tbody id="summary-pay-body" class="divide-y divide-slate-50"></tbody>
+              <tfoot class="bg-slate-50 font-bold sticky bottom-0 border-t">
+                <tr><td class="p-3">Total</td><td id="summary-pay-total" class="p-3 text-right">0</td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border summary-card overflow-hidden">
+          <div class="px-5 py-3 border-b border-emerald-100 bg-emerald-50/40 flex justify-between items-center">
+            <h2 class="text-sm font-bold text-emerald-900 flex items-center gap-2"><div class="w-1.5 h-4 bg-emerald-500 rounded-full"></div>Receivable Summary</h2>
+            <button id="clear-recv-party" class="text-[10px] font-bold text-emerald-600 hover:underline">Show All</button>
+          </div>
+          <div class="max-h-[300px] overflow-auto custom-scrollbar">
+            <table class="min-w-full text-[11px]" id="tbl-sum-recv">
+              <thead class="bg-slate-50 sticky top-0">
+                <tr>
+                  <th class="text-left p-3 sortable" data-sort="text" data-col="0">Party Name</th>
+                  <th class="text-right p-3 sortable" data-sort="num" data-col="1">O/S Amount</th>
+                </tr>
+              </thead>
+              <tbody id="summary-recv-body" class="divide-y divide-slate-50"></tbody>
+              <tfoot class="bg-slate-50 font-bold sticky bottom-0 border-t">
+                <tr><td class="p-3">Total</td><td id="summary-recv-total" class="p-3 text-right">0</td></tr>
+              </tfoot>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+        <section id="target-pay-detail" class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-[600px] scroll-target">
+          <div class="p-4 border-b border-rose-100 bg-rose-50/30 flex justify-between items-center">
+            <div><h2 class="text-sm font-bold text-rose-900">PAYABLES DETAIL</h2><p class="text-[10px]">Active: <span id="lbl-pay-party" class="font-bold">All</span></p></div>
+            <div class="text-[10px] font-mono bg-white border border-rose-100 px-2 py-1 rounded shadow-sm">Count: <span id="pay-visible-count">0</span></div>
+          </div>
+          <div class="flex-grow overflow-auto custom-scrollbar">
+            <table class="min-w-full text-[11px] border-collapse" id="tbl-detail-pay">
+              <thead class="bg-slate-100 sticky top-0 z-20">
+                <tr class="text-slate-500">
+                  <th class="p-2 text-left sticky-col sortable" data-sort="text" data-col="0">Party</th>
+                  <th class="p-2 text-left sortable" data-sort="text" data-col="1">Inv #</th>
+                  <th class="p-2 text-left sortable" data-sort="date" data-col="2">Due Date</th>
+                  <th class="p-2 text-left sortable" data-sort="text" data-col="3">Ref No</th>
+                  <th class="p-2 text-left sortable" data-sort="date" data-col="4">Ref Date</th>
+                  <th class="p-2 text-right sortable" data-sort="num" data-col="5">O/S</th>
+                </tr>
+              </thead>
+              <tbody id="pay-rows" class="divide-y">
+                {% for r in pay_rows %}
+                <tr data-kind="pay-row" data-party="{{ r.party_name }}" data-week="{{ r.week_no }}" data-os="{{ r.outstanding_amt }}" data-nature="{{ r.nature }}" class="hover:bg-slate-50 transition-colors">
+                  <td class="p-2 sticky-col font-medium">{{ r.party_name }}</td>
+                  <td class="p-2">{{ r.trans_no }}</td>
+                  <td class="p-2 whitespace-nowrap text-slate-500">{{ r.due_date }}</td>
+                  <td class="p-2 text-slate-400 italic">{{ r.ref_no|default:"-" }}</td>
+                  <td class="p-2 text-slate-400">{{ r.ref_date|default:"-" }}</td>
+                  <td class="p-2 text-right font-bold text-rose-700 financial-num">{{ r.outstanding_amt|floatformat:0|indian_comma }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="target-recv-detail" class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden flex flex-col h-[600px] scroll-target">
+          <div class="p-4 border-b border-emerald-100 bg-emerald-50/30 flex justify-between items-center">
+            <div><h2 class="text-sm font-bold text-emerald-900">RECEIVABLES DETAIL</h2><p class="text-[10px]">Active: <span id="lbl-recv-party" class="font-bold">All</span></p></div>
+            <div class="text-[10px] font-mono bg-white border border-emerald-100 px-2 py-1 rounded shadow-sm">Count: <span id="recv-visible-count">0</span></div>
+          </div>
+          <div class="flex-grow overflow-auto custom-scrollbar">
+            <table class="min-w-full text-[11px] border-collapse" id="tbl-detail-recv">
+              <thead class="bg-slate-100 sticky top-0 z-20">
+                <tr class="text-slate-500">
+                  <th class="p-2 text-left sticky-col sortable" data-sort="text" data-col="0">Party</th>
+                  <th class="p-2 text-left sortable" data-sort="text" data-col="1">Inv #</th>
+                  <th class="p-2 text-left sortable" data-sort="date" data-col="2">Due Date</th>
+                  <th class="p-2 text-left sortable" data-sort="text" data-col="3">Ref No</th>
+                  <th class="p-2 text-left sortable" data-sort="date" data-col="4">Ref Date</th>
+                  <th class="p-2 text-right sortable" data-sort="num" data-col="5">O/S</th>
+                </tr>
+              </thead>
+              <tbody id="recv-rows" class="divide-y">
+                {% for r in recv_rows %}
+                <tr data-kind="recv-row" data-party="{{ r.party_name }}" data-week="{{ r.week_no }}" data-os="{{ r.outstanding_amt }}" data-type="{{ r.invoice_type }}" class="hover:bg-slate-50 transition-colors">
+                  <td class="p-2 sticky-col font-medium">{{ r.party_name }}</td>
+                  <td class="p-2">{{ r.trans_no }}</td>
+                  <td class="p-2 whitespace-nowrap text-slate-500">{{ r.due_date }}</td>
+                  <td class="p-2 text-slate-400 italic">{{ r.ref_no|default:"-" }}</td>
+                  <td class="p-2 text-slate-400">{{ r.ref_date|default:"-" }}</td>
+                  <td class="p-2 text-right font-bold text-emerald-700 financial-num">{{ r.outstanding_amt|floatformat:0|indian_comma }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="tab-panel-excluded" class="hidden space-y-4">
+       <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-5 border-b bg-slate-900 text-white font-bold text-sm flex justify-between">
+            <span>Excluded Parties Mapping Summary</span>
+            <button id="excl-clear" class="text-xs text-slate-300 hover:text-white">Clear</button>
+          </div>
+          <div class="overflow-auto max-h-[400px] custom-scrollbar">
+             <table class="min-w-full text-[11px]" id="tbl-excl-summary">
+                <thead class="bg-slate-50 sticky top-0">
+                   <tr>
+                     <th class="p-3 text-left sortable" data-sort="text" data-col="0">Party</th>
+                     <th class="p-3 text-right sortable" data-sort="num" data-col="1">Payable</th>
+                     <th class="p-3 text-right sortable" data-sort="num" data-col="2">Receivable</th>
+                     <th class="p-3 text-right sortable" data-sort="num" data-col="3">Net</th>
+                   </tr>
+                </thead>
+                <tbody id="excl-summary-body" class="divide-y"></tbody>
+             </table>
+          </div>
+       </section>
+
+       <div id="section-excl-details" class="grid grid-cols-1 xl:grid-cols-2 gap-6 h-[400px] scroll-target">
+          <section class="bg-white rounded-xl shadow-lg border border-rose-200 overflow-hidden flex flex-col h-full">
+             <div class="p-3 border-b border-rose-100 bg-rose-50/40 text-rose-900 font-bold text-xs uppercase">Excluded Payables Detail</div>
+             <div class="flex-grow overflow-auto custom-scrollbar">
+                <table class="min-w-full text-[11px]" id="tbl-excl-detail-pay">
+                   <thead class="bg-slate-50 sticky top-0">
+                      <tr>
+                         <th class="p-2 text-left sticky-col sortable" data-sort="text" data-col="0">Party</th>
+                         <th class="p-2 text-left sortable" data-sort="text" data-col="1">Inv #</th>
+                         <th class="p-2 text-left sortable" data-sort="date" data-col="2">Due</th>
+                         <th class="p-2 text-left sortable" data-sort="text" data-col="3">Ref #</th>
+                         <th class="p-2 text-left sortable" data-sort="date" data-col="4">Ref Date</th>
+                         <th class="p-2 text-right sortable" data-sort="num" data-col="5">O/S</th>
+                      </tr>
+                   </thead>
+                   <tbody id="excl-pay-body" class="divide-y"><tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Select a party above</td></tr></tbody>
+                </table>
+             </div>
+          </section>
+
+          <section class="bg-white rounded-xl shadow-lg border border-emerald-200 overflow-hidden flex flex-col h-full">
+             <div class="p-3 border-b border-emerald-100 bg-emerald-50/40 text-emerald-900 font-bold text-xs uppercase">Excluded Receivables Detail</div>
+             <div class="flex-grow overflow-auto custom-scrollbar">
+                <table class="min-w-full text-[11px]" id="tbl-excl-detail-recv">
+                   <thead class="bg-slate-50 sticky top-0">
+                      <tr>
+                         <th class="p-2 text-left sticky-col sortable" data-sort="text" data-col="0">Party</th>
+                         <th class="p-2 text-left sortable" data-sort="text" data-col="1">Inv #</th>
+                         <th class="p-2 text-left sortable" data-sort="date" data-col="2">Due</th>
+                         <th class="p-2 text-left sortable" data-sort="text" data-col="3">Ref #</th>
+                         <th class="p-2 text-left sortable" data-sort="date" data-col="4">Ref Date</th>
+                         <th class="p-2 text-right sortable" data-sort="num" data-col="5">O/S</th>
+                      </tr>
+                   </thead>
+                   <tbody id="excl-recv-body" class="divide-y"><tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Select a party above</td></tr></tbody>
+                </table>
+             </div>
+          </section>
+       </div>
+
+       <div class="hidden">
+          <table id="excl-pay-source">
+            <tbody>
+              {% for r in excluded_pay_rows %}
+              <tr data-party="{{ r.party_name }}" data-os="{{ r.outstanding_amt }}" 
+                  data-inv="{{ r.trans_no }}" data-due="{{ r.due_date }}"
+                  data-ref="{{ r.ref_no|default:'-' }}" data-refdate="{{ r.ref_date|default:'-' }}">
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <table id="excl-recv-source">
+            <tbody>
+              {% for r in excluded_recv_rows %}
+              <tr data-party="{{ r.party_name }}" data-os="{{ r.outstanding_amt }}" 
+                  data-inv="{{ r.trans_no }}" data-due="{{ r.due_date }}"
+                  data-ref="{{ r.ref_no|default:'-' }}" data-refdate="{{ r.ref_date|default:'-' }}">
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+       </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  // --- DATE LOGIC ---
+  (function setDates() {
+      const fromInput = document.getElementById('date-from');
+      const toInput = document.getElementById('date-to');
+      if(!fromInput || !toInput) return;
+
+      const startDate = "2025-04-01";
+      const now = new Date();
+      const targetMonth = now.getMonth() + 4; 
+      const targetYear = now.getFullYear();
+      const endDateObj = new Date(targetYear, targetMonth + 1, 0); 
+      const fmt = (d) => {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+      };
+      fromInput.value = startDate;
+      toInput.value = fmt(endDateObj);
+  })();
+
+  // --- SHORTEN WEEK HEADER LOGIC ---
+  (function shortenWeekHeaders() {
+      const headers = document.querySelectorAll('th[data-week-label]');
+      headers.forEach(th => {
+          // Fixes "Wk-39. 22-Dec-2025" -> "Wk-39. 22-Dec-25"
+          const txt = th.innerText.trim();
+          const newTxt = txt.replace(/(\d{2})-[A-Za-z]{3}-20(\d{2})$/, (match, d, y) => {
+              // Extract the month part from the original string
+              const parts = match.split('-');
+              return `${parts[0]}-${parts[1]}-${y}`;
+          });
+          
+          // Also simpler regex to catch just the year part at end
+          const finalTxt = newTxt.replace(/-20(\d{2})$/, '-$1');
+          
+          if(finalTxt !== txt) {
+              th.innerText = finalTxt;
+          }
+      });
+  })();
+
+  const qsa = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const parseNum = (t) => parseFloat(String(t || 0).replace(/,/g, '')) || 0;
+  const parseDate = (d) => d ? Date.parse(d) || 0 : 0;
+  const formatIndian = (n) => {
+    n = Math.round(Number(n || 0));
+    const neg = n < 0; n = Math.abs(n);
+    const s = String(n);
+    if (s.length <= 3) return (neg ? "-" : "") + s;
+    const last3 = s.slice(-3); const rest = s.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+    return (neg ? "-" : "") + rest + "," + last3;
+  };
+  const norm = (s) => String(s || "").trim().toUpperCase();
+
+  const payRows = qsa('#pay-rows tr[data-kind="pay-row"]');
+  const recvRows = qsa('#recv-rows tr[data-kind="recv-row"]');
+  const weekHeaders = qsa('th[data-week-col="true"]');
+  const matrixCells = qsa('td[data-cf-kind]');
+
+  // --- Better Scroll Helper ---
+  function jumpTo(id) {
+    const el = document.getElementById(id);
+    if (el) { 
+        setTimeout(() => { 
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100); 
+    }
+  }
+
+  // --- Expand/Collapse Logic ---
+  const sectionStates = { receipts: true, payments: true };
+  function applySectionState(section) {
+    const rows = qsa('tr[data-section="' + section + '"]');
+    const icon = document.querySelector('[data-section-icon="' + section + '"]');
+    const isCollapsed = sectionStates[section];
+    rows.forEach(r => r.classList.toggle('hidden', isCollapsed));
+    if (icon) { icon.textContent = isCollapsed ? '+' : '−'; }
+  }
+  ['receipts', 'payments'].forEach(applySectionState);
+  qsa('[data-toggle-section]').forEach(btn => {
+    const section = btn.dataset.toggleSection;
+    btn.addEventListener('click', function () {
+      sectionStates[section] = !sectionStates[section];
+      applySectionState(section);
+    });
+  });
+
+  // --- Sorting Logic ---
+  function makeSortable(tableId) {
+    const table = document.getElementById(tableId);
+    if(!table) return;
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('th.sortable');
+
+    headers.forEach(th => {
+      th.addEventListener('click', () => {
+        const type = th.dataset.sort;
+        const col = parseInt(th.dataset.col);
+        const isAsc = !th.classList.contains('asc');
+        headers.forEach(h => h.classList.remove('asc', 'desc'));
+        th.classList.add(isAsc ? 'asc' : 'desc');
+
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort((a, b) => {
+          const tA = a.children[col].innerText.trim();
+          const tB = b.children[col].innerText.trim();
+          let valA, valB;
+          if (type === 'num') { valA = parseNum(tA); valB = parseNum(tB); }
+          else if (type === 'date') { valA = parseDate(tA); valB = parseDate(tB); }
+          else { valA = tA.toLowerCase(); valB = tB.toLowerCase(); }
+          if (valA < valB) return isAsc ? -1 : 1;
+          if (valA > valB) return isAsc ? 1 : -1;
+          return 0;
+        });
+        rows.forEach(r => tbody.appendChild(r));
+      });
+    });
+  }
+  makeSortable('tbl-sum-pay');
+  makeSortable('tbl-sum-recv');
+  makeSortable('tbl-detail-pay');
+  makeSortable('tbl-detail-recv');
+  makeSortable('tbl-excl-summary');
+  makeSortable('tbl-excl-detail-pay');
+  makeSortable('tbl-excl-detail-recv');
+
+  // --- Visibility & Filtering Logic ---
+  function updateRowVisibility(row) {
+    const isHidden = (row.dataset.weekHide === "1") || (row.dataset.partyHide === "1") || (row.dataset.typeHide === "1");
+    row.classList.toggle("hidden", isHidden);
+  }
+  function setHide(row, reason, hidden) {
+    row.dataset[reason] = hidden ? "1" : "0";
+    updateRowVisibility(row);
+  }
+  function updateTotals(key) {
+    const rows = (key === "pay") ? payRows : recvRows;
+    let count = 0;
+    rows.forEach(r => { if (!r.classList.contains('hidden')) count++; });
+    document.getElementById(key + '-visible-count').textContent = count;
+  }
+
+  function rebuildSummaries() {
+    const summaries = { pay: {}, recv: {} };
+    // Scan Payables
+    payRows.forEach(r => {
+      if (r.dataset.weekHide === "1" || r.dataset.typeHide === "1") return;
+      const p = r.dataset.party; const k = norm(p);
+      if (!summaries.pay[k]) summaries.pay[k] = { name: p, amt: 0 };
+      summaries.pay[k].amt += parseNum(r.dataset.os);
+    });
+    // Scan Receivables
+    recvRows.forEach(r => {
+      if (r.dataset.weekHide === "1" || r.dataset.typeHide === "1") return;
+      const p = r.dataset.party; const k = norm(p);
+      if (!summaries.recv[k]) summaries.recv[k] = { name: p, amt: 0 };
+      summaries.recv[k].amt += parseNum(r.dataset.os);
+    });
+
+    const render = (key, data, color) => {
+      const body = document.getElementById(`summary-${key}-body`);
+      const list = Object.values(data).sort((a,b) => b.amt - a.amt);
+      let grandTotal = 0;
+      body.innerHTML = list.length ? "" : '<tr><td colspan="2" class="p-4 text-center text-slate-300 italic">No Data</td></tr>';
+      list.forEach(item => {
+        grandTotal += item.amt;
+        body.insertAdjacentHTML('beforeend', `
+          <tr class="hover:bg-slate-50 cursor-pointer transition-colors" data-party-key="${norm(item.name)}" data-party-name="${item.name}">
+            <td class="p-3 border-b text-slate-700 font-medium">${item.name}</td>
+            <td class="p-3 text-right border-b font-bold ${color}">${formatIndian(item.amt)}</td>
+          </tr>`);
+      });
+      document.getElementById(`summary-${key}-total`).textContent = formatIndian(grandTotal);
+    };
+    render('pay', summaries.pay, 'text-rose-700');
+    render('recv', summaries.recv, 'text-emerald-700');
+  }
+
+  // --- Click Events ---
+
+  // 1. Week Header Click
+  weekHeaders.forEach(th => {
+    th.addEventListener('click', function() {
+      const wk = this.getAttribute('data-week-label'); // Use getAttribute for safety
+      // Visuals
+      weekHeaders.forEach(h => h.classList.remove('week-header-active'));
+      this.classList.add('week-header-active');
+      matrixCells.forEach(c => c.classList.remove('cell-active'));
+
+      // Filter Logic: Reset Type/Party, Set Week
+      payRows.forEach(r => { setHide(r, "weekHide", r.dataset.week !== wk); setHide(r, "partyHide", false); setHide(r, "typeHide", false); });
+      recvRows.forEach(r => { setHide(r, "weekHide", r.dataset.week !== wk); setHide(r, "partyHide", false); setHide(r, "typeHide", false); });
+
+      rebuildSummaries(); updateTotals("pay"); updateTotals("recv");
+      jumpTo('target-summary');
+    });
+  });
+
+  // 2. Cell Click (The requested specific cell filter)
+  matrixCells.forEach(cell => {
+    cell.addEventListener('click', function() {
+       const wk = this.dataset.week;
+       const kind = this.dataset.cfKind; // 'pay' or 'recv'
+       const filterType = this.dataset.type; // for recv
+       const filterNature = this.dataset.nature; // for pay
+
+       // Visuals
+       weekHeaders.forEach(h => h.classList.remove('week-header-active'));
+       matrixCells.forEach(c => c.classList.remove('cell-active'));
+       this.classList.add('cell-active');
+
+       // Logic: 
+       if (kind === 'pay') {
+          // Filter Payables by Week AND Nature
+          payRows.forEach(r => { 
+             const weekMatch = r.dataset.week === wk;
+             const natureMatch = r.dataset.nature === filterNature;
+             setHide(r, "weekHide", !weekMatch);
+             setHide(r, "typeHide", !natureMatch); 
+             setHide(r, "partyHide", false);
+          });
+          // Hide all Receivables
+          recvRows.forEach(r => setHide(r, "typeHide", true));
+       } else {
+          // Filter Receivables by Week AND Type
+          recvRows.forEach(r => { 
+             const weekMatch = r.dataset.week === wk;
+             const typeMatch = r.dataset.type === filterType;
+             setHide(r, "weekHide", !weekMatch);
+             setHide(r, "typeHide", !typeMatch);
+             setHide(r, "partyHide", false);
+          });
+          // Hide all Payables
+          payRows.forEach(r => setHide(r, "typeHide", true));
+       }
+
+       rebuildSummaries(); updateTotals("pay"); updateTotals("recv");
+       jumpTo('target-summary');
+    });
+  });
+
+  // 3. Summary Click
+  document.getElementById('summary-pay-body').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-party-key]'); if(!tr) return;
+    payRows.forEach(r => { setHide(r, "partyHide", norm(r.dataset.party) !== tr.dataset.partyKey); });
+    document.getElementById('lbl-pay-party').textContent = tr.dataset.partyName;
+    updateTotals("pay");
+    jumpTo('target-pay-detail');
+  });
+
+  document.getElementById('summary-recv-body').addEventListener('click', (e) => {
+    const tr = e.target.closest('tr[data-party-key]'); if(!tr) return;
+    recvRows.forEach(r => { setHide(r, "partyHide", norm(r.dataset.party) !== tr.dataset.partyKey); });
+    document.getElementById('lbl-recv-party').textContent = tr.dataset.partyName;
+    updateTotals("recv");
+    jumpTo('target-recv-detail');
+  });
+
+  // 4. Clear/Reset
+  document.getElementById('cf-clear-filters').onclick = () => {
+    weekHeaders.forEach(h => h.classList.remove('week-header-active'));
+    matrixCells.forEach(c => c.classList.remove('cell-active'));
+    [...payRows, ...recvRows].forEach(r => { r.dataset.weekHide = "0"; r.dataset.partyHide = "0"; r.dataset.typeHide = "0"; updateRowVisibility(r); });
+    rebuildSummaries(); updateTotals("pay"); updateTotals("recv");
+    document.getElementById('lbl-pay-party').textContent = "All";
+    document.getElementById('lbl-recv-party').textContent = "All";
+  };
+
+  document.getElementById('clear-pay-party').onclick = () => { payRows.forEach(r => setHide(r, "partyHide", false)); updateTotals("pay"); document.getElementById('lbl-pay-party').textContent = "All"; };
+  document.getElementById('clear-recv-party').onclick = () => { recvRows.forEach(r => setHide(r, "partyHide", false)); updateTotals("recv"); document.getElementById('lbl-recv-party').textContent = "All"; };
+
+  // 5. Tab Switching
+  qsa('.tab-btn').forEach(btn => {
+    btn.onclick = () => {
+      const target = btn.dataset.tabBtn;
+      qsa('.tab-btn').forEach(b => b.classList.toggle('tab-btn-active', b === btn));
+      document.getElementById('tab-panel-main').classList.toggle('hidden', target !== 'main');
+      document.getElementById('tab-panel-excluded').classList.toggle('hidden', target !== 'excluded');
+    };
+  });
+
+  // --- RESTORED EXCLUDED MAPPING ---
+  (function initExcluded() {
+     const PARTY_MAP = [
+        { common: "ZEOLITES AND ALLIED PRODUCTS", pay: "ZEOLITES AND ALLIED PRODUCTS PVT. LTD. (CR)", recv: "ZEOLITES AND ALLIED PRODUCTS PVT. LTD." },
+        { common: "ARAB/Universal", pay: "THE ARAB POTASH CO. PLC (CR)", recv: "UNIVERSAL CHEMICALS & INDUSTRIES PVT. LTD." },
+        { common: "DEEDY CHEMICALS PVT. LTD.", pay: "DEEDY CHEMICALS PVT. LTD. (CR)", recv: "DEEDY CHEMICALS PVT. LTD." },
+        { common: "FREESIA CHEMICALS", pay: "FREESIA CHEMICALS (CR)", recv: "FREESIA CHEMICALS" },
+        { common: "HINDUSTHAN CHEMICALS COMPANY", pay: "HINDUSTHAN CHEMICALS COMPANY (CR)", recv: "HINDUSTHAN CHEMICAL COMPANY" },
+        { common: "REMEDIUM LIFECARE LTD.", pay: "REMEDIUM LIFECARE LTD. (CR)", recv: "REMEDIUM LIFECARE LTD." },
+     ];
+     const payToCommon = {}, recvToCommon = {};
+     PARTY_MAP.forEach(m => {
+        if(m.pay) payToCommon[norm(m.pay)] = m.common;
+        if(m.recv) recvToCommon[norm(m.recv)] = m.common;
+     });
+     const getCanonical = (name, type) => {
+        const k = norm(name);
+        if(type==='pay' && payToCommon[k]) return payToCommon[k];
+        if(type==='recv' && recvToCommon[k]) return recvToCommon[k];
+        return name.replace(/\s*\(CR\)\s*$/i, "").trim();
+     };
+
+     const summary = {};
+     const pSrc = qsa('#excl-pay-source tr').map(tr => ({...tr.dataset, type:'pay', canonical: getCanonical(tr.dataset.party, 'pay')}));
+     const rSrc = qsa('#excl-recv-source tr').map(tr => ({...tr.dataset, type:'recv', canonical: getCanonical(tr.dataset.party, 'recv')}));
+     
+     [...pSrc, ...rSrc].forEach(r => {
+        if(!summary[r.canonical]) summary[r.canonical] = {name:r.canonical, pay:0, recv:0, pRows:[], rRows:[]};
+        if(r.type==='pay') { summary[r.canonical].pay += parseNum(r.os); summary[r.canonical].pRows.push(r); }
+        else { summary[r.canonical].recv += parseNum(r.os); summary[r.canonical].rRows.push(r); }
+     });
+
+     const body = document.getElementById('excl-summary-body');
+     Object.values(summary).forEach(s => {
+        body.insertAdjacentHTML('beforeend', `<tr class="hover:bg-slate-50 cursor-pointer" data-party="${s.name}"><td class="p-3 font-medium">${s.name}</td><td class="p-3 text-right text-rose-700">${formatIndian(s.pay)}</td><td class="p-3 text-right text-emerald-700">${formatIndian(s.recv)}</td><td class="p-3 text-right font-bold">${formatIndian(s.pay - s.recv)}</td></tr>`);
+     });
+
+     // Render Detail Rows Helper
+     const renderRows = (rows, color) => {
+        if(!rows.length) return `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">No data</td></tr>`;
+        return rows.map(r => `
+           <tr class="hover:bg-slate-50 border-b">
+             <td class="p-2 sticky-col font-medium bg-white">${r.party}</td>
+             <td class="p-2">${r.inv}</td>
+             <td class="p-2 whitespace-nowrap text-slate-500">${r.due}</td>
+             <td class="p-2 text-slate-400 italic">${r.ref}</td>
+             <td class="p-2 text-slate-400">${r.refdate}</td>
+             <td class="p-2 text-right font-bold ${color}">${formatIndian(r.os)}</td>
+           </tr>`).join('');
+     };
+
+     body.addEventListener('click', (e) => {
+        const tr = e.target.closest('tr'); if(!tr) return;
+        const d = summary[tr.dataset.party];
+        document.getElementById('excl-pay-body').innerHTML = renderRows(d.pRows, 'text-rose-700');
+        document.getElementById('excl-recv-body').innerHTML = renderRows(d.rRows, 'text-emerald-700');
+        jumpTo('section-excl-details');
+     });
+     document.getElementById('excl-clear').onclick = () => { 
+        document.getElementById('excl-pay-body').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Select a party above</td></tr>';
+        document.getElementById('excl-recv-body').innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">Select a party above</td></tr>';
+     };
+  })();
+
+  rebuildSummaries(); updateTotals("pay"); updateTotals("recv");
+})();
+</script>
+{% endblock %}
